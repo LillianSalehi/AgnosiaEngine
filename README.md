@@ -2,7 +2,7 @@
 
 ## Goals
 
-[Docs](https://vulkan.lunarg.com/doc/sdk/1.3.290.0/linux/getting_started.html)
+[Current Simple Docs](https://docs.vulkan.org/tutorial/latest/03_Drawing_a_triangle/00_Setup/00_Base_code.html)
 - Implement Vulkan SDK
 - Play with OpenXR
 - Implement features for maximum fidelity/performance ratio
