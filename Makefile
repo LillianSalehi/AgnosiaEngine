@@ -1,32 +1,36 @@
-CC=gcc
-CXX=g++
-CPPFLAGS=-g
-
+CPPFLAGS=-g 
+LDFLAGS=-lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
 SRC=$(shell find . -name *.cpp)
 OBJ=$(SRC:%.cpp=%.o)
-BIN= build/placeholderengine
+
+BIN=build/placeholderengine
 
 
 .PHONY: all
 all: $(BIN)
 
+.PHONY: run
+run: $(BIN)
+	./$(BIN)
 .PHONY: dep
 dep: 
-	sudo pacman -S $(CC)
+	sudo pacman -S gcc glfw glm shaderc libxi libxxf86vm
 .PHONY: info
 info: 
 	@echo "make:		Build executable"
 	@echo "make dep: 	Make all required dependencies"
 	@echo "make debug: 	Make with Debug hooked in"
 	@echo "make clean:	Clean all files"
+	@echo "make run: 	Run the executable after building"
 
 $(BIN): $(OBJ)
 	mkdir -p build
-	$(CXX) $(CPPFLAGS) -o $(BIN) $(OBJ)
+	g++ $(CPPFLAGS) -o $(BIN) $(OBJ) $(LDFLAGS)
 
 %.o: %.cpp
-	g++ -c $< -o $@
+	g++ -c $< -o $@ $(LDFLAGS)
 
 .PHONY: clean
 clean:
 	rm -rf build
+	find . -name "*.o" -type f -delete
