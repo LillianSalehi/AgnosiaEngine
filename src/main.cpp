@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include "debug/VulkanDebugLibs.h"
+#include "DeviceLibrary.h"
 using namespace AgnosiaEngine;
 
 #include <cstdint>
@@ -36,6 +37,7 @@ private:
   GLFWwindow* window;
   VkInstance instance;
   VulkanDebugLibs debug;
+  DeviceLibrary device;
   // Initialize GLFW Window. First, Initialize GLFW lib, disable resizing for
   // now, and create window.
   void initWindow() {
@@ -50,6 +52,7 @@ private:
   void initVulkan() {
     createInstance();
     debug.setupDebugMessenger(instance);                          // The debug messenger is out holy grail, it gives us Vulkan related debug info when built with the -DNDEBUG flag (as per the makefile)
+    device.pickPhysicalDevice(instance);
   }
 
   void createInstance() {
