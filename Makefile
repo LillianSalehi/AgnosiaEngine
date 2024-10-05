@@ -1,5 +1,6 @@
-CPPFLAGS=-g 
+CPPFLAGS=-g
 LDFLAGS=-lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
+DEBUGFLAGS=-DDEBUG
 SRC=$(shell find . -name *.cpp)
 OBJ=$(SRC:%.cpp=%.o)
 
@@ -11,6 +12,10 @@ all: $(BIN)
 
 .PHONY: run
 run: $(BIN)
+	./$(BIN)
+.PHONY: debug
+debug: LDFLAGS+=$(DEBUGFLAGS)
+debug: $(BIN)
 	./$(BIN)
 .PHONY: dep
 dep: 
