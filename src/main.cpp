@@ -1,9 +1,13 @@
-#include <cstdint>
-#include <cstring>
-#include <vector>
+
 #define GLFW_INCLUDE_VULKAN
+#include <vulkan/vulkan_core.h>
 #include <GLFW/glfw3.h>
 
+#include "debug/VulkanDebugLibs.h"
+using namespace AgnosiaEngine;
+
+#include <cstdint>
+#include <cstring>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
@@ -12,10 +16,6 @@
 class TriangleTestApplication {
   const uint32_t WIDTH = 800;
   const uint32_t HEIGHT = 600;
-
-  const std::vector<const char*> validationLayers = {
-    "VK_LAYER_KHRONOS_validation"
-  };
 
   #ifdef DEBUG
     const bool enableValidationLayers = true;
@@ -51,7 +51,9 @@ private:
   }
 
   void createInstance() {
-    if(enableValidationLayers && !checkValidationLayerSupport()) {
+    VulkanDebugLibs debug;
+
+    if(enableValidationLayers && !debug.checkValidationLayerSupport()) {
       throw std::runtime_error("Validation layers requested, but not available!");
     }
 
@@ -81,8 +83,7 @@ private:
     createInfo.ppEnabledExtensionNames = glfwExtensions;
     
     if(enableValidationLayers) {                                            // If we have validation layers, add them now, otherwise set it to 0
-      createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-      createInfo.ppEnabledLayerNames = validationLayers.data();
+      debug.vulkanDebugSetup(createInfo);
     } else {
       createInfo.enabledLayerCount = 0;
     }
@@ -92,30 +93,8 @@ private:
       throw std::runtime_error("Failed to create vulkan instance!");
     }
   }
- 
-  bool checkValidationLayerSupport() {                                      // This function is used to check Validation Layer Support, validation layers are the debug trace tools in the Vulkan SDK.
-    uint32_t layerCount;                                                    // layerCount will be used as the var to keep track of the number of requested validation layerk
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);               // Set layerCount to the number of validation layers requested when pProperties is NULLPTR
 
-    std::vector<VkLayerProperties> availableLayers(layerCount);             // VkLayerProperties is a structure with data on the layername, desc, versions and etc. 
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());// Now that we have a VkLayerProperties fed in, as well as the num. of properties, we can fill layerCount with the VkResult
 
-    for(const char* layerName : validationLayers) {                         // Pretty straightforward from here, just enumerate over all the VkResult data and see if we have any validationLayers
-      bool layerFound = false;
-
-      for(const auto& layerProperties : availableLayers) {
-        if(strcmp(layerName, layerProperties.layerName) == 0) {
-          layerFound = true;
-          break;
-        }
-      }
-
-      if(!layerFound) {
-        return false;
-      }
-    }
-    return true;
-  }
  
   void mainLoop() {
     // Update window whilst open
@@ -144,3 +123,4 @@ int main() {
   }
   return EXIT_SUCCESS;
 }
+
