@@ -4,7 +4,7 @@ DEBUGFLAGS=-DDEBUG
 SRC=$(shell find . -name *.cpp)
 OBJ=$(SRC:%.cpp=%.o)
 
-BIN=build/placeholderengine
+BIN=build/agnosiaengine
 
 
 .PHONY: all

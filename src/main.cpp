@@ -17,7 +17,7 @@ class TriangleTestApplication {
   const uint32_t WIDTH = 800;
   const uint32_t HEIGHT = 600;
 
-  #ifdef DEBUG
+ #ifdef DEBUG
     const bool enableValidationLayers = true;
   #else 
     const bool enableValidationLayers = false;
@@ -63,7 +63,7 @@ private:
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;                     // Tell vulkan that appInfo is a Application Info structure
     appInfo.pApplicationName = "Triangle Test";                             // Give the struct a name to use
     appInfo.applicationVersion = VK_MAKE_VERSION(1,0,0);                    // Create a Major Minor Patch version number for the application!
-    appInfo.pEngineName = "No Engine";                                      // Give an internal name for the engine running
+    appInfo.pEngineName = "Agnosia Engine";                                 // Give an internal name for the engine running
     appInfo.engineVersion = VK_MAKE_VERSION(1,0,0);                         // Similar to the App version, give vulkan an *engine* version
     appInfo.apiVersion = VK_API_VERSION_1_0;                                // Tell vulkan what the highest API version we will allow this program to run on
   
