@@ -1,5 +1,6 @@
 
 #include <vector>
+#include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -37,7 +38,8 @@ private:
   GLFWwindow* window;
   VkInstance instance;
   VulkanDebugLibs debug;
-  DeviceLibrary device;
+  DeviceLibrary deviceLibs;
+  VkDevice device;
   // Initialize GLFW Window. First, Initialize GLFW lib, disable resizing for
   // now, and create window.
   void initWindow() {
@@ -52,7 +54,8 @@ private:
   void initVulkan() {
     createInstance();
     debug.setupDebugMessenger(instance);                          // The debug messenger is out holy grail, it gives us Vulkan related debug info when built with the -DNDEBUG flag (as per the makefile)
-    device.pickPhysicalDevice(instance);
+    deviceLibs.pickPhysicalDevice(instance);
+    deviceLibs.createLogicalDevice(device);
   }
 
   void createInstance() {
@@ -82,6 +85,7 @@ private:
   }
 
   void cleanup() {                                                // Similar to the last handoff, destroy the debug util in a safe manner in the library!
+    vkDestroyDevice(device, nullptr);
     if(enableValidationLayers) {
       debug.DestroyDebugUtilsMessengerEXT(instance, nullptr);
     }

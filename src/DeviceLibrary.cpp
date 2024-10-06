@@ -1,16 +1,25 @@
 #include "DeviceLibrary.h"
+#include "debug/VulkanDebugLibs.h"
+#include "global.h"
+
 #include <cstdint>
-#include <iostream>
 #include <optional>
 #include <ostream>
 #include <stdexcept>
-#include <vector>
 #include <vulkan/vulkan_core.h>
 using namespace AgnosiaEngine;
 
 VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 VkPhysicalDeviceProperties deviceProperties;
 VkPhysicalDeviceFeatures deviceFeatures;
+VulkanDebugLibs debug;
+VkQueue graphicsQueue;
+
+#ifdef DEBUG
+  const bool enableValidationLayers = true;
+#else 
+  const bool enableValidationLayers = false;
+#endif
 
 struct QueueFamilyIndices {
   std::optional<uint32_t> graphicsFamily;
@@ -56,6 +65,7 @@ bool isDeviceSuitable(VkPhysicalDevice device) {
   // We need to find a device that supports graphical operations, or else we cant do much with it! This function just runs over all the queueFamilies and sees if there 
   // is a queue family with the VK_QUEUE_GRAPHICS_BIT flipped!
   QueueFamilyIndices indices = findQueueFamilies(device);
+  
 
   return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && deviceFeatures.multiViewport && deviceFeatures.geometryShader && indices.isComplete();
 }
@@ -84,4 +94,34 @@ void DeviceLibrary::pickPhysicalDevice(VkInstance& instance) {
   }
 }
 
+void DeviceLibrary::createLogicalDevice(VkDevice& device) {
+  // Describe how many queues we want for a single family (1) here, right now we are solely interested in graphics capabilites,
+  // but Compute Shaders, transfer ops, decode and encode operations can also queued with setup! We also assign each queue a priority.
+  QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
+  VkDeviceQueueCreateInfo queueCreateInfo{};
+  queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+  queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+  queueCreateInfo.queueCount = 1;
+
+  float queuePriority = 1.0f;
+  queueCreateInfo.pQueuePriorities = &queuePriority;
+
+  VkDeviceCreateInfo createInfo{};
+  createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO; 
+  createInfo.pQueueCreateInfos = &queueCreateInfo;
+  createInfo.queueCreateInfoCount = 1;
+  createInfo.pEnabledFeatures = &deviceFeatures;
+  createInfo.enabledExtensionCount = 0;
+  
+  if(enableValidationLayers) {
+    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+    createInfo.ppEnabledLayerNames = validationLayers.data();
+  } else {
+    createInfo.enabledLayerCount = 0;
+  }
+  if(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create logical device");
+  }
+  vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);  
+}

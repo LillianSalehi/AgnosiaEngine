@@ -1,14 +1,13 @@
 #include <cstdint>
-#include <iostream>
 #include <stdexcept>
 #include <vulkan/vk_platform.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include "../global.h"
 #include "VulkanDebugLibs.h"
 using namespace AgnosiaEngine;
 
-#include <vector>
 #include <cstring>
 #include <vulkan/vulkan_core.h>
 
@@ -21,9 +20,6 @@ using namespace AgnosiaEngine;
 // This is our messenger object! It handles passing along debug messages to the debug callback we will also set.
 VkDebugUtilsMessengerEXT debugMessenger;
 // This is the set of "layers" to hook into. Basically, layers are used to tell the messenger what data we want, its a filter. *validation* is the general blanket layer to cover incorrect usage.
-const std::vector<const char*> validationLayers = {
-  "VK_LAYER_KHRONOS_validation"
-};
 
 std::vector<const char*> getRequiredExtensions() {
   // This gets a little weird, Vulkan is platform agnostic, so you need to figure out what extensions to interface with the current system are needed
@@ -50,6 +46,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     // The VKAPI_CALL and VKAPI_ATTR ensure that the function has the right signature for vulkan to call it. The callback message can be anything from a diagnostic to error!
     // You can even sort by those diagnostics with their flags, since they are just integers, maybe TODO?
     std::cerr << "Validation layer: " << pCallbackData->pMessage << std::endl;
+    std::cout << "\n";
 
     return VK_FALSE;
 }
