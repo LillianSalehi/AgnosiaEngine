@@ -1,14 +1,10 @@
-#include <cstdint>
-#include <stdexcept>
-#include <vulkan/vk_platform.h>
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
 #include "../global.h"
 using namespace Debug;
 
+#include <cstdint>
+#include <stdexcept>
+#include <vulkan/vk_platform.h>
 #include <cstring>
-#include <vulkan/vulkan_core.h>
 
 // This is our messenger object! It handles passing along debug messages to the debug callback we will also set.
 VkDebugUtilsMessengerEXT debugMessenger;

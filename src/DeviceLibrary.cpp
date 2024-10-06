@@ -112,6 +112,7 @@ namespace DeviceControl {
   void DeviceLibrary::createLogicalDevice(VkDevice& device) {
     // Describe how many queues we want for a single family (1) here, right now we are solely interested in graphics capabilites,
     // but Compute Shaders, transfer ops, decode and encode operations can also queued with setup! We also assign each queue a priority.
+    // We do this by looping over all the queueFamilies and sorting them by indices to fill the queue at the end!
     QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -130,11 +131,10 @@ namespace DeviceControl {
       queueCreateInfos.push_back(queueCreateSingularInfo);
     }
     VkDeviceCreateInfo createDeviceInfo = {};
-    VkPhysicalDeviceFeatures emptyFeatures = {};
     createDeviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO; 
     createDeviceInfo.pQueueCreateInfos = queueCreateInfos.data();
     createDeviceInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    createDeviceInfo.pEnabledFeatures = &emptyFeatures;
+    createDeviceInfo.pEnabledFeatures = &deviceFeatures;
     createDeviceInfo.enabledExtensionCount = 0;
 
 

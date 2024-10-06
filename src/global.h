@@ -8,6 +8,8 @@
 #include <GLFW/glfw3.h>
 
 namespace Global {
+  // Global variables and includes we are going to use almost everywhere, validation layers hook into everything, and you need to check if they are enabled first,
+  // so that's one obvious global, as well as the glfw includes!
   extern const std::vector<const char*> validationLayers;
   extern const bool enableValidationLayers;
 }

@@ -1,8 +1,6 @@
 
+#include "DeviceLibrary.h" // Device Library includes global, redundant to include with it here
 #include "debug/VulkanDebugLibs.h"
-#include "DeviceLibrary.h"
-#include "debug/VulkanDebugLibs.h"
-#include "global.h"
 
 #include <cstdint>
 #include <cstring>
