@@ -1,6 +1,6 @@
 CPPFLAGS=-g
 LDFLAGS=-lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
-DEBUGFLAGS=-DDEBUG
+DEBUGFLAGS=-DDEBUG -fsanitize=address 
 SRC=$(shell find . -name *.cpp)
 OBJ=$(SRC:%.cpp=%.o)
 

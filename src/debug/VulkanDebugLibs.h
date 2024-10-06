@@ -2,8 +2,9 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-namespace AgnosiaEngine {
+namespace Debug {
   class VulkanDebugLibs {
+    
     public:
       void vulkanDebugSetup(VkInstanceCreateInfo& createInfo, VkInstance& instance);
       bool checkValidationLayerSupport();

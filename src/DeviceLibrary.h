@@ -1,9 +1,14 @@
 #pragma once
-#include <vulkan/vulkan_core.h>
-namespace AgnosiaEngine {
+#include "global.h"
+namespace DeviceControl {
   class DeviceLibrary {
     public:
+
       void pickPhysicalDevice(VkInstance& instance);
-      void createLogicalDevice(VkDevice& devicvee); 
+      void createLogicalDevice(VkDevice& device);
+      void createSurface(VkInstance& instance, GLFWwindow* window);
+      void destroySurface(VkInstance& instance);
   };
 }
+
+

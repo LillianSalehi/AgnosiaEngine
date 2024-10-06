@@ -5,18 +5,11 @@
 #include <GLFW/glfw3.h>
 
 #include "../global.h"
-#include "VulkanDebugLibs.h"
-using namespace AgnosiaEngine;
+using namespace Debug;
 
 #include <cstring>
 #include <vulkan/vulkan_core.h>
 
-// This ifdef checks if the build flag is present, hence whether to hook the debugger in at all.
-#ifdef DEBUG
-  const bool enableValidationLayers = true;
-#else 
-  const bool enableValidationLayers = false;
-#endif
 // This is our messenger object! It handles passing along debug messages to the debug callback we will also set.
 VkDebugUtilsMessengerEXT debugMessenger;
 // This is the set of "layers" to hook into. Basically, layers are used to tell the messenger what data we want, its a filter. *validation* is the general blanket layer to cover incorrect usage.
@@ -31,7 +24,7 @@ std::vector<const char*> getRequiredExtensions() {
   
   std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
   
-  if(enableValidationLayers) {
+  if(Global::enableValidationLayers) {
     extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
   return extensions;
@@ -50,6 +43,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 
     return VK_FALSE;
 }
+
+
 
 void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)  { 
   // There is absolutely nothing about this i like, those long ass flags for messageType and Severity are just fucking hex values. Khronos should never cook again ToT
@@ -71,9 +66,9 @@ void VulkanDebugLibs::vulkanDebugSetup(VkInstanceCreateInfo& createInfo, VkInsta
   createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
   createInfo.ppEnabledExtensionNames = extensions.data();
 
-  if(enableValidationLayers) {
-    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-    createInfo.ppEnabledLayerNames = validationLayers.data();
+  if(Global::enableValidationLayers) {
+    createInfo.enabledLayerCount = static_cast<uint32_t>(Global::validationLayers.size());
+    createInfo.ppEnabledLayerNames = Global::validationLayers.data();
 
     populateDebugMessengerCreateInfo(debugCreateInfo);
     createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
@@ -90,7 +85,7 @@ void VulkanDebugLibs::vulkanDebugSetup(VkInstanceCreateInfo& createInfo, VkInsta
 
 void VulkanDebugLibs::checkUnavailableValidationLayers() {
   // Check if we are trying to hook validation layers in without support.
-  if(enableValidationLayers && !checkValidationLayerSupport()) {
+  if(Global::enableValidationLayers && !checkValidationLayerSupport()) {
     throw std::runtime_error("Validation layers request, but not available! Are your SDK path variables set?");
   }
 }
@@ -106,7 +101,7 @@ bool VulkanDebugLibs::checkValidationLayerSupport() {
   std::vector<VkLayerProperties> availableLayers(layerCount);
   vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-  for(const char* layerName : validationLayers) { 
+  for(const char* layerName : Global::validationLayers) { 
     bool layerFound = false;
 
     for(const auto& layerProperties : availableLayers) {
@@ -153,7 +148,7 @@ void VulkanDebugLibs::DestroyDebugUtilsMessengerEXT(VkInstance instance,
 void VulkanDebugLibs::setupDebugMessenger(VkInstance& vulkanInstance) {
   // This is a pretty simple function! we just pass in the values to build the debug messenger, populate the structure with the data we want, 
   // and safely create it, covering for runtime errors as per usual, this is the first thing that will be called!
-  if(!enableValidationLayers) return;
+  if(!Global::enableValidationLayers) return;
   
   VkDebugUtilsMessengerCreateInfoEXT createInfo;
   populateDebugMessengerCreateInfo(createInfo);
