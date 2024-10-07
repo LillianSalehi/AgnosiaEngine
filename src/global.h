@@ -1,5 +1,5 @@
 #pragma once
-#include "debug/VulkanDebugLibs.h"
+#include "debug/vulkandebuglibs.h"
 #include <iostream>
 #include <vector>
 #include <vulkan/vulkan_core.h>

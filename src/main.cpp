@@ -1,6 +1,5 @@
-
-#include "DeviceLibrary.h" // Device Library includes global, redundant to include with it here
-#include "debug/VulkanDebugLibs.h"
+#include "devicelibrary.h" // Device Library includes global, redundant to include with it here
+#include "debug/vulkandebuglibs.h"
 
 #include <cstdint>
 #include <cstring>
@@ -22,8 +21,8 @@ public:
   }
 
 private:
-  DeviceControl::DeviceLibrary deviceLibs;
-  Debug::VulkanDebugLibs debugController;
+  DeviceControl::devicelibrary deviceLibs;
+  Debug::vulkandebuglibs debugController;
 
   GLFWwindow* window;
   VkInstance instance;
@@ -42,15 +41,16 @@ private:
 
   void initVulkan() {
     createInstance();
-    debugController.setupDebugMessenger(instance);                          // The debug messenger is out holy grail, it gives us Vulkan related debug info when built with the -DNDEBUG flag (as per the makefile)
+    debugController.setupDebugMessenger(instance);                // The debug messenger is out holy grail, it gives us Vulkan related debug info when built with the -DNDEBUG flag (as per the makefile)
     deviceLibs.createSurface(instance, window);
     deviceLibs.pickPhysicalDevice(instance);
     deviceLibs.createLogicalDevice(device);
     deviceLibs.createSwapChain(window, device);
+    deviceLibs.createImageViews(device);
   }
 
   void createInstance() {
-    debugController.checkUnavailableValidationLayers();                     // Check if there is a mistake with our Validation Layers.
+    debugController.checkUnavailableValidationLayers();           // Check if there is a mistake with our Validation Layers.
 
     // Set application info for the vulkan instance!
 	  VkApplicationInfo appInfo{};
@@ -66,7 +66,7 @@ private:
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;    // Tell vulkan this is a info structure 
     createInfo.pApplicationInfo = &appInfo;                       // We just created a new appInfo structure, so we pass the pointer to it.
 
-    debugController.vulkanDebugSetup(createInfo, instance);                 // Handoff to the debug library to wrap the validation libs in! (And set the window up!)
+    debugController.vulkanDebugSetup(createInfo, instance);       // Handoff to the debug library to wrap the validation libs in! (And set the window up!)
   }
 
   void mainLoop() {                                               // This loop just updates the GLFW window.
@@ -75,7 +75,8 @@ private:
     }
   }
 
-  void cleanup() {                                                // Similar to the last handoff, destroy the debug util in a safe manner in the library!
+  void cleanup() {                                                // Similar to the last handoff, destroy the utils in a safe manner in the library!
+    deviceLibs.destroyImageViews(device);
     deviceLibs.destroySwapChain(device);
     vkDestroyDevice(device, nullptr);
     if(Global::enableValidationLayers) {

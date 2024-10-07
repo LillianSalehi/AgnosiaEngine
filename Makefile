@@ -1,6 +1,7 @@
 CPPFLAGS=-g
 LDFLAGS=-lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
-DEBUGFLAGS=-DDEBUG -fsanitize=address 
+DEBUGFLAGS=-DDEBUG -fsanitize=address
+GDBFLAGS=
 SRC=$(shell find . -name *.cpp)
 OBJ=$(SRC:%.cpp=%.o)
 
@@ -13,13 +14,19 @@ all: $(BIN)
 .PHONY: run
 run: $(BIN)
 	./$(BIN)
+
+.PHONY: gdb
+gdb: LDFLAGS+=$(GDBFLAGS)
+gdb: $(BIN)
+	gdb -q $(BIN)
 .PHONY: debug
 debug: LDFLAGS+=$(DEBUGFLAGS)
 debug: $(BIN)
 	./$(BIN)
+
 .PHONY: dep
 dep: 
-	sudo pacman -S gcc glfw glm shaderc libxi libxxf86vm
+	sudo pacman -S gcc glfw glm shaderc libxi libxxf86vm gdb
 .PHONY: info
 info: 
 	@echo "make:		Build executable"
@@ -33,7 +40,7 @@ $(BIN): $(OBJ)
 	g++ $(CPPFLAGS) -o $(BIN) $(OBJ) $(LDFLAGS)
 
 %.o: %.cpp
-	g++ -c $< -o $@ $(LDFLAGS)
+	g++ -c -g $< -o $@ $(LDFLAGS)
 
 .PHONY: clean
 clean:

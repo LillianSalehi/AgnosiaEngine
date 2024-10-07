@@ -1,4 +1,4 @@
-#include "DeviceLibrary.h"
+#include "devicelibrary.h"
 #include "global.h"
 
 #include <algorithm>
@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <vulkan/vulkan_core.h>
 
 namespace DeviceControl {
 
@@ -23,6 +24,7 @@ namespace DeviceControl {
   std::vector<VkImage> swapChainImages;
   VkFormat swapChainImageFormat;
   VkExtent2D swapChainExtent;
+  std::vector<VkImageView> swapChainImageViews;
 
   VkQueue graphicsQueue;
   VkQueue presentQueue;
@@ -142,7 +144,6 @@ namespace DeviceControl {
   
     return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU 
       && deviceFeatures.multiViewport 
-      && deviceFeatures.geometryShader 
       && indices.isComplete() 
       && extensionSupported
       && swapChainAdequate;
@@ -166,9 +167,12 @@ namespace DeviceControl {
     // This is most similarly to standard V-Sync.
     for(const auto& availablePresentMode : availablePresentModes) {
       if(availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+        if(Global::enableValidationLayers) std::cout << "Using Triple Buffering\n" << std::endl;
         return availablePresentMode;
       }
     }
+
+    if(Global::enableValidationLayers) std::cout << "Using FIFO (V-Sync)\n" << std::endl;
     return VK_PRESENT_MODE_FIFO_KHR;
   }
   VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window) {
@@ -179,22 +183,22 @@ namespace DeviceControl {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
     } else {
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
+      int width, height;
+      glfwGetFramebufferSize(window, &width, &height);
 
-        VkExtent2D actualExtent = {
-            static_cast<uint32_t>(width),
-            static_cast<uint32_t>(height)
-        };
+      VkExtent2D actualExtent = {
+        static_cast<uint32_t>(width),
+        static_cast<uint32_t>(height)
+      };
         // Clamp the image size to the minimum extent values specified by vulkan for our window manager.
-        actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-        actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+       actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+       actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
-        return actualExtent;
+       return actualExtent;
     }
   }
 // --------------------------------------- External Functions -----------------------------------------//
-  void DeviceLibrary::pickPhysicalDevice(VkInstance& instance) {
+  void devicelibrary::pickPhysicalDevice(VkInstance& instance) {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
@@ -206,7 +210,7 @@ namespace DeviceControl {
 
     for(const auto& device : devices) {
       if(isDeviceSuitable(device)) {
-        std::cout << "Using device: " << deviceProperties.deviceName << std::endl;
+        if(Global::enableValidationLayers) std::cout << "Using device: " << deviceProperties.deviceName << std::endl;
         //Once we have buttons or such, maybe ask the user or write a config file for which GPU to use?
         physicalDevice = device;
         break;
@@ -216,17 +220,17 @@ namespace DeviceControl {
       throw std::runtime_error("Failed to find a suitable GPU!");
     }
   }
-  void DeviceLibrary::destroySurface(VkInstance& instance) {
+  void devicelibrary::destroySurface(VkInstance& instance) {
     vkDestroySurfaceKHR(instance, surface, nullptr);
-    std::cout << "Destroyed surface safely\n" << std::endl;
+    if(Global::enableValidationLayers) std::cout << "Destroyed surface safely\n" << std::endl;
   }
-  void DeviceLibrary::createSurface(VkInstance& instance, GLFWwindow* window) {
+  void devicelibrary::createSurface(VkInstance& instance, GLFWwindow* window) {
     if(glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create window surface!!");
     }
-    std::cout << "GLFW Window Surface created successfully\n" << std::endl;
+    if(Global::enableValidationLayers) std::cout << "GLFW Window Surface created successfully\n" << std::endl;
   }
-  void DeviceLibrary::createLogicalDevice(VkDevice& device) {
+  void devicelibrary::createLogicalDevice(VkDevice& device) {
     // Describe how many queues we want for a single family (1) here, right now we are solely interested in graphics capabilites,
     // but Compute Shaders, transfer ops, decode and encode operations can also queued with setup! We also assign each queue a priority.
     // We do this by looping over all the queueFamilies and sorting them by indices to fill the queue at the end!
@@ -264,12 +268,12 @@ namespace DeviceControl {
     if(vkCreateDevice(physicalDevice, &createDeviceInfo, nullptr, &device) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create logical device");
     }
-    std::cout << "Created Logical device successfully!\n" << std::endl;
+    if(Global::enableValidationLayers) std::cout << "Created Logical device successfully!\n" << std::endl;
 
     vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);  
     vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
   }
-  void DeviceLibrary::createSwapChain(GLFWwindow* window, VkDevice& device) {
+  void devicelibrary::createSwapChain(GLFWwindow* window, VkDevice& device) {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
     
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -326,7 +330,7 @@ namespace DeviceControl {
     if(vkCreateSwapchainKHR(device, &createSwapChainInfo, nullptr, &swapChain) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create the swap chain!!");
     }
-    std::cout << "Swap Chain created successfully\n" << std::endl;
+    if(Global::enableValidationLayers) std::cout << "Swap Chain created successfully\n" << std::endl;
 
     vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
     swapChainImages.resize(imageCount);
@@ -335,8 +339,42 @@ namespace DeviceControl {
     swapChainImageFormat = surfaceFormat.format;
     swapChainExtent = extent;
   }
-  void DeviceLibrary::destroySwapChain(VkDevice& device) {
+  void devicelibrary::destroySwapChain(VkDevice& device) {
     vkDestroySwapchainKHR(device, swapChain, nullptr);
-    std::cout << "Destroyed Swap Chain safely\n" << std::endl;   
+    if(Global::enableValidationLayers) std::cout << "Destroyed Swap Chain safely\n" << std::endl;   
+  }
+  void devicelibrary::createImageViews(VkDevice& device) {
+    swapChainImageViews.resize(swapChainImages.size());
+    for(size_t i = 0; i < swapChainImages.size(); i++) {
+      VkImageViewCreateInfo createImageViewInfo{};
+      createImageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+      createImageViewInfo.image = swapChainImages[i];
+      // Are we treating images as 1D, 2D or 3D?
+      createImageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+      createImageViewInfo.format = swapChainImageFormat;
+      // Allow us to swizzle color channels
+      createImageViewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+      createImageViewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+      createImageViewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+      createImageViewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY; 
+
+      createImageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      createImageViewInfo.subresourceRange.baseMipLevel = 0;
+      createImageViewInfo.subresourceRange.levelCount = 1;
+      createImageViewInfo.subresourceRange.baseArrayLayer = 0;
+      // Yet another setting we would increase for VR applications, and specifically create a swap chain with more layers as well. The other layers would be the eye outputs.
+      createImageViewInfo.subresourceRange.layerCount = 1;
+
+      if(vkCreateImageView(device, &createImageViewInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create image views!");
+      }
+      if(Global::enableValidationLayers) std::cout << "Image views created successfully\n" << std::endl;
+    }
+  }
+  void devicelibrary::destroyImageViews(VkDevice& device) {
+    for (auto imageView : swapChainImageViews) {  
+      vkDestroyImageView(device, imageView, nullptr);
+    }
+    if(Global::enableValidationLayers) std::cout << "Image destroyed safely\n" << std::endl;
   }
 }

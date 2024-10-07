@@ -3,7 +3,7 @@
 #include <vulkan/vulkan_core.h>
 
 namespace Debug {
-  class VulkanDebugLibs {
+  class vulkandebuglibs {
     
     public:
       void vulkanDebugSetup(VkInstanceCreateInfo& createInfo, VkInstance& instance);

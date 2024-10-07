@@ -1,3 +1,4 @@
+#include "vulkandebuglibs.h"
 #include "../global.h"
 using namespace Debug;
 
@@ -53,7 +54,7 @@ void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create
   createInfo.pUserData = nullptr; // Optional
 }
 
-void VulkanDebugLibs::vulkanDebugSetup(VkInstanceCreateInfo& createInfo, VkInstance& instance) {
+void vulkandebuglibs::vulkanDebugSetup(VkInstanceCreateInfo& createInfo, VkInstance& instance) {
   // This function is quite useful, we first populate the debug create info structure, all the parameters dictating how the debug messenger will operate.
   // The reason we populate the debug messenger so late is actually on purpose, we need to set the createInfo, which depends on the debugMessenger info,
   // and if we set it before the creation of the instance, we cant debug vkCreateInstance or vkDestroyInstance! It's timed perfectly as of now.
@@ -79,14 +80,14 @@ void VulkanDebugLibs::vulkanDebugSetup(VkInstanceCreateInfo& createInfo, VkInsta
   }
 }
 
-void VulkanDebugLibs::checkUnavailableValidationLayers() {
+void vulkandebuglibs::checkUnavailableValidationLayers() {
   // Check if we are trying to hook validation layers in without support.
   if(Global::enableValidationLayers && !checkValidationLayerSupport()) {
     throw std::runtime_error("Validation layers request, but not available! Are your SDK path variables set?");
   }
 }
 
-bool VulkanDebugLibs::checkValidationLayerSupport() {
+bool vulkandebuglibs::checkValidationLayerSupport() {
   // This function is used to check Validation Layer Support, validation layers are the debug trace tools in the Vulkan SDK.
   // layerCount will be used as the var to keep track of the number of requested validation layer
   // VkLayerProperties is a structure with data on the layername, desc, versions and etc. 
@@ -131,7 +132,7 @@ VkResult CreateDebugUtilsMessengerEXT(
     }
 }
 
-void VulkanDebugLibs::DestroyDebugUtilsMessengerEXT(VkInstance instance, 
+void vulkandebuglibs::DestroyDebugUtilsMessengerEXT(VkInstance instance, 
   const VkAllocationCallbacks* pAllocator) {
   // We are doing kind of the same thing as before in the create function, find the address of the DestroyDebugUtils function, and call it.
 
@@ -141,7 +142,7 @@ void VulkanDebugLibs::DestroyDebugUtilsMessengerEXT(VkInstance instance,
   }
 }
 
-void VulkanDebugLibs::setupDebugMessenger(VkInstance& vulkanInstance) {
+void vulkandebuglibs::setupDebugMessenger(VkInstance& vulkanInstance) {
   // This is a pretty simple function! we just pass in the values to build the debug messenger, populate the structure with the data we want, 
   // and safely create it, covering for runtime errors as per usual, this is the first thing that will be called!
   if(!Global::enableValidationLayers) return;

@@ -1,7 +1,7 @@
 #pragma once
 #include "global.h"
 namespace DeviceControl {
-  class DeviceLibrary {
+  class devicelibrary {
     public:
 
       void pickPhysicalDevice(VkInstance& instance);
@@ -10,6 +10,8 @@ namespace DeviceControl {
       void destroySurface(VkInstance& instance);
       void createSwapChain(GLFWwindow* window, VkDevice& device);
       void destroySwapChain(VkDevice& device);
+      void createImageViews(VkDevice& device);
+      void destroyImageViews(VkDevice& device);
   };
 }
 
