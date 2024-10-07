@@ -8,6 +8,8 @@ namespace DeviceControl {
       void createLogicalDevice(VkDevice& device);
       void createSurface(VkInstance& instance, GLFWwindow* window);
       void destroySurface(VkInstance& instance);
+      void createSwapChain(GLFWwindow* window, VkDevice& device);
+      void destroySwapChain(VkDevice& device);
   };
 }
 

@@ -46,6 +46,7 @@ private:
     deviceLibs.createSurface(instance, window);
     deviceLibs.pickPhysicalDevice(instance);
     deviceLibs.createLogicalDevice(device);
+    deviceLibs.createSwapChain(window, device);
   }
 
   void createInstance() {
@@ -75,6 +76,7 @@ private:
   }
 
   void cleanup() {                                                // Similar to the last handoff, destroy the debug util in a safe manner in the library!
+    deviceLibs.destroySwapChain(device);
     vkDestroyDevice(device, nullptr);
     if(Global::enableValidationLayers) {
       debugController.DestroyDebugUtilsMessengerEXT(instance, nullptr);
