@@ -1,5 +1,6 @@
 #include "devicelibrary.h" // Device Library includes global, redundant to include with it here
 #include "debug/vulkandebuglibs.h"
+#include "graphics/graphicspipeline.h"
 
 #include <cstdint>
 #include <cstring>
@@ -23,7 +24,7 @@ public:
 private:
   DeviceControl::devicelibrary deviceLibs;
   Debug::vulkandebuglibs debugController;
-
+  Graphics::graphicspipeline graphicsPipeline;
   GLFWwindow* window;
   VkInstance instance;
   VkDevice device;
@@ -47,6 +48,7 @@ private:
     deviceLibs.createLogicalDevice(device);
     deviceLibs.createSwapChain(window, device);
     deviceLibs.createImageViews(device);
+    graphicsPipeline.createGraphicsPipeline(device);
   }
 
   void createInstance() {
@@ -76,6 +78,7 @@ private:
   }
 
   void cleanup() {                                                // Similar to the last handoff, destroy the utils in a safe manner in the library!
+    graphicsPipeline.destroyGraphicsPipeline(device);
     deviceLibs.destroyImageViews(device);
     deviceLibs.destroySwapChain(device);
     vkDestroyDevice(device, nullptr);

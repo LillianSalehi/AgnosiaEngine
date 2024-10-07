@@ -1,7 +1,7 @@
 #pragma once
 #include "global.h"
 namespace DeviceControl {
-  class devicelibrary {
+class devicelibrary {
     public:
 
       void pickPhysicalDevice(VkInstance& instance);
