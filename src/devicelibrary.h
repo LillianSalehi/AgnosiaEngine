@@ -14,6 +14,7 @@ class devicelibrary {
       void destroyImageViews();
       void createCommandPool();
       void destroyCommandPool();
+
       // ---------- Getters & Setters ----------- //
       VkFormat getImageFormat();
       std::vector<VkImageView> getSwapChainImageViews();

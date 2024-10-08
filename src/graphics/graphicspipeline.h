@@ -13,5 +13,6 @@ namespace Graphics {
       void createCommandPool();
       void destroyCommandPool();
       void createCommandBuffer();
+      void recordCommandBuffer(VkCommandBuffer cmndBuffer, uint32_t imageIndex);
   };
 }

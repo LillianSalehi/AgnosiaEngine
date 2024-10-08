@@ -11,8 +11,6 @@ namespace Graphics {
   };
   std::vector<VkFramebuffer> swapChainFramebuffers;
 
-  VkCommandPool commandPool;
-  VkCommandBuffer commandBuffer;
 
   VkRenderPass renderPass;
   VkPipelineLayout pipelineLayout;
@@ -242,6 +240,7 @@ namespace Graphics {
   }
 
   void graphicspipeline::createCommandPool() {
+
     Global::QueueFamilyIndices queueFamilyIndices = Global::findQueueFamilies(Global::physicalDevice);
 
     VkCommandPoolCreateInfo poolInfo{};
@@ -249,28 +248,30 @@ namespace Graphics {
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
     
-    if(vkCreateCommandPool(Global::device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+    if(vkCreateCommandPool(Global::device, &poolInfo, nullptr, &Global::commandPool) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create command pool!");
     }
     if(Global::enableValidationLayers) std::cout << "Command pool created successfully\n" << std::endl;
   }
   void graphicspipeline::destroyCommandPool() {
-    vkDestroyCommandPool(Global::device, commandPool, nullptr);
+    vkDestroyCommandPool(Global::device, Global::commandPool, nullptr);
   }
   void graphicspipeline::createCommandBuffer() {
+    Global::commandBuffers.resize(Global::MAX_FRAMES_IN_FLIGHT);
+
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = commandPool;
+    allocInfo.commandPool = Global::commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
+    allocInfo.commandBufferCount = (uint32_t) Global::commandBuffers.size();
 
-    if(vkAllocateCommandBuffers(Global::device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
+    if(vkAllocateCommandBuffers(Global::device, &allocInfo, Global::commandBuffers.data()) != VK_SUCCESS) {
       throw std::runtime_error("Failed to allocate command buffers");
     }
     if(Global::enableValidationLayers) std::cout << "Allocated command buffers successfully\n" << std::endl;
   }
 
-  void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+  void graphicspipeline::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0; // Optional

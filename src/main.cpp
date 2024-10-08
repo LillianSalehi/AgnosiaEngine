@@ -1,6 +1,7 @@
 #include "devicelibrary.h" // Device Library includes global, redundant to include with it here
 #include "debug/vulkandebuglibs.h"
 #include "graphics/graphicspipeline.h"
+#include "graphics/render.h"
 
 #include <cstdint>
 #include <cstring>
@@ -25,6 +26,7 @@ private:
   DeviceControl::devicelibrary deviceLibs;
   Debug::vulkandebuglibs debugController;
   Graphics::graphicspipeline graphicsPipeline;
+  RenderPresent::render renderPresentation;
   GLFWwindow* window;
   VkInstance instance;
 
@@ -52,6 +54,7 @@ private:
     graphicsPipeline.createFramebuffers();
     graphicsPipeline.createCommandPool();
     graphicsPipeline.createCommandBuffer();
+    renderPresentation.createSyncObject();
   }
 
   void createInstance() {
@@ -77,7 +80,9 @@ private:
   void mainLoop() {                                               // This loop just updates the GLFW window.
     while (!glfwWindowShouldClose(window)) {
       glfwPollEvents();
+      renderPresentation.drawFrame();
     }
+    vkDeviceWaitIdle(Global::device);
   }
 
   void cleanup() {                                                // Similar to the last handoff, destroy the utils in a safe manner in the library!

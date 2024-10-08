@@ -14,6 +14,11 @@ namespace Global {
   extern const std::vector<const char*> validationLayers;
   extern const bool enableValidationLayers;
   extern VkDevice device;  
+  extern VkCommandPool commandPool;
+  extern std::vector<VkCommandBuffer> commandBuffers;  
+  extern VkQueue graphicsQueue;
+  extern VkQueue presentQueue;
+  const int MAX_FRAMES_IN_FLIGHT = 2;
   struct QueueFamilyIndices {
     // We need to check that the Queue families support graphics operations and window presentation, sometimes they can support one or the other,
     // therefore, we take into account both for completion.
@@ -24,7 +29,7 @@ namespace Global {
       return graphicsFamily.has_value() && presentFamily.has_value();
     }
   };
-
+  extern VkSwapchainKHR swapChain;
   extern VkSurfaceKHR surface;
   extern VkPhysicalDevice physicalDevice;
   Global::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);

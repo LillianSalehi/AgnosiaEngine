@@ -19,14 +19,12 @@ namespace DeviceControl {
   VkPhysicalDeviceFeatures deviceFeatures;
 
 
-  VkSwapchainKHR swapChain;
   std::vector<VkImage> swapChainImages;
   VkFormat swapChainImageFormat;
   VkExtent2D swapChainExtent;
   std::vector<VkImageView> swapChainImageViews;
 
-  VkQueue graphicsQueue;
-  VkQueue presentQueue;
+
   
   struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
@@ -227,8 +225,8 @@ namespace DeviceControl {
     }
     if(Global::enableValidationLayers) std::cout << "Created Logical device successfully!\n" << std::endl;
 
-    vkGetDeviceQueue(Global::device, indices.graphicsFamily.value(), 0, &graphicsQueue);  
-    vkGetDeviceQueue(Global::device, indices.presentFamily.value(), 0, &presentQueue);
+    vkGetDeviceQueue(Global::device, indices.graphicsFamily.value(), 0, &Global::graphicsQueue);  
+    vkGetDeviceQueue(Global::device, indices.presentFamily.value(), 0, &Global::presentQueue);
   }
   void devicelibrary::createSwapChain(GLFWwindow* window) {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(Global::physicalDevice);
@@ -284,20 +282,20 @@ namespace DeviceControl {
     // require you to recreate it and reference the old one specified here, will revisit in a few days.
     createSwapChainInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if(vkCreateSwapchainKHR(Global::device, &createSwapChainInfo, nullptr, &swapChain) != VK_SUCCESS) {
+    if(vkCreateSwapchainKHR(Global::device, &createSwapChainInfo, nullptr, &Global::swapChain) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create the swap chain!!");
     }
     if(Global::enableValidationLayers) std::cout << "Swap Chain created successfully\n" << std::endl;
 
-    vkGetSwapchainImagesKHR(Global::device, swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(Global::device, Global::swapChain, &imageCount, nullptr);
     swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(Global::device, swapChain, &imageCount, swapChainImages.data());
+    vkGetSwapchainImagesKHR(Global::device, Global::swapChain, &imageCount, swapChainImages.data());
 
     swapChainImageFormat = surfaceFormat.format;
     swapChainExtent = extent;
   }
   void devicelibrary::destroySwapChain() {
-    vkDestroySwapchainKHR(Global::device, swapChain, nullptr);
+    vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
     if(Global::enableValidationLayers) std::cout << "Destroyed Swap Chain safely\n" << std::endl;   
   }
   void devicelibrary::createImageViews() {
