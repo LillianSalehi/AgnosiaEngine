@@ -1,12 +1,24 @@
 #include "graphicspipeline.h"
+#include "../devicelibrary.h"
+#include <cstdint>
 #include <fstream>
+#include <stdexcept>
+#include <vulkan/vulkan_core.h>
 namespace Graphics {
   std::vector<VkDynamicState> dynamicStates = {
     VK_DYNAMIC_STATE_VIEWPORT,
     VK_DYNAMIC_STATE_SCISSOR
   };
-  VkPipelineLayout pipelineLayout;
+  std::vector<VkFramebuffer> swapChainFramebuffers;
 
+  VkCommandPool commandPool;
+  VkCommandBuffer commandBuffer;
+
+  VkRenderPass renderPass;
+  VkPipelineLayout pipelineLayout;
+  VkPipeline graphicsPipeline;
+  DeviceControl::devicelibrary deviceLibs;
+  
   static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
@@ -36,17 +48,20 @@ namespace Graphics {
     return shaderModule;
   }
 
-  void graphicspipeline::destroyGraphicsPipeline(VkDevice& device) {
-    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+  void graphicspipeline::destroyGraphicsPipeline() {
+    vkDestroyPipeline(Global::device, graphicsPipeline, nullptr);
+    if(Global::enableValidationLayers) std::cout << "Destroyed Graphics Pipeline safely\n" << std::endl; 
+    vkDestroyPipelineLayout(Global::device, pipelineLayout, nullptr);
     if(Global::enableValidationLayers) std::cout << "Destroyed Layout Pipeline safely\n" << std::endl;
+    
   }
 
-  void graphicspipeline::createGraphicsPipeline(VkDevice& device) {
+  void graphicspipeline::createGraphicsPipeline() {
     // Note to self, for some reason the working directory is not where a read file is called from, but the project folder!
     auto vertShaderCode = readFile("src/shaders/vert.spv");
     auto fragShaderCode = readFile("src/shaders/frag.spv");
-    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode, device);
-    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode, device);
+    VkShaderModule vertShaderModule = createShaderModule(vertShaderCode, Global::device);
+    VkShaderModule fragShaderModule = createShaderModule(fragShaderCode, Global::device);
 
     // ------------------ STAGE 1 - INPUT ASSEMBLER ---------------- //
     // This can get a little complicated, normally, vertices are loaded in sequential order, with an element buffer however, you can specify the indices yourself!
@@ -133,13 +148,174 @@ namespace Graphics {
     pipelineLayoutInfo.setLayoutCount = 0;
     pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+    if (vkCreatePipelineLayout(Global::device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
       throw std::runtime_error("failed to create pipeline layout!");
     }
+    // Here we combine all of the structures we created to make the final pipeline!
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineInfo.stageCount = 2;
+    pipelineInfo.pStages = shaderStages;
+    pipelineInfo.pVertexInputState = &vertexInputInfo;
+    pipelineInfo.pInputAssemblyState = &inputAssembly;
+    pipelineInfo.pViewportState = &viewportState;
+    pipelineInfo.pRasterizationState = &rasterizer;
+    pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pColorBlendState = &colorBlending;
+    pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.layout = pipelineLayout;
+    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.subpass = 0;
 
-    vkDestroyShaderModule(device, fragShaderModule, nullptr);
-    vkDestroyShaderModule(device, vertShaderModule, nullptr); 
+    if (vkCreateGraphicsPipelines(Global::device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create graphics pipeline!");
+    }
+    vkDestroyShaderModule(Global::device, fragShaderModule, nullptr);
+    vkDestroyShaderModule(Global::device, vertShaderModule, nullptr); 
     
     if(Global::enableValidationLayers) std::cout << "Pipeline Layout created successfully\n" << std::endl;
+  }
+  void graphicspipeline::createRenderPass() {
+    VkAttachmentDescription colorAttachment{};
+    colorAttachment.format = deviceLibs.getImageFormat();
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    
+    VkAttachmentReference colorAttachmentRef{};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass{};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+
+    VkRenderPassCreateInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.subpassCount = 1;
+    renderPassInfo.pSubpasses = &subpass;
+  
+    if (vkCreateRenderPass(Global::device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+      throw std::runtime_error("failed to create render pass!");
+    }
+    if(Global::enableValidationLayers) std::cout << "Render pass created successfully\n" << std::endl;
+  }
+  void graphicspipeline::destroyRenderPass() {
+    vkDestroyRenderPass(Global::device, renderPass, nullptr);
+    std::cout << "Destroyed Render Pass Safely\n" << std::endl;
+  }
+  void graphicspipeline::createFramebuffers() {
+    // Resize the container to hold all the framebuffers.
+    int framebuffersSize = deviceLibs.getSwapChainImageViews().size();
+    swapChainFramebuffers.resize(framebuffersSize);
+
+    for(size_t i = 0; i < framebuffersSize; i++) {
+      VkImageView attachments[] = {
+        deviceLibs.getSwapChainImageViews()[i]
+      };
+    
+      VkFramebufferCreateInfo framebufferInfo{};
+      framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+      framebufferInfo.renderPass = renderPass;
+      framebufferInfo.attachmentCount = 1;
+      framebufferInfo.pAttachments = attachments;
+      framebufferInfo.width = deviceLibs.getSwapChainExtent().width;
+      framebufferInfo.height = deviceLibs.getSwapChainExtent().height;
+      framebufferInfo.layers = 1;
+
+      if(vkCreateFramebuffer(Global::device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create framebuffer!");
+      }
+    }
+  }
+  void graphicspipeline::destroyFramebuffers() {
+    for (auto framebuffer : swapChainFramebuffers) {
+      vkDestroyFramebuffer(Global::device, framebuffer, nullptr);
+    }
+  }
+
+  void graphicspipeline::createCommandPool() {
+    Global::QueueFamilyIndices queueFamilyIndices = Global::findQueueFamilies(Global::physicalDevice);
+
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+    
+    if(vkCreateCommandPool(Global::device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create command pool!");
+    }
+    if(Global::enableValidationLayers) std::cout << "Command pool created successfully\n" << std::endl;
+  }
+  void graphicspipeline::destroyCommandPool() {
+    vkDestroyCommandPool(Global::device, commandPool, nullptr);
+  }
+  void graphicspipeline::createCommandBuffer() {
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+
+    if(vkAllocateCommandBuffers(Global::device, &allocInfo, &commandBuffer) != VK_SUCCESS) {
+      throw std::runtime_error("Failed to allocate command buffers");
+    }
+    if(Global::enableValidationLayers) std::cout << "Allocated command buffers successfully\n" << std::endl;
+  }
+
+  void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = 0; // Optional
+    beginInfo.pInheritanceInfo = nullptr; // Optional
+
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+      throw std::runtime_error("failed to begin recording command buffer!");
+    }
+    if(Global::enableValidationLayers) std::cout << "Recording command buffer...\n" << std::endl;
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = renderPass;
+    renderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = deviceLibs.getSwapChainExtent();
+
+    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearColor;
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = (float) deviceLibs.getSwapChainExtent().width;
+    viewport.height = (float) deviceLibs.getSwapChainExtent().height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {0, 0};
+    scissor.extent = deviceLibs.getSwapChainExtent();
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);            
+
+    vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+
+    vkCmdEndRenderPass(commandBuffer);
+
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+      throw std::runtime_error("failed to record command buffer!");
+    }
   }
 }

@@ -1,17 +1,23 @@
 #pragma once
 #include "global.h"
+#include <optional>
 namespace DeviceControl {
 class devicelibrary {
     public:
-
       void pickPhysicalDevice(VkInstance& instance);
-      void createLogicalDevice(VkDevice& device);
+      void createLogicalDevice();
       void createSurface(VkInstance& instance, GLFWwindow* window);
       void destroySurface(VkInstance& instance);
-      void createSwapChain(GLFWwindow* window, VkDevice& device);
-      void destroySwapChain(VkDevice& device);
-      void createImageViews(VkDevice& device);
-      void destroyImageViews(VkDevice& device);
+      void createSwapChain(GLFWwindow* window);
+      void destroySwapChain();
+      void createImageViews();
+      void destroyImageViews();
+      void createCommandPool();
+      void destroyCommandPool();
+      // ---------- Getters & Setters ----------- //
+      VkFormat getImageFormat();
+      std::vector<VkImageView> getSwapChainImageViews();
+      VkExtent2D getSwapChainExtent();
   };
 }
 

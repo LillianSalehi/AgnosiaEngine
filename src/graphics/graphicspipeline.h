@@ -4,7 +4,14 @@
 namespace Graphics {
   class graphicspipeline {
     public:
-      void createGraphicsPipeline(VkDevice& device);
-      void destroyGraphicsPipeline(VkDevice& device);
+      void createGraphicsPipeline();
+      void destroyGraphicsPipeline();
+      void createRenderPass();
+      void destroyRenderPass();
+      void createFramebuffers();
+      void destroyFramebuffers();
+      void createCommandPool();
+      void destroyCommandPool();
+      void createCommandBuffer();
   };
 }

@@ -15,10 +15,9 @@
 namespace DeviceControl {
 
 
-  VkSurfaceKHR surface;
-  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   VkPhysicalDeviceProperties deviceProperties;
   VkPhysicalDeviceFeatures deviceFeatures;
+
 
   VkSwapchainKHR swapChain;
   std::vector<VkImage> swapChainImages;
@@ -29,16 +28,6 @@ namespace DeviceControl {
   VkQueue graphicsQueue;
   VkQueue presentQueue;
   
-  struct QueueFamilyIndices {
-    // We need to check that the Queue families support graphics operations and window presentation, sometimes they can support one or the other,
-    // therefore, we take into account both for completion.
-    std::optional<uint32_t> graphicsFamily;
-    std::optional<uint32_t> presentFamily;
-
-    bool isComplete() {
-      return graphicsFamily.has_value() && presentFamily.has_value();
-    }
-  };
   struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
     std::vector<VkSurfaceFormatKHR> formats;
@@ -47,55 +36,6 @@ namespace DeviceControl {
   const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
   };
-  QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
-    // First we feed in a integer we want to use to hold the number of queued items, that fills it, then we create that amount of default constructed *VkQueueFamilyProperties* structs. 
-    // These store the flags, the amount of queued items in the family, and timestamp data. Queue families are simply group collections of tasks we want to get done. 
-    // Next, we check the flags of the queueFamily item, use a bitwise and to see if they match, i.e. support graphical operations, then return that to notify that we have at least one family that supports VK_QUEUE_GRAPHICS_BIT.
-    // Which means this device supports graphical operations!
-    // We also do the same thing for window presentation, just check to see if its supported.
-    QueueFamilyIndices indices;
-  
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-    int i = 0;
-    for(const auto& queueFamily : queueFamilies) {
-      if(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-        indices.graphicsFamily = i;
-      }
-
-      VkBool32 presentSupport = false;
-      vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-      if(presentSupport) {
-        indices.presentFamily = i;
-      }
-
-      if(indices.isComplete()) {
-        break;
-      }
-      i++;
-    }
-    return indices;
-  }
-
-  bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
-    uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-    
-    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-    
-    std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
-
-    for(const auto& extension : availableExtensions) {
-      requiredExtensions.erase(extension.extensionName);
-    }
-
-    return requiredExtensions.empty();
-  }
   SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
 
     // Swap chains are weird ngl, it's another one of those Vulkan platform agnosticity. The swapchain is basically a wrapper for GDI+, DXGI, X11, Wayland, etc.
@@ -104,26 +44,43 @@ namespace DeviceControl {
     // (still no fucking clue how it works though)
     SwapChainSupportDetails details;
 
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, Global::surface, &details.capabilities);
 
     uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, Global::surface, &formatCount, nullptr);
 
     if(formatCount != 0) {
       details.formats.resize(formatCount);
-      vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+      vkGetPhysicalDeviceSurfaceFormatsKHR(device, Global::surface, &formatCount, details.formats.data());
     }
     
     uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, Global::surface, &presentModeCount, details.presentModes.data());
 
     if(presentModeCount != 0) {
       details.presentModes.resize(presentModeCount);
-      vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+      vkGetPhysicalDeviceSurfacePresentModesKHR(device, Global::surface, &presentModeCount, details.presentModes.data());
     }
   
     return details;
   }
+
+  bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+    std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+    for (const auto& extension : availableExtensions) {
+       requiredExtensions.erase(extension.extensionName);
+    }
+
+    return requiredExtensions.empty();
+  }
+
   bool isDeviceSuitable(VkPhysicalDevice device) {
     // These two are simple, create a structure to hold the apiVersion, driverVersion, vendorID, deviceID and type, name, and a few other settings.
     // Then populate it by passing in the device and the structure reference.
@@ -133,7 +90,7 @@ namespace DeviceControl {
     vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
     // We need to find a device that supports graphical operations, or else we cant do much with it! This function just runs over all the queueFamilies and sees if there 
     // is a queue family with the VK_QUEUE_GRAPHICS_BIT flipped!
-    QueueFamilyIndices indices = findQueueFamilies(device);
+    Global::QueueFamilyIndices indices = Global::findQueueFamilies(device);
     bool extensionSupported = checkDeviceExtensionSupport(device);
     bool swapChainAdequate = false;
 
@@ -148,7 +105,7 @@ namespace DeviceControl {
       && extensionSupported
       && swapChainAdequate;
   }
-// -------------------------------------- Swap Chain Settings -----------------------------------------//
+// -------------------------------------- Swap Chain Settings ----------------------------------------- //
   VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
     // One of three settings we can set, Surface Format controls the color space and format.
     
@@ -197,7 +154,7 @@ namespace DeviceControl {
        return actualExtent;
     }
   }
-// --------------------------------------- External Functions -----------------------------------------//
+// --------------------------------------- External Functions ----------------------------------------- //
   void devicelibrary::pickPhysicalDevice(VkInstance& instance) {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -212,29 +169,29 @@ namespace DeviceControl {
       if(isDeviceSuitable(device)) {
         if(Global::enableValidationLayers) std::cout << "Using device: " << deviceProperties.deviceName << std::endl;
         //Once we have buttons or such, maybe ask the user or write a config file for which GPU to use?
-        physicalDevice = device;
+        Global::physicalDevice = device;
         break;
       }
     }
-    if(physicalDevice == VK_NULL_HANDLE) {
+    if(Global::physicalDevice == VK_NULL_HANDLE) {
       throw std::runtime_error("Failed to find a suitable GPU!");
     }
   }
   void devicelibrary::destroySurface(VkInstance& instance) {
-    vkDestroySurfaceKHR(instance, surface, nullptr);
+    vkDestroySurfaceKHR(instance, Global::surface, nullptr);
     if(Global::enableValidationLayers) std::cout << "Destroyed surface safely\n" << std::endl;
   }
   void devicelibrary::createSurface(VkInstance& instance, GLFWwindow* window) {
-    if(glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
+    if(glfwCreateWindowSurface(instance, window, nullptr, &Global::surface) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create window surface!!");
     }
     if(Global::enableValidationLayers) std::cout << "GLFW Window Surface created successfully\n" << std::endl;
   }
-  void devicelibrary::createLogicalDevice(VkDevice& device) {
+  void devicelibrary::createLogicalDevice() {
     // Describe how many queues we want for a single family (1) here, right now we are solely interested in graphics capabilites,
     // but Compute Shaders, transfer ops, decode and encode operations can also queued with setup! We also assign each queue a priority.
     // We do this by looping over all the queueFamilies and sorting them by indices to fill the queue at the end!
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+    Global::QueueFamilyIndices indices = Global::findQueueFamilies(Global::physicalDevice);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = { 
@@ -265,16 +222,16 @@ namespace DeviceControl {
     } else {
       createDeviceInfo.enabledLayerCount = 0;
     }
-    if(vkCreateDevice(physicalDevice, &createDeviceInfo, nullptr, &device) != VK_SUCCESS) {
+    if(vkCreateDevice(Global::physicalDevice, &createDeviceInfo, nullptr, &Global::device) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create logical device");
     }
     if(Global::enableValidationLayers) std::cout << "Created Logical device successfully!\n" << std::endl;
 
-    vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);  
-    vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
+    vkGetDeviceQueue(Global::device, indices.graphicsFamily.value(), 0, &graphicsQueue);  
+    vkGetDeviceQueue(Global::device, indices.presentFamily.value(), 0, &presentQueue);
   }
-  void devicelibrary::createSwapChain(GLFWwindow* window, VkDevice& device) {
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
+  void devicelibrary::createSwapChain(GLFWwindow* window) {
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(Global::physicalDevice);
     
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
     VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -290,7 +247,7 @@ namespace DeviceControl {
     
     VkSwapchainCreateInfoKHR createSwapChainInfo{};
     createSwapChainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createSwapChainInfo.surface = surface;
+    createSwapChainInfo.surface = Global::surface;
     createSwapChainInfo.minImageCount = imageCount;
     createSwapChainInfo.imageFormat = surfaceFormat.format;
     createSwapChainInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -303,7 +260,7 @@ namespace DeviceControl {
     createSwapChainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
     // This handles swap chain images across multiple queue families, ie, if the graphics queue family is different from the present queue
-    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+    Global::QueueFamilyIndices indices = Global::findQueueFamilies(Global::physicalDevice);
     uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
     // Usage across multiple queue families without explicit transfer of ownership if they are different queue families.
     // Otherwise, no sharing without explicit handoffs, faster, but not easily supported with multiple families.
@@ -327,23 +284,23 @@ namespace DeviceControl {
     // require you to recreate it and reference the old one specified here, will revisit in a few days.
     createSwapChainInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if(vkCreateSwapchainKHR(device, &createSwapChainInfo, nullptr, &swapChain) != VK_SUCCESS) {
+    if(vkCreateSwapchainKHR(Global::device, &createSwapChainInfo, nullptr, &swapChain) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create the swap chain!!");
     }
     if(Global::enableValidationLayers) std::cout << "Swap Chain created successfully\n" << std::endl;
 
-    vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(Global::device, swapChain, &imageCount, nullptr);
     swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+    vkGetSwapchainImagesKHR(Global::device, swapChain, &imageCount, swapChainImages.data());
 
     swapChainImageFormat = surfaceFormat.format;
     swapChainExtent = extent;
   }
-  void devicelibrary::destroySwapChain(VkDevice& device) {
-    vkDestroySwapchainKHR(device, swapChain, nullptr);
+  void devicelibrary::destroySwapChain() {
+    vkDestroySwapchainKHR(Global::device, swapChain, nullptr);
     if(Global::enableValidationLayers) std::cout << "Destroyed Swap Chain safely\n" << std::endl;   
   }
-  void devicelibrary::createImageViews(VkDevice& device) {
+  void devicelibrary::createImageViews() {
     swapChainImageViews.resize(swapChainImages.size());
     for(size_t i = 0; i < swapChainImages.size(); i++) {
       VkImageViewCreateInfo createImageViewInfo{};
@@ -365,16 +322,28 @@ namespace DeviceControl {
       // Yet another setting we would increase for VR applications, and specifically create a swap chain with more layers as well. The other layers would be the eye outputs.
       createImageViewInfo.subresourceRange.layerCount = 1;
 
-      if(vkCreateImageView(device, &createImageViewInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
+      if(vkCreateImageView(Global::device, &createImageViewInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
         throw std::runtime_error("failed to create image views!");
       }
       if(Global::enableValidationLayers) std::cout << "Image views created successfully\n" << std::endl;
     }
   }
-  void devicelibrary::destroyImageViews(VkDevice& device) {
+  void devicelibrary::destroyImageViews() {
     for (auto imageView : swapChainImageViews) {  
-      vkDestroyImageView(device, imageView, nullptr);
+      vkDestroyImageView(Global::device, imageView, nullptr);
     }
     if(Global::enableValidationLayers) std::cout << "Image destroyed safely\n" << std::endl;
   }
+
+// --------------------------------------- Getters & Setters ------------------------------------------ //
+  VkFormat devicelibrary::getImageFormat() {
+    return swapChainImageFormat;
+  }
+  std::vector<VkImageView> devicelibrary::getSwapChainImageViews() {
+    return swapChainImageViews;
+  }
+  VkExtent2D devicelibrary::getSwapChainExtent() {
+    return swapChainExtent;
+  }
 }
+

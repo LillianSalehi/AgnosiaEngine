@@ -27,7 +27,6 @@ private:
   Graphics::graphicspipeline graphicsPipeline;
   GLFWwindow* window;
   VkInstance instance;
-  VkDevice device;
 
   // Initialize GLFW Window. First, Initialize GLFW lib, disable resizing for
   // now, and create window.
@@ -45,10 +44,14 @@ private:
     debugController.setupDebugMessenger(instance);                // The debug messenger is out holy grail, it gives us Vulkan related debug info when built with the -DNDEBUG flag (as per the makefile)
     deviceLibs.createSurface(instance, window);
     deviceLibs.pickPhysicalDevice(instance);
-    deviceLibs.createLogicalDevice(device);
-    deviceLibs.createSwapChain(window, device);
-    deviceLibs.createImageViews(device);
-    graphicsPipeline.createGraphicsPipeline(device);
+    deviceLibs.createLogicalDevice();
+    deviceLibs.createSwapChain(window);
+    deviceLibs.createImageViews();
+    graphicsPipeline.createRenderPass();
+    graphicsPipeline.createGraphicsPipeline();
+    graphicsPipeline.createFramebuffers();
+    graphicsPipeline.createCommandPool();
+    graphicsPipeline.createCommandBuffer();
   }
 
   void createInstance() {
@@ -78,10 +81,13 @@ private:
   }
 
   void cleanup() {                                                // Similar to the last handoff, destroy the utils in a safe manner in the library!
-    graphicsPipeline.destroyGraphicsPipeline(device);
-    deviceLibs.destroyImageViews(device);
-    deviceLibs.destroySwapChain(device);
-    vkDestroyDevice(device, nullptr);
+    graphicsPipeline.destroyCommandPool();
+    graphicsPipeline.destroyFramebuffers();
+    graphicsPipeline.destroyGraphicsPipeline();
+    graphicsPipeline.destroyRenderPass();
+    deviceLibs.destroyImageViews();
+    deviceLibs.destroySwapChain();
+    vkDestroyDevice(Global::device, nullptr);
     if(Global::enableValidationLayers) {
       debugController.DestroyDebugUtilsMessengerEXT(instance, nullptr);
     }
