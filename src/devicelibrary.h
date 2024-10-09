@@ -1,7 +1,12 @@
 #pragma once
 #include "global.h"
 #include <optional>
-#include <vulkan/vulkan_core.h>
+#include <algorithm>
+#include <limits>
+#include <ostream>
+#include <set>
+#include <string>
+#include <vector>
 namespace DeviceControl {
 class devicelibrary {
     public:

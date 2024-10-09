@@ -1,7 +1,6 @@
 #include "entrypoint.h"
 int main() {
   EntryApp::getInstance().initialize();
-
   try {
     EntryApp::getInstance().run();
   } catch (const std::exception &e) {

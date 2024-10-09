@@ -5,7 +5,7 @@ Graphics::graphicspipeline graphicsPipeline;
 RenderPresent::render renderPresentation;
 VkInstance vulkaninstance;
 
-
+// Getters and Setters!
 void EntryApp::setFramebufferResized(bool setter) {
   framebufferResized = setter;
 }
@@ -28,8 +28,6 @@ void initWindow() {
   glfwSetWindowUserPointer(Global::window, &EntryApp::getInstance());
   glfwSetFramebufferSizeCallback(Global::window, framebufferResizeCallback);
 }
- 
-
 
 void createInstance() {
   debugController.checkUnavailableValidationLayers();           // Check if there is a mistake with our Validation Layers.
@@ -83,9 +81,6 @@ void cleanup() {                                                // Similar to th
   renderPresentation.destroyFenceSemaphores();
   graphicsPipeline.destroyCommandPool();
 
-  deviceLibs.destroyImageViews();
-  deviceLibs.destroySwapChain();
-
   vkDestroyDevice(Global::device, nullptr);
   if(Global::enableValidationLayers) {
     debugController.DestroyDebugUtilsMessengerEXT(vulkaninstance, nullptr);
@@ -96,7 +91,7 @@ void cleanup() {                                                // Similar to th
   glfwDestroyWindow(Global::window);
   glfwTerminate();
 }
-
+// External Functions
 EntryApp& EntryApp::getInstance() {
   static EntryApp instance;
   return instance;

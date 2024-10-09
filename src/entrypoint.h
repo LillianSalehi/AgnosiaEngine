@@ -19,6 +19,4 @@ class EntryApp {
 
     bool framebufferResized;
     bool initialized;
-
-
 };

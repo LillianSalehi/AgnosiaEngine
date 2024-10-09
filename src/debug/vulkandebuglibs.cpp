@@ -1,11 +1,5 @@
 #include "vulkandebuglibs.h"
-#include "../global.h"
 using namespace Debug;
-
-#include <cstdint>
-#include <stdexcept>
-#include <vulkan/vk_platform.h>
-#include <cstring>
 
 // This is our messenger object! It handles passing along debug messages to the debug callback we will also set.
 VkDebugUtilsMessengerEXT debugMessenger;

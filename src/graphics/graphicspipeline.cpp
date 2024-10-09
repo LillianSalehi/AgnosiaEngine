@@ -1,9 +1,5 @@
+
 #include "graphicspipeline.h"
-#include "../devicelibrary.h"
-#include <cstdint>
-#include <fstream>
-#include <stdexcept>
-#include <vulkan/vulkan_core.h>
 namespace Graphics {
   std::vector<VkDynamicState> dynamicStates = {
     VK_DYNAMIC_STATE_VIEWPORT,
@@ -57,8 +53,8 @@ namespace Graphics {
 
   void graphicspipeline::createGraphicsPipeline() {
     // Note to self, for some reason the working directory is not where a read file is called from, but the project folder!
-    auto vertShaderCode = readFile("src/shaders/vert.spv");
-    auto fragShaderCode = readFile("src/shaders/frag.spv");
+    auto vertShaderCode = readFile("src/shaders/vertex.spv");
+    auto fragShaderCode = readFile("src/shaders/fragment.spv");
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode, Global::device);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode, Global::device);
 
@@ -208,7 +204,7 @@ namespace Graphics {
   }
   void graphicspipeline::destroyRenderPass() {
     vkDestroyRenderPass(Global::device, renderPass, nullptr);
-    std::cout << "Destroyed Render Pass Safely\n" << std::endl;
+    if(Global::enableValidationLayers) std::cout << "Destroyed Render Pass Safely\n" << std::endl;
   }
   void graphicspipeline::createFramebuffers() {
     // Resize the container to hold all the framebuffers.
@@ -275,7 +271,6 @@ namespace Graphics {
     if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
       throw std::runtime_error("failed to begin recording command buffer!");
     }
-    if(Global::enableValidationLayers) std::cout << "Recording command buffer...\n" << std::endl;
 
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
