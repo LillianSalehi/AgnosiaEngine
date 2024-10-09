@@ -12,6 +12,12 @@ namespace RenderPresent {
   uint32_t currentFrame = 0;
 
   void recreateSwapChain() {
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(Global::window, &width, &height);
+    while (width == 0 || height == 0) {
+      glfwGetFramebufferSize(Global::window, &width, &height);
+      glfwWaitEvents();
+    }
     vkDeviceWaitIdle(Global::device);
     // Don't really wanna do this but I also don't want to create an extra class instance just to call the cleanup function.
     for(auto framebuffer : pipeline.getSwapChainFramebuffers()) {
