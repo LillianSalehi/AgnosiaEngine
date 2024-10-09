@@ -1,8 +1,10 @@
 #include "entrypoint.h"
+#include "graphics/buffers.h"
 DeviceControl::devicelibrary deviceLibs;
 Debug::vulkandebuglibs debugController;
 Graphics::graphicspipeline graphicsPipeline;
 RenderPresent::render renderPresentation;
+Buffers::bufferslibrary buffers;
 VkInstance vulkaninstance;
 
 // Getters and Setters!
@@ -40,7 +42,7 @@ void createInstance() {
   appInfo.applicationVersion = VK_MAKE_VERSION(1,0,0);          // Create a Major Minor Patch version number for the application!
   appInfo.pEngineName = "Agnosia Engine";                       // Give an internal name for the engine running
   appInfo.engineVersion = VK_MAKE_VERSION(1,0,0);               // Similar to the App version, give vulkan an *engine* version
-  appInfo.apiVersion = VK_API_VERSION_1_1;                      // Tell vulkan what the highest API version we will allow this program to run on
+  appInfo.apiVersion = VK_API_VERSION_1_3;                      // Tell vulkan what the highest API version we will allow this program to run on
   
   VkInstanceCreateInfo createInfo{};                            // Define parameters of new vulkan instance
   createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;    // Tell vulkan this is a info structure 
@@ -52,7 +54,7 @@ void createInstance() {
 
 void initVulkan() {
   createInstance();
-  debugController.setupDebugMessenger(vulkaninstance);                // The debug messenger is out holy grail, it gives us Vulkan related debug info when built with the -DNDEBUG flag (as per the makefile)
+  debugController.setupDebugMessenger(vulkaninstance);                // The debug messenger is out holy grail, it gives us Vulkan related debug info when built with the -DDEBUG flag (as per the makefile)
   deviceLibs.createSurface(vulkaninstance, Global::window);
   deviceLibs.pickPhysicalDevice(vulkaninstance);
   deviceLibs.createLogicalDevice();
@@ -62,6 +64,7 @@ void initVulkan() {
   graphicsPipeline.createGraphicsPipeline();
   graphicsPipeline.createFramebuffers();
   graphicsPipeline.createCommandPool();
+  buffers.createVertexBuffer();
   graphicsPipeline.createCommandBuffer();
   renderPresentation.createSyncObject();
 }
@@ -76,6 +79,7 @@ void mainLoop() {                                               // This loop jus
 
 void cleanup() {                                                // Similar to the last handoff, destroy the utils in a safe manner in the library!
   renderPresentation.cleanupSwapChain();
+  buffers.destroyVertexBuffer();
   graphicsPipeline.destroyGraphicsPipeline();
   graphicsPipeline.destroyRenderPass();
   renderPresentation.destroyFenceSemaphores();

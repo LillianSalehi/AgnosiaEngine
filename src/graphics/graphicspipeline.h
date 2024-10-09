@@ -1,6 +1,7 @@
 #pragma once
 #include "../global.h"
 #include "../devicelibrary.h"
+#include "buffers.h"
 #include <fstream>
 namespace Graphics {
   class graphicspipeline {

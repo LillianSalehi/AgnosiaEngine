@@ -21,6 +21,7 @@ namespace Global {
   VkQueue graphicsQueue;
   VkQueue presentQueue;
   GLFWwindow* window;
+  
 
   Global::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
     // First we feed in a integer we want to use to hold the number of queued items, that fills it, then we create that amount of default constructed *VkQueueFamilyProperties* structs. 

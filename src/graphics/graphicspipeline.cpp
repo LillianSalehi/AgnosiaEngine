@@ -1,5 +1,7 @@
 
 #include "graphicspipeline.h"
+#include "buffers.h"
+#include <vector>
 namespace Graphics {
   std::vector<VkDynamicState> dynamicStates = {
     VK_DYNAMIC_STATE_VIEWPORT,
@@ -11,6 +13,7 @@ namespace Graphics {
   VkPipelineLayout pipelineLayout;
   VkPipeline graphicsPipeline;
   DeviceControl::devicelibrary deviceLibs;
+  Buffers::bufferslibrary buffers;
   
   std::vector<VkFramebuffer> swapChainFramebuffers;
 
@@ -75,10 +78,14 @@ namespace Graphics {
     vertShaderStageInfo.pName = "main";
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.pVertexBindingDescriptions = nullptr;
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
-    vertexInputInfo.pVertexAttributeDescriptions = nullptr; 
+
+    auto bindingDescription = Global::Vertex::getBindingDescription();
+    auto attributeDescriptions = Global::Vertex::getAttributeDescriptions();
+
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); 
 
     // ------------------- STAGE 5 - RASTERIZATION ----------------- //
     // Take Vertex shader vertices and fragmentize them for the frament shader. The rasterizer also can perform depth testing, face culling, and scissor testing.
@@ -265,8 +272,6 @@ namespace Graphics {
   void graphicspipeline::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = 0; // Optional
-    beginInfo.pInheritanceInfo = nullptr; // Optional
 
     if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
       throw std::runtime_error("failed to begin recording command buffer!");
@@ -286,7 +291,6 @@ namespace Graphics {
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
@@ -299,10 +303,13 @@ namespace Graphics {
     VkRect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = deviceLibs.getSwapChainExtent();
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);            
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor); 
 
-    vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+    VkBuffer vertexBuffers[] = {buffers.getVertexBuffer()};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
+    vkCmdDraw(commandBuffer, static_cast<uint32_t>(buffers.getVertices().size()), 1, 0, 0);
     vkCmdEndRenderPass(commandBuffer);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {

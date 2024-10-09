@@ -6,7 +6,7 @@ SRC = $(shell find . -name "*.cpp")
 SHDRSRC = $(shell find . -name "*.frag" -o -name "*vert")
 SPV = $(SHDRSRC:%.vert=%.spv) $(SHDRSRC:%.frag=%.spv)
 OBJ = $(SRC:%.cpp=%.o)
-
+MAKEFLAGS += -j16
 BIN=build/agnosiaengine
 
 .PHONY: all

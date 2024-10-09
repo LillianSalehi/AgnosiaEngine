@@ -264,7 +264,7 @@ namespace DeviceControl {
     // Do NOT blend with other windows on the system.
     createSwapChainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createSwapChainInfo.presentMode = presentMode;
-    // This is interesting, clip pixels that are obscured for performance, but that means you wont be able to reaf them reliably..
+    // This is interesting, clip pixels that are obscured for performance, but that means you wont be able to read them reliably..
     // I am curious if this would affect screen-space rendering techniques, may be something to note.
     createSwapChainInfo.clipped = VK_TRUE;
     // This is something that needs to be implemented later, operations like resizing the window invalidate the swap chain and 
