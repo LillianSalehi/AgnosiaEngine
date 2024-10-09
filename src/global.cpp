@@ -1,5 +1,6 @@
 #include "global.h"
 #include "devicelibrary.h"
+#include <vulkan/vulkan_core.h>
 namespace Global {
 
   const std::vector<const char*> validationLayers = {
@@ -11,14 +12,16 @@ namespace Global {
     const bool enableValidationLayers = false;
   #endif
 
-  VkSurfaceKHR surface = VK_NULL_HANDLE;
-  VkDevice device = VK_NULL_HANDLE;
-  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-  VkSwapchainKHR swapChain = VK_NULL_HANDLE;
-  VkCommandPool commandPool = VK_NULL_HANDLE;
+  VkSurfaceKHR surface;
+  VkDevice device;
+  VkPhysicalDevice physicalDevice;
+  VkSwapchainKHR swapChain;
+  VkCommandPool commandPool;
   std::vector<VkCommandBuffer> commandBuffers;
-  VkQueue graphicsQueue = VK_NULL_HANDLE;
-  VkQueue presentQueue = VK_NULL_HANDLE;
+  VkQueue graphicsQueue;
+  VkQueue presentQueue;
+  GLFWwindow* window;
+
   Global::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
     // First we feed in a integer we want to use to hold the number of queued items, that fills it, then we create that amount of default constructed *VkQueueFamilyProperties* structs. 
     // These store the flags, the amount of queued items in the family, and timestamp data. Queue families are simply group collections of tasks we want to get done. 

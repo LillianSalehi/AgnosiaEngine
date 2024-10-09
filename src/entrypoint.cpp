@@ -1,0 +1,119 @@
+#include "entrypoint.h"
+DeviceControl::devicelibrary deviceLibs;
+Debug::vulkandebuglibs debugController;
+Graphics::graphicspipeline graphicsPipeline;
+RenderPresent::render renderPresentation;
+VkInstance vulkaninstance;
+
+
+void EntryApp::setFramebufferResized(bool setter) {
+  framebufferResized = setter;
+}
+bool EntryApp::getFramebufferResized() const {
+  return framebufferResized;
+}
+static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+  auto app = reinterpret_cast<EntryApp*>(glfwGetWindowUserPointer(window));
+  app->EntryApp::getInstance().setFramebufferResized(true);
+}
+    // Initialize GLFW Window. First, Initialize GLFW lib, disable resizing for
+    // now, and create window.
+void initWindow() {
+  glfwInit();
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+    // Settings for the window are set, create window reference.
+  Global::window = glfwCreateWindow(Global::WIDTH, Global::HEIGHT, "Vulkan", nullptr, nullptr);
+  glfwSetWindowUserPointer(Global::window, &EntryApp::getInstance());
+  glfwSetFramebufferSizeCallback(Global::window, framebufferResizeCallback);
+}
+ 
+
+
+void createInstance() {
+  debugController.checkUnavailableValidationLayers();           // Check if there is a mistake with our Validation Layers.
+
+  // Set application info for the vulkan instance!
+	VkApplicationInfo appInfo{};
+ 
+  appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;           // Tell vulkan that appInfo is a Application Info structure
+  appInfo.pApplicationName = "Triangle Test";                   // Give the struct a name to use
+  appInfo.applicationVersion = VK_MAKE_VERSION(1,0,0);          // Create a Major Minor Patch version number for the application!
+  appInfo.pEngineName = "Agnosia Engine";                       // Give an internal name for the engine running
+  appInfo.engineVersion = VK_MAKE_VERSION(1,0,0);               // Similar to the App version, give vulkan an *engine* version
+  appInfo.apiVersion = VK_API_VERSION_1_1;                      // Tell vulkan what the highest API version we will allow this program to run on
+  
+  VkInstanceCreateInfo createInfo{};                            // Define parameters of new vulkan instance
+  createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;    // Tell vulkan this is a info structure 
+  createInfo.pApplicationInfo = &appInfo;                       // We just created a new appInfo structure, so we pass the pointer to it.
+
+  debugController.vulkanDebugSetup(createInfo, vulkaninstance);       // Handoff to the debug library to wrap the validation libs in! (And set the window up!)
+}
+
+
+void initVulkan() {
+  createInstance();
+  debugController.setupDebugMessenger(vulkaninstance);                // The debug messenger is out holy grail, it gives us Vulkan related debug info when built with the -DNDEBUG flag (as per the makefile)
+  deviceLibs.createSurface(vulkaninstance, Global::window);
+  deviceLibs.pickPhysicalDevice(vulkaninstance);
+  deviceLibs.createLogicalDevice();
+  deviceLibs.createSwapChain(Global::window);
+  deviceLibs.createImageViews();
+  graphicsPipeline.createRenderPass();
+  graphicsPipeline.createGraphicsPipeline();
+  graphicsPipeline.createFramebuffers();
+  graphicsPipeline.createCommandPool();
+  graphicsPipeline.createCommandBuffer();
+  renderPresentation.createSyncObject();
+}
+
+void mainLoop() {                                               // This loop just updates the GLFW window.
+  while (!glfwWindowShouldClose(Global::window)) {
+    glfwPollEvents();
+    renderPresentation.drawFrame();
+  }
+  vkDeviceWaitIdle(Global::device);
+}
+
+void cleanup() {                                                // Similar to the last handoff, destroy the utils in a safe manner in the library!
+  renderPresentation.cleanupSwapChain();
+  graphicsPipeline.destroyGraphicsPipeline();
+  graphicsPipeline.destroyRenderPass();
+  renderPresentation.destroyFenceSemaphores();
+  graphicsPipeline.destroyCommandPool();
+
+  deviceLibs.destroyImageViews();
+  deviceLibs.destroySwapChain();
+
+  vkDestroyDevice(Global::device, nullptr);
+  if(Global::enableValidationLayers) {
+    debugController.DestroyDebugUtilsMessengerEXT(vulkaninstance, nullptr);
+  }
+ 
+  deviceLibs.destroySurface(vulkaninstance);
+  vkDestroyInstance(vulkaninstance, nullptr);
+  glfwDestroyWindow(Global::window);
+  glfwTerminate();
+}
+
+EntryApp& EntryApp::getInstance() {
+  static EntryApp instance;
+  return instance;
+}
+EntryApp::EntryApp() : initialized(false), framebufferResized(false) {}
+
+void EntryApp::initialize() {
+  initialized = true;
+}
+bool EntryApp::isInitialized() const {
+  return initialized;
+}
+
+void EntryApp::run() {
+  initWindow();
+  initVulkan();
+  mainLoop();
+  cleanup();
+}
+

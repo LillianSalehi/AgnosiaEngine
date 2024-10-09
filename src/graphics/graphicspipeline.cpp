@@ -9,7 +9,6 @@ namespace Graphics {
     VK_DYNAMIC_STATE_VIEWPORT,
     VK_DYNAMIC_STATE_SCISSOR
   };
-  std::vector<VkFramebuffer> swapChainFramebuffers;
 
 
   VkRenderPass renderPass;
@@ -17,6 +16,8 @@ namespace Graphics {
   VkPipeline graphicsPipeline;
   DeviceControl::devicelibrary deviceLibs;
   
+  std::vector<VkFramebuffer> swapChainFramebuffers;
+
   static std::vector<char> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
@@ -233,12 +234,6 @@ namespace Graphics {
       }
     }
   }
-  void graphicspipeline::destroyFramebuffers() {
-    for (auto framebuffer : swapChainFramebuffers) {
-      vkDestroyFramebuffer(Global::device, framebuffer, nullptr);
-    }
-  }
-
   void graphicspipeline::createCommandPool() {
 
     Global::QueueFamilyIndices queueFamilyIndices = Global::findQueueFamilies(Global::physicalDevice);
@@ -319,4 +314,7 @@ namespace Graphics {
       throw std::runtime_error("failed to record command buffer!");
     }
   }
+  std::vector<VkFramebuffer> graphicspipeline::getSwapChainFramebuffers() {
+    return swapChainFramebuffers;
+  }  
 }

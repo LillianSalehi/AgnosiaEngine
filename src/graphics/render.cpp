@@ -1,12 +1,31 @@
 #include "render.h"
 #include "graphicspipeline.h"
+#include "../devicelibrary.h"
+#include "../entrypoint.h"
 namespace RenderPresent {
 
   std::vector<VkSemaphore> imageAvailableSemaphores;
   std::vector<VkSemaphore> renderFinishedSemaphores;
   std::vector<VkFence> inFlightFences;
   Graphics::graphicspipeline pipeline;
+  DeviceControl::devicelibrary deviceLibs;
   uint32_t currentFrame = 0;
+
+  void recreateSwapChain() {
+    vkDeviceWaitIdle(Global::device);
+    // Don't really wanna do this but I also don't want to create an extra class instance just to call the cleanup function.
+    for(auto framebuffer : pipeline.getSwapChainFramebuffers()) {
+      vkDestroyFramebuffer(Global::device, framebuffer, nullptr);
+    }
+    for(auto imageView : deviceLibs.getSwapChainImageViews()) {
+      vkDestroyImageView(Global::device, imageView, nullptr);
+    }
+    vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
+
+    deviceLibs.createSwapChain(Global::window);
+    deviceLibs.createImageViews();
+    pipeline.createFramebuffers();
+  }
   // At a high level, rendering in Vulkan consists of 5 steps:
   // Wait for the previous frame, acquire a image from the swap chain
   // record a comman d buffer which draws the scene onto that image
@@ -17,7 +36,14 @@ namespace RenderPresent {
     vkResetFences(Global::device, 1, &inFlightFences[currentFrame]);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(Global::device, Global::swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(Global::device, Global::swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+      recreateSwapChain();
+      return;
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+      throw std::runtime_error("failed to acquire swap chain image!");
+    }
+    vkResetFences(Global::device, 1, &inFlightFences[currentFrame]);
 
     vkResetCommandBuffer(Global::commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
     pipeline.recordCommandBuffer(Global::commandBuffers[currentFrame], imageIndex);
@@ -54,7 +80,13 @@ namespace RenderPresent {
 
     presentInfo.pImageIndices = &imageIndex;
 
-    vkQueuePresentKHR(Global::presentQueue, &presentInfo);
+    result = vkQueuePresentKHR(Global::presentQueue, &presentInfo);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || EntryApp::getInstance().getFramebufferResized()) {
+    EntryApp::getInstance().setFramebufferResized(false);
+      recreateSwapChain();
+    } else if (result != VK_SUCCESS) {
+      throw std::runtime_error("failed to present swap chain image!");
+    }
     currentFrame = (currentFrame + 1) % Global::MAX_FRAMES_IN_FLIGHT;
   }
   #pragma info
@@ -70,7 +102,8 @@ namespace RenderPresent {
   // enqueue QueueOne, Signal semaphore when done, start now.
   // vkQueueSubmit(work: QueueOne, signal: semaphore, wait: none)
   // enqueue QueueTwo, wait on semaphore to start
-  // vkQueueSubmit(work: QueueTwo, signal: None, wait: semaphore)
+  // vkQueueSubmit(
+// work: QueueTwo, signal: None, wait: semaphore)
   // FENCES
   // Fences are basically semaphores for the CPU! Otherwise known as the host. If the host needs to know when the GPU has finished a task, we use a fence. 
   // VkCommandBuffer cmndBuf = ...
@@ -103,11 +136,21 @@ namespace RenderPresent {
 
   
   }
-  void destroyFenceSemaphore() {
+  void render::destroyFenceSemaphores() {
     for (size_t i = 0; i < Global::MAX_FRAMES_IN_FLIGHT; i++) {
       vkDestroySemaphore(Global::device, imageAvailableSemaphores[i], nullptr);
       vkDestroySemaphore(Global::device, renderFinishedSemaphores[i], nullptr);
       vkDestroyFence(Global::device, inFlightFences[i], nullptr);
     }
   }
+  void render::cleanupSwapChain() {
+    for(auto framebuffer : pipeline.getSwapChainFramebuffers()) {
+      vkDestroyFramebuffer(Global::device, framebuffer, nullptr);
+    }
+    for(auto imageView : deviceLibs.getSwapChainImageViews()) {
+      vkDestroyImageView(Global::device, imageView, nullptr);
+    }
+    vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
+  }
+
 }

@@ -14,5 +14,6 @@ namespace Graphics {
       void destroyCommandPool();
       void createCommandBuffer();
       void recordCommandBuffer(VkCommandBuffer cmndBuffer, uint32_t imageIndex);
+      std::vector<VkFramebuffer> getSwapChainFramebuffers();
   };
 }

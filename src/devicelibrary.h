@@ -1,6 +1,7 @@
 #pragma once
 #include "global.h"
 #include <optional>
+#include <vulkan/vulkan_core.h>
 namespace DeviceControl {
 class devicelibrary {
     public:
@@ -19,6 +20,7 @@ class devicelibrary {
       VkFormat getImageFormat();
       std::vector<VkImageView> getSwapChainImageViews();
       VkExtent2D getSwapChainExtent();
+      std::vector<VkFramebuffer> getSwapChainFramebuffers();
   };
 }
 

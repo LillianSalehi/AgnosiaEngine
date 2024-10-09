@@ -18,7 +18,6 @@ namespace DeviceControl {
   VkPhysicalDeviceProperties deviceProperties;
   VkPhysicalDeviceFeatures deviceFeatures;
 
-
   std::vector<VkImage> swapChainImages;
   VkFormat swapChainImageFormat;
   VkExtent2D swapChainExtent;
@@ -298,6 +297,7 @@ namespace DeviceControl {
     vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
     if(Global::enableValidationLayers) std::cout << "Destroyed Swap Chain safely\n" << std::endl;   
   }
+
   void devicelibrary::createImageViews() {
     swapChainImageViews.resize(swapChainImages.size());
     for(size_t i = 0; i < swapChainImages.size(); i++) {
@@ -332,7 +332,6 @@ namespace DeviceControl {
     }
     if(Global::enableValidationLayers) std::cout << "Image destroyed safely\n" << std::endl;
   }
-
 // --------------------------------------- Getters & Setters ------------------------------------------ //
   VkFormat devicelibrary::getImageFormat() {
     return swapChainImageFormat;
@@ -340,6 +339,7 @@ namespace DeviceControl {
   std::vector<VkImageView> devicelibrary::getSwapChainImageViews() {
     return swapChainImageViews;
   }
+
   VkExtent2D devicelibrary::getSwapChainExtent() {
     return swapChainExtent;
   }

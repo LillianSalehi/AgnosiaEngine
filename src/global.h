@@ -19,6 +19,11 @@ namespace Global {
   extern VkQueue graphicsQueue;
   extern VkQueue presentQueue;
   const int MAX_FRAMES_IN_FLIGHT = 2;
+  extern GLFWwindow* window;
+
+  const uint32_t WIDTH = 800;
+  const uint32_t HEIGHT = 600;
+
   struct QueueFamilyIndices {
     // We need to check that the Queue families support graphics operations and window presentation, sometimes they can support one or the other,
     // therefore, we take into account both for completion.

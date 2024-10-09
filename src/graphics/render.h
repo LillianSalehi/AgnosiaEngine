@@ -7,5 +7,7 @@ class render {
   public:
     void drawFrame();
     void createSyncObject();
+    void destroyFenceSemaphores();
+    void cleanupSwapChain();
   };
 }
