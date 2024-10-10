@@ -144,8 +144,8 @@ namespace RenderPresent {
   }
   void render::destroyFenceSemaphores() {
     for (size_t i = 0; i < Global::MAX_FRAMES_IN_FLIGHT; i++) {
-      vkDestroySemaphore(Global::device, imageAvailableSemaphores[i], nullptr);
       vkDestroySemaphore(Global::device, renderFinishedSemaphores[i], nullptr);
+      vkDestroySemaphore(Global::device, imageAvailableSemaphores[i], nullptr);
       vkDestroyFence(Global::device, inFlightFences[i], nullptr);
     }
   }

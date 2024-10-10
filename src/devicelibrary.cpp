@@ -269,7 +269,7 @@ namespace DeviceControl {
     createSwapChainInfo.clipped = VK_TRUE;
     // This is something that needs to be implemented later, operations like resizing the window invalidate the swap chain and 
     // require you to recreate it and reference the old one specified here, will revisit in a few days.
-    createSwapChainInfo.oldSwapchain = VK_NULL_HANDLE;
+    //createSwapChainInfo.oldSwapchain = VK_NULL_HANDLE;
 
     if(vkCreateSwapchainKHR(Global::device, &createSwapChainInfo, nullptr, &Global::swapChain) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create the swap chain!!");

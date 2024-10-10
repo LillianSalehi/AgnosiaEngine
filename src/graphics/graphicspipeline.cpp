@@ -96,8 +96,8 @@ namespace Graphics {
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     // MODE_FILL, fill polygons, MODE_LINE, draw wireframe, MODE_POINT, draw vertices. Anything other than fill requires GPU feature *fillModeNonSolid*
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.lineWidth = 1.0f;
+    rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+    rasterizer.lineWidth = 2.0f;
       // How to cull the faces, right here we cull the back faces and tell the rasterizer front facing vertices are ordered clockwise.
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
     rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
@@ -308,8 +308,9 @@ namespace Graphics {
     VkBuffer vertexBuffers[] = {buffers.getVertexBuffer()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+    vkCmdBindIndexBuffer(commandBuffer, buffers.getIndexBuffer(), 0, VK_INDEX_TYPE_UINT16);
 
-    vkCmdDraw(commandBuffer, static_cast<uint32_t>(buffers.getVertices().size()), 1, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(buffers.getIndices().size()), 1, 0, 0, 0);
     vkCmdEndRenderPass(commandBuffer);
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {

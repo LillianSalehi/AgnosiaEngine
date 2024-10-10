@@ -16,15 +16,13 @@ bool EntryApp::getFramebufferResized() const {
 }
 static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
   auto app = reinterpret_cast<EntryApp*>(glfwGetWindowUserPointer(window));
-  app->EntryApp::getInstance().setFramebufferResized(true);
+  app->setFramebufferResized(true);
 }
     // Initialize GLFW Window. First, Initialize GLFW lib, disable resizing for
     // now, and create window.
 void initWindow() {
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
     // Settings for the window are set, create window reference.
   Global::window = glfwCreateWindow(Global::WIDTH, Global::HEIGHT, "Vulkan", nullptr, nullptr);
   glfwSetWindowUserPointer(Global::window, &EntryApp::getInstance());
@@ -65,6 +63,7 @@ void initVulkan() {
   graphicsPipeline.createFramebuffers();
   graphicsPipeline.createCommandPool();
   buffers.createVertexBuffer();
+  buffers.createIndexBuffer();
   graphicsPipeline.createCommandBuffer();
   renderPresentation.createSyncObject();
 }
@@ -79,9 +78,10 @@ void mainLoop() {                                               // This loop jus
 
 void cleanup() {                                                // Similar to the last handoff, destroy the utils in a safe manner in the library!
   renderPresentation.cleanupSwapChain();
-  buffers.destroyVertexBuffer();
   graphicsPipeline.destroyGraphicsPipeline();
   graphicsPipeline.destroyRenderPass();
+
+  buffers.destroyBuffers();
   renderPresentation.destroyFenceSemaphores();
   graphicsPipeline.destroyCommandPool();
 
