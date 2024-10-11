@@ -1,4 +1,5 @@
 #pragma once
+#include <glm/detail/qualifier.hpp>
 #include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <iostream>
@@ -51,7 +52,6 @@ namespace Global {
       return attributeDescriptions;
     }
   };
-
   const uint32_t WIDTH = 800;
   const uint32_t HEIGHT = 600;
 
