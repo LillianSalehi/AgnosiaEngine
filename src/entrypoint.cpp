@@ -24,7 +24,7 @@ void initWindow() {
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     // Settings for the window are set, create window reference.
-  Global::window = glfwCreateWindow(Global::WIDTH, Global::HEIGHT, "Vulkan", nullptr, nullptr);
+  Global::window = glfwCreateWindow(Global::WIDTH, Global::HEIGHT, "Trimgles :o", nullptr, nullptr);
   glfwSetWindowUserPointer(Global::window, &EntryApp::getInstance());
   glfwSetFramebufferSizeCallback(Global::window, framebufferResizeCallback);
 }
