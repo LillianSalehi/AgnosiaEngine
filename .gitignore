@@ -8,6 +8,9 @@
 *.o
 *.obj
 
+# Compiled Shader files
+*.spv
+
 # Precompiled Headers
 *.gch
 *.pch
