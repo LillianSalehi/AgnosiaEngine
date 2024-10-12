@@ -238,7 +238,8 @@ namespace Graphics {
     }
   }
   void graphicspipeline::createCommandPool() {
-
+    // Commands in Vulkan are not executed using function calls, you have to record the ops you wish to perform 
+    // to command buffers, pools manage the memory used by the buffer!
     Global::QueueFamilyIndices queueFamilyIndices = Global::findQueueFamilies(Global::physicalDevice);
 
     VkCommandPoolCreateInfo poolInfo{};

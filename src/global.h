@@ -3,6 +3,7 @@
 #include <glm/detail/qualifier.hpp>
 #include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float3.hpp>
+#include <glm/fwd.hpp>
 #include <iostream>
 #include <vector>
 #include <optional>
@@ -29,11 +30,11 @@ namespace Global {
   extern VkDescriptorSetLayout descriptorSetLayout;
   extern uint32_t currentFrame;
   extern std::vector<VkDescriptorSet> descriptorSets;
-
   struct UniformBufferObject {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 proj;
+    float time;
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 proj;
   };
   struct Vertex {
     glm::vec2 pos;

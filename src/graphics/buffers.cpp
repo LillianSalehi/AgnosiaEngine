@@ -165,7 +165,7 @@ namespace Buffers {
   std::vector<uint16_t> bufferslibrary::getIndices() {
     return indices;
   }
-  
+// ------------------------------ Uniform Buffer Setup -------------------------------- //
   void bufferslibrary::createDescriptorSetLayout() {
     // Create a table of pointers to data, a Descriptor Set!
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -187,10 +187,9 @@ namespace Buffers {
       throw std::runtime_error("Failed to create descriptor set layout!");
     }
   }
-  //void createMVPDescriptor() {
-    
-  //}
   void bufferslibrary::createUniformBuffers() {
+    // Map the uniform buffer to memory as a pointer we can use to write data to later. This stays mapped to memory for the applications lifetime.
+    // This technique is called "persistent mapping", not having to map the buffer every time we need to update it increases performance, though not free
     VkDeviceSize bufferSize = sizeof(Global::UniformBufferObject);
     
     uniformBuffers.resize(Global::MAX_FRAMES_IN_FLIGHT);
@@ -203,12 +202,16 @@ namespace Buffers {
     }
   }
   void bufferslibrary::updateUniformBuffer(uint32_t currentImage) {
+    // Update the uniform buffer every frame to change the position, but notably, use chrono to know exactly how much to move 
+    // so we aren't locked to the framerate as the world time.
+
     static auto startTime = std::chrono::high_resolution_clock::now();
     // Calculate the time in seconds since rendering has began to floating point precision.
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     Global::UniformBufferObject ubo{};
+    ubo.time = time;
     // Modify the model projection transformation to rotate around the Z over time.
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     // Modify the view transformation to look at the object from above at a 45 degree angle.
@@ -229,6 +232,7 @@ namespace Buffers {
     }
   }
   void bufferslibrary::createDescriptorPool() {
+    // Create a pool to be used to allocate descriptor sets.
     VkDescriptorPoolSize poolSize{};
     poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSize.descriptorCount = static_cast<uint32_t>(Global::MAX_FRAMES_IN_FLIGHT);

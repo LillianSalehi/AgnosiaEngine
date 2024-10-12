@@ -1,5 +1,4 @@
 #include "entrypoint.h"
-#include "global.h"
 DeviceControl::devicelibrary deviceLibs;
 Debug::vulkandebuglibs debugController;
 Graphics::graphicspipeline graphicsPipeline;

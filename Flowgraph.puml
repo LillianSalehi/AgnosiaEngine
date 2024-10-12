@@ -77,13 +77,20 @@ partition "**DeviceControl**" {
   end note
 }
 
+:**Graphics**::createRenderPass(...);
+note right
+  This is pretty simple, it sets up the image bit depth 
+  and the color bit depth! Basically, the format of the
+  displayed images, simple, but important!
+end note
+:**Buffers**::createDescriptorSetLayout();
+note right 
+  This function creates a table of pointers to the stored
+  data that we want, in this case it would be pointing to 
+  pre-programmed model view and projection values, and 
+  a time variable.
+end note
 partition "**Graphics**" {
-  :createRenderPass(...);
-  note right
-    This is pretty simple, it sets up the image bit depth 
-    and the color bit depth! Basically, the format of the
-    displayed images, simple, but important!
-  end note
   :createGraphicsPipeline(...);
   note right
     This is a complex function that goes through every 
@@ -115,6 +122,28 @@ partition "**Buffers**" {
     some vertices that would normally be duplicated 
     at corners to triangulate. this saves cycles at 
     scale, complex objects rejoice!
+  end note
+  :createUniformBuffer();
+  note right
+    Map the buffer data to memory (The struct) as a pointer
+    we can use this as a reference of where to write data to 
+    when the fence lets us write data.
+    (see **recordCommandBuffer()**).
+  end note
+  :createDescriptorPool();
+  note right
+    Here we create a pool to manage the memory and allocate
+    space for the descriptor sets! Very useful and the same 
+    structure as command buffers & pools.
+  end note
+  :createDescriptorSetLayout();
+  note right
+    //Descriptor set **layouts** specify the types of resources accessible//
+    //by the graphical pipeline. A descriptor set is the actual buffer//
+    //or resource that gets bound to descriptors and passed in.//
+    These differ from Vertex & Index buffers, as they are not unique
+    to the graphics pipeline. Specification of compute vs. graphics is 
+    therefore necessary. (see **createDescriptorSets()**)
   end note
 }
 :Graphics::createCommandBuffer();
