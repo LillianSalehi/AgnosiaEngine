@@ -9,7 +9,7 @@ namespace RenderPresent {
   std::vector<VkFence> inFlightFences;
   Graphics::graphicspipeline pipeline;
   DeviceControl::devicelibrary deviceLibs;
-  uint32_t currentFrame = 0;
+  Buffers::bufferslibrary buffers;
 
   void recreateSwapChain() {
     int width = 0, height = 0;
@@ -38,39 +38,42 @@ namespace RenderPresent {
   // submit the recorded command buffer and present the image!
   void render::drawFrame() {
 
-    vkWaitForFences(Global::device, 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-    vkResetFences(Global::device, 1, &inFlightFences[currentFrame]);
+    vkWaitForFences(Global::device, 1, &inFlightFences[Global::currentFrame], VK_TRUE, UINT64_MAX);
+    vkResetFences(Global::device, 1, &inFlightFences[Global::currentFrame]);
 
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(Global::device, Global::swapChain, UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(Global::device, Global::swapChain, UINT64_MAX, imageAvailableSemaphores[Global::currentFrame], VK_NULL_HANDLE, &imageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
       recreateSwapChain();
       return;
     } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
       throw std::runtime_error("failed to acquire swap chain image!");
     }
-    vkResetFences(Global::device, 1, &inFlightFences[currentFrame]);
 
-    vkResetCommandBuffer(Global::commandBuffers[currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
-    pipeline.recordCommandBuffer(Global::commandBuffers[currentFrame], imageIndex);
+    buffers.updateUniformBuffer(Global::currentFrame);
+
+    vkResetFences(Global::device, 1, &inFlightFences[Global::currentFrame]);
+
+    vkResetCommandBuffer(Global::commandBuffers[Global::currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
+    pipeline.recordCommandBuffer(Global::commandBuffers[Global::currentFrame], imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
+    VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[Global::currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &Global::commandBuffers[currentFrame];
+    submitInfo.pCommandBuffers = &Global::commandBuffers[Global::currentFrame];
 
-    VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
+    VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[Global::currentFrame]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if (vkQueueSubmit(Global::graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
+    if (vkQueueSubmit(Global::graphicsQueue, 1, &submitInfo, inFlightFences[Global::currentFrame]) != VK_SUCCESS) {
       throw std::runtime_error("failed to submit draw command buffer!");
     }
 
@@ -93,7 +96,7 @@ namespace RenderPresent {
     } else if (result != VK_SUCCESS) {
       throw std::runtime_error("failed to present swap chain image!");
     }
-    currentFrame = (currentFrame + 1) % Global::MAX_FRAMES_IN_FLIGHT;
+  Global::currentFrame = (Global::currentFrame + 1) % Global::MAX_FRAMES_IN_FLIGHT;
   }
   #pragma info
   // SEMAPHORES

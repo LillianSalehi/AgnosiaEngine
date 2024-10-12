@@ -1,5 +1,5 @@
 #include "entrypoint.h"
-#include "graphics/buffers.h"
+#include "global.h"
 DeviceControl::devicelibrary deviceLibs;
 Debug::vulkandebuglibs debugController;
 Graphics::graphicspipeline graphicsPipeline;
@@ -59,11 +59,15 @@ void initVulkan() {
   deviceLibs.createSwapChain(Global::window);
   deviceLibs.createImageViews();
   graphicsPipeline.createRenderPass();
+  buffers.createDescriptorSetLayout();
   graphicsPipeline.createGraphicsPipeline();
   graphicsPipeline.createFramebuffers();
   graphicsPipeline.createCommandPool();
   buffers.createVertexBuffer();
   buffers.createIndexBuffer();
+  buffers.createUniformBuffers();
+  buffers.createDescriptorPool();
+  buffers.createDescriptorSets();
   graphicsPipeline.createCommandBuffer();
   renderPresentation.createSyncObject();
 }
@@ -78,6 +82,9 @@ void mainLoop() {                                               // This loop jus
 
 void cleanup() {                                                // Similar to the last handoff, destroy the utils in a safe manner in the library!
   renderPresentation.cleanupSwapChain();
+  buffers.destroyUniformBuffer();
+  buffers.destroyDescriptorPool();
+  vkDestroyDescriptorSetLayout(Global::device, Global::descriptorSetLayout, nullptr);
   graphicsPipeline.destroyGraphicsPipeline();
   graphicsPipeline.destroyRenderPass();
 

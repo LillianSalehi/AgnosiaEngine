@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <glm/detail/qualifier.hpp>
 #include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float3.hpp>
@@ -7,6 +8,7 @@
 #include <optional>
 #include <vulkan/vulkan_core.h>
 #include "debug/vulkandebuglibs.h"
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <array>
 #define GLFW_INCLUDE_VULKAN
@@ -24,7 +26,15 @@ namespace Global {
   extern VkQueue presentQueue;
   const int MAX_FRAMES_IN_FLIGHT = 2;
   extern GLFWwindow* window;
+  extern VkDescriptorSetLayout descriptorSetLayout;
+  extern uint32_t currentFrame;
+  extern std::vector<VkDescriptorSet> descriptorSets;
 
+  struct UniformBufferObject {
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
+  };
   struct Vertex {
     glm::vec2 pos;
     glm::vec3 color;

@@ -96,11 +96,11 @@ namespace Graphics {
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     // MODE_FILL, fill polygons, MODE_LINE, draw wireframe, MODE_POINT, draw vertices. Anything other than fill requires GPU feature *fillModeNonSolid*
-    rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 2.0f;
       // How to cull the faces, right here we cull the back faces and tell the rasterizer front facing vertices are ordered clockwise.
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     // Whether or not to add depth values. e.x. for shadow maps.
     rasterizer.depthBiasEnable = VK_FALSE;
 
@@ -147,8 +147,8 @@ namespace Graphics {
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &Global::descriptorSetLayout;
 
     if (vkCreatePipelineLayout(Global::device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
       throw std::runtime_error("failed to create pipeline layout!");
@@ -309,6 +309,8 @@ namespace Graphics {
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(commandBuffer, buffers.getIndexBuffer(), 0, VK_INDEX_TYPE_UINT16);
+    
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &Global::descriptorSets[Global::currentFrame], 0, nullptr);
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(buffers.getIndices().size()), 1, 0, 0, 0);
     vkCmdEndRenderPass(commandBuffer);
