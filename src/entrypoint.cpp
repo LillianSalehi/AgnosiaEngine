@@ -3,7 +3,8 @@ DeviceControl::devicelibrary deviceLibs;
 Debug::vulkandebuglibs debugController;
 Graphics::graphicspipeline graphicsPipeline;
 RenderPresent::render renderPresentation;
-Buffers::bufferslibrary buffers;
+BuffersLibraries::buffers buffers;
+TextureLibraries::texture texture;
 VkInstance vulkaninstance;
 
 // Getters and Setters!
@@ -48,7 +49,6 @@ void createInstance() {
   debugController.vulkanDebugSetup(createInfo, vulkaninstance);       // Handoff to the debug library to wrap the validation libs in! (And set the window up!)
 }
 
-
 void initVulkan() {
   createInstance();
   debugController.setupDebugMessenger(vulkaninstance);                // The debug messenger is out holy grail, it gives us Vulkan related debug info when built with the -DDEBUG flag (as per the makefile)
@@ -62,6 +62,9 @@ void initVulkan() {
   graphicsPipeline.createGraphicsPipeline();
   graphicsPipeline.createFramebuffers();
   graphicsPipeline.createCommandPool();
+  texture.createTextureImage();
+  texture.createTextureImageView();
+  texture.createTextureSampler();
   buffers.createVertexBuffer();
   buffers.createIndexBuffer();
   buffers.createUniformBuffers();
@@ -81,6 +84,8 @@ void mainLoop() {                                               // This loop jus
 
 void cleanup() {                                                // Similar to the last handoff, destroy the utils in a safe manner in the library!
   renderPresentation.cleanupSwapChain();
+  texture.createTextureSampler();
+  texture.destroyTextureImage();
   buffers.destroyUniformBuffer();
   buffers.destroyDescriptorPool();
   vkDestroyDescriptorSetLayout(Global::device, Global::descriptorSetLayout, nullptr);
@@ -95,7 +100,6 @@ void cleanup() {                                                // Similar to th
   if(Global::enableValidationLayers) {
     debugController.DestroyDebugUtilsMessengerEXT(vulkaninstance, nullptr);
   }
- 
   deviceLibs.destroySurface(vulkaninstance);
   vkDestroyInstance(vulkaninstance, nullptr);
   glfwDestroyWindow(Global::window);

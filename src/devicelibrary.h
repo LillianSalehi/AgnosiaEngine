@@ -16,6 +16,7 @@ class devicelibrary {
       void destroySurface(VkInstance& instance);
       void createSwapChain(GLFWwindow* window);
       void destroySwapChain();
+      VkImageView createImageView(VkImage image, VkFormat format);
       void createImageViews();
       void destroyImageViews();
       void createCommandPool();

@@ -1,12 +1,12 @@
 #include "devicelibrary.h"
 #include "global.h"
+#include <vulkan/vulkan_core.h>
 
 
 namespace DeviceControl {
 
 
   VkPhysicalDeviceProperties deviceProperties;
-  VkPhysicalDeviceFeatures deviceFeatures;
 
   std::vector<VkImage> swapChainImages;
   VkFormat swapChainImageFormat;
@@ -74,7 +74,8 @@ namespace DeviceControl {
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
     // Similarly, we can pass in the device and a deviceFeatures struct, this is quite special, it holds a struct of optional features the GPU can perform.
     // Some, like a geometry shader, and stereoscopic rendering (multiViewport) we want, so we dont return true without them.
-    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+    VkPhysicalDeviceFeatures supportedFeatures;
+    vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
     // We need to find a device that supports graphical operations, or else we cant do much with it! This function just runs over all the queueFamilies and sees if there 
     // is a queue family with the VK_QUEUE_GRAPHICS_BIT flipped!
     Global::QueueFamilyIndices indices = Global::findQueueFamilies(device);
@@ -87,7 +88,7 @@ namespace DeviceControl {
     }
   
     return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU 
-      && deviceFeatures.multiViewport 
+      && supportedFeatures.samplerAnisotropy 
       && indices.isComplete() 
       && extensionSupported
       && swapChainAdequate;
@@ -195,6 +196,9 @@ namespace DeviceControl {
       queueCreateSingularInfo.pQueuePriorities = &queuePriority;
       queueCreateInfos.push_back(queueCreateSingularInfo);
     }
+    VkPhysicalDeviceFeatures deviceFeatures{};
+    deviceFeatures.samplerAnisotropy = VK_TRUE;
+
     VkDeviceCreateInfo createDeviceInfo = {};
     createDeviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO; 
     createDeviceInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -287,33 +291,30 @@ namespace DeviceControl {
     vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
     if(Global::enableValidationLayers) std::cout << "Destroyed Swap Chain safely\n" << std::endl;   
   }
+  VkImageView devicelibrary::createImageView(VkImage image, VkFormat format) {
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = image;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = format;
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
 
+    VkImageView imageView;
+    if (vkCreateImageView(Global::device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create image view!");
+    }
+
+    return imageView;
+  }
   void devicelibrary::createImageViews() {
     swapChainImageViews.resize(swapChainImages.size());
-    for(size_t i = 0; i < swapChainImages.size(); i++) {
-      VkImageViewCreateInfo createImageViewInfo{};
-      createImageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-      createImageViewInfo.image = swapChainImages[i];
-      // Are we treating images as 1D, 2D or 3D?
-      createImageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-      createImageViewInfo.format = swapChainImageFormat;
-      // Allow us to swizzle color channels
-      createImageViewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-      createImageViewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-      createImageViewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-      createImageViewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY; 
 
-      createImageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-      createImageViewInfo.subresourceRange.baseMipLevel = 0;
-      createImageViewInfo.subresourceRange.levelCount = 1;
-      createImageViewInfo.subresourceRange.baseArrayLayer = 0;
-      // Yet another setting we would increase for VR applications, and specifically create a swap chain with more layers as well. The other layers would be the eye outputs.
-      createImageViewInfo.subresourceRange.layerCount = 1;
-
-      if(vkCreateImageView(Global::device, &createImageViewInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create image views!");
-      }
-      if(Global::enableValidationLayers) std::cout << "Image views created successfully\n" << std::endl;
+    for (uint32_t i = 0; i < swapChainImages.size(); i++) {
+        swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat);
     }
   }
   void devicelibrary::destroyImageViews() {

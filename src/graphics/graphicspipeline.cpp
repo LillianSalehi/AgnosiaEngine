@@ -13,7 +13,7 @@ namespace Graphics {
   VkPipelineLayout pipelineLayout;
   VkPipeline graphicsPipeline;
   DeviceControl::devicelibrary deviceLibs;
-  Buffers::bufferslibrary buffers;
+  BuffersLibraries::buffers buffers;
   
   std::vector<VkFramebuffer> swapChainFramebuffers;
 
@@ -97,7 +97,7 @@ namespace Graphics {
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     // MODE_FILL, fill polygons, MODE_LINE, draw wireframe, MODE_POINT, draw vertices. Anything other than fill requires GPU feature *fillModeNonSolid*
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.lineWidth = 2.0f;
+    rasterizer.lineWidth = 1.0f;
       // How to cull the faces, right here we cull the back faces and tell the rasterizer front facing vertices are ordered clockwise.
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;

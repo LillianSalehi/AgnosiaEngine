@@ -1,10 +1,11 @@
 #pragma once
 #include "../global.h"
-#include <cstdint>
 
-namespace Buffers {
-  class bufferslibrary {
+namespace BuffersLibraries {
+  class buffers {
     public:
+      void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+      uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags flags);
       void createIndexBuffer();
       void createVertexBuffer();
       void destroyBuffers();

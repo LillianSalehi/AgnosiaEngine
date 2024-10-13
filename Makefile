@@ -27,7 +27,7 @@ debug: $(BIN)
 
 .PHONY: dep
 dep: 
-	sudo pacman -S gcc glfw glm shaderc libxi libxxf86vm gdb shaderc
+	sudo pacman -S gcc glfw glm shaderc libxi libxxf86vm gdb shaderc stb
 .PHONY: info
 info: 
 	@echo "make:		Build executable"

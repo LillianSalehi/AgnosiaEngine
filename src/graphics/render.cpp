@@ -9,7 +9,7 @@ namespace RenderPresent {
   std::vector<VkFence> inFlightFences;
   Graphics::graphicspipeline pipeline;
   DeviceControl::devicelibrary deviceLibs;
-  Buffers::bufferslibrary buffers;
+  BuffersLibraries::buffers buffers;
 
   void recreateSwapChain() {
     int width = 0, height = 0;

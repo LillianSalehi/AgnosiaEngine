@@ -24,6 +24,8 @@ namespace Global {
   VkDescriptorSetLayout descriptorSetLayout;
   std::vector<VkDescriptorSet> descriptorSets;
   uint32_t currentFrame = 0;
+  VkImageView textureImageView;
+  VkSampler textureSampler;
 
   Global::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
     // First we feed in a integer we want to use to hold the number of queued items, that fills it, then we create that amount of default constructed *VkQueueFamilyProperties* structs. 

@@ -16,21 +16,21 @@ std::vector<VkDeviceMemory> uniformBuffersMemory;
 std::vector<void*> uniformBuffersMapped;
 
 
-namespace Buffers {
+namespace BuffersLibraries {
 
 
   const std::vector<Global::Vertex> vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
   };  
   // Index buffer definition, showing which points to reuse.
   const std::vector<uint16_t> indices = {
     0, 1, 2, 2, 3, 0
   };
 
-  uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+  uint32_t buffers::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     // Graphics cards offer different types of memory to allocate from, here we query to find the right type of memory for our needs.
     // Query the available types of memory to iterate over.
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -77,7 +77,7 @@ namespace Buffers {
     vkFreeCommandBuffers(Global::device, Global::commandPool, 1, &commandBuffer);
   }
 
-  void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+  void buffers::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
@@ -103,7 +103,7 @@ namespace Buffers {
     vkBindBufferMemory(Global::device, buffer, bufferMemory, 0);
   }
 
-  void bufferslibrary::createIndexBuffer() {
+  void buffers::createIndexBuffer() {
     VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
 
     VkBuffer stagingBuffer;
@@ -123,7 +123,7 @@ namespace Buffers {
     vkDestroyBuffer(Global::device, stagingBuffer, nullptr);
     vkFreeMemory(Global::device, stagingBufferMemory, nullptr);
   }
-  void bufferslibrary::createVertexBuffer() {
+  void buffers::createVertexBuffer() {
     // Create a Vertex Buffer to hold the vertex information in memory so it doesn't have to be hardcoded!
     // Size denotes the size of the buffer in bytes, usage in this case is the buffer behaviour, using a bitwise OR.
     // Sharing mode denostes the same as the images in the swap chain! in this case, only the graphics queue uses this buffer, so we make it exclusive.
@@ -146,28 +146,29 @@ namespace Buffers {
     vkFreeMemory(Global::device, stagingBufferMemory, nullptr);
   }
 
-  void bufferslibrary::destroyBuffers() {
+  void buffers::destroyBuffers() {
     vkDestroyBuffer(Global::device, indexBuffer, nullptr);
     vkFreeMemory(Global::device, indexBufferMemory, nullptr);
 
     vkDestroyBuffer(Global::device, vertexBuffer, nullptr);
     vkFreeMemory(Global::device, vertexBufferMemory, nullptr);
   }
-  VkBuffer bufferslibrary::getVertexBuffer() {
+  VkBuffer buffers::getVertexBuffer() {
     return vertexBuffer;
   }
-  VkBuffer bufferslibrary::getIndexBuffer() {
+  VkBuffer buffers::getIndexBuffer() {
     return indexBuffer;
   }
-  std::vector<Global::Vertex> bufferslibrary::getVertices() {
+  std::vector<Global::Vertex> buffers::getVertices() {
     return vertices;
   }
-  std::vector<uint16_t> bufferslibrary::getIndices() {
+  std::vector<uint16_t> buffers::getIndices() {
     return indices;
   }
 // ------------------------------ Uniform Buffer Setup -------------------------------- //
-  void bufferslibrary::createDescriptorSetLayout() {
+  void buffers::createDescriptorSetLayout() {
     // Create a table of pointers to data, a Descriptor Set!
+    // --------------------- UBO Layout --------------------- //
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -178,16 +179,25 @@ namespace Buffers {
     // Immutable Samplers is relevant for image sampling.
     uboLayoutBinding.pImmutableSamplers = nullptr;
     
+    // --------------- Texture Sampler Layout --------------- //
+    VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+    samplerLayoutBinding.binding = 1;
+    samplerLayoutBinding.descriptorCount = 1;
+    samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerLayoutBinding.pImmutableSamplers = nullptr;
+    samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &uboLayoutBinding;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
 
     if(vkCreateDescriptorSetLayout(Global::device, &layoutInfo, nullptr, &Global::descriptorSetLayout) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create descriptor set layout!");
     }
   }
-  void bufferslibrary::createUniformBuffers() {
+  void buffers::createUniformBuffers() {
     // Map the uniform buffer to memory as a pointer we can use to write data to later. This stays mapped to memory for the applications lifetime.
     // This technique is called "persistent mapping", not having to map the buffer every time we need to update it increases performance, though not free
     VkDeviceSize bufferSize = sizeof(Global::UniformBufferObject);
@@ -201,7 +211,7 @@ namespace Buffers {
       vkMapMemory(Global::device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
     }
   }
-  void bufferslibrary::updateUniformBuffer(uint32_t currentImage) {
+  void buffers::updateUniformBuffer(uint32_t currentImage) {
     // Update the uniform buffer every frame to change the position, but notably, use chrono to know exactly how much to move 
     // so we aren't locked to the framerate as the world time.
 
@@ -225,29 +235,31 @@ namespace Buffers {
     
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
   }
-  void bufferslibrary::destroyUniformBuffer() {
+  void buffers::destroyUniformBuffer() {
     for(size_t i = 0; i < Global::MAX_FRAMES_IN_FLIGHT; i++) {
       vkDestroyBuffer(Global::device, uniformBuffers[i],nullptr);
       vkFreeMemory(Global::device, uniformBuffersMemory[i], nullptr);
     }
   }
-  void bufferslibrary::createDescriptorPool() {
+  void buffers::createDescriptorPool() {
     // Create a pool to be used to allocate descriptor sets.
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = static_cast<uint32_t>(Global::MAX_FRAMES_IN_FLIGHT);
-
+    std::array<VkDescriptorPoolSize, 2> poolSizes{};
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[0].descriptorCount = static_cast<uint32_t>(Global::MAX_FRAMES_IN_FLIGHT);
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[1].descriptorCount = static_cast<uint32_t>(Global::MAX_FRAMES_IN_FLIGHT);
+    
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolInfo.pPoolSizes = poolSizes.data();
     poolInfo.maxSets = static_cast<uint32_t>(Global::MAX_FRAMES_IN_FLIGHT);
 
     if (vkCreateDescriptorPool(Global::device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
       throw std::runtime_error("failed to create descriptor pool!");
     }
   }
-  void bufferslibrary::createDescriptorSets() {
+  void buffers::createDescriptorSets() {
     std::vector<VkDescriptorSetLayout> layouts(Global::MAX_FRAMES_IN_FLIGHT, Global::descriptorSetLayout);
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -259,29 +271,40 @@ namespace Buffers {
     if (vkAllocateDescriptorSets(Global::device, &allocInfo, Global::descriptorSets.data()) != VK_SUCCESS) {
       throw std::runtime_error("failed to allocate descriptor sets!");
     }
-    for(size_t i = 0; i < Global::MAX_FRAMES_IN_FLIGHT; i++) {
+
+    for (size_t i = 0; i < Global::MAX_FRAMES_IN_FLIGHT; i++) {
       VkDescriptorBufferInfo bufferInfo{};
       bufferInfo.buffer = uniformBuffers[i];
       bufferInfo.offset = 0;
       bufferInfo.range = sizeof(Global::UniformBufferObject);
 
-      VkWriteDescriptorSet descriptorWrite{};
-      descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-      descriptorWrite.dstSet = Global::descriptorSets[i];
-      descriptorWrite.dstBinding = 0;
-      descriptorWrite.dstArrayElement = 0;
+      VkDescriptorImageInfo imageInfo{};
+      imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+      imageInfo.imageView = Global::textureImageView;
+      imageInfo.sampler = Global::textureSampler;
 
-      descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      descriptorWrite.descriptorCount = 1;
+      std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
 
-      descriptorWrite.pBufferInfo = &bufferInfo;
-      descriptorWrite.pImageInfo = nullptr; // Optional
-      descriptorWrite.pTexelBufferView = nullptr; // Optional
-    
-      vkUpdateDescriptorSets(Global::device, 1, &descriptorWrite, 0, nullptr);
+      descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[0].dstSet = Global::descriptorSets[i];
+      descriptorWrites[0].dstBinding = 0;
+      descriptorWrites[0].dstArrayElement = 0;
+      descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      descriptorWrites[0].descriptorCount = 1;
+      descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+      descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[1].dstSet = Global::descriptorSets[i];
+      descriptorWrites[1].dstBinding = 1;
+      descriptorWrites[1].dstArrayElement = 0;
+      descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWrites[1].descriptorCount = 1;
+      descriptorWrites[1].pImageInfo = &imageInfo;
+
+      vkUpdateDescriptorSets(Global::device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
   }
-  void bufferslibrary::destroyDescriptorPool() {
+  void buffers::destroyDescriptorPool() {
     vkDestroyDescriptorPool(Global::device, descriptorPool, nullptr);
   }
 }

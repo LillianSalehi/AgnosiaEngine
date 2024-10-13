@@ -5,7 +5,7 @@ caption
   //**This dictates basic flow of the vulkan boilerplate system. **//
 endcaption
 
-:main;
+://**main()**//; <<procedure>>
 ://**run()**//; <<procedure>>
 split
 ://**initWindow()**//; <<procedure>>
