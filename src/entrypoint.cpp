@@ -5,7 +5,9 @@ Graphics::graphicspipeline graphicsPipeline;
 RenderPresent::render renderPresentation;
 BuffersLibraries::buffers buffers;
 TextureLibraries::texture texture;
+ModelLib::model model;
 VkInstance vulkaninstance;
+
 //TODO: add global instances?
 
 // Getters and Setters!
@@ -67,6 +69,7 @@ void initVulkan() {
   texture.createTextureImage();
   texture.createTextureImageView();
   texture.createTextureSampler();
+  model.loadModel();
   buffers.createVertexBuffer();
   buffers.createIndexBuffer();
   buffers.createUniformBuffers();

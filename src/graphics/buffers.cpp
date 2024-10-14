@@ -18,24 +18,6 @@ std::vector<void*> uniformBuffersMapped;
 namespace BuffersLibraries {
 
 
-  const std::vector<Global::Vertex> vertices = {
-    // X      Y      Z    |  R     G     B   |   W     Q
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-
-  
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-  };  
-  // Index buffer definition, showing which points to reuse.
-  const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-  };
 
   uint32_t buffers::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     // Graphics cards offer different types of memory to allocate from, here we query to find the right type of memory for our needs.
@@ -111,7 +93,7 @@ namespace BuffersLibraries {
   }
 
   void buffers::createIndexBuffer() {
-    VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
+    VkDeviceSize bufferSize = sizeof(Global::indices[0]) * Global::indices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -120,7 +102,7 @@ namespace BuffersLibraries {
 
     void* data;
     vkMapMemory(Global::device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices.data(), (size_t) bufferSize);
+    memcpy(data, Global::indices.data(), (size_t) bufferSize);
   
     vkUnmapMemory(Global::device, stagingBufferMemory);
 
@@ -135,7 +117,7 @@ namespace BuffersLibraries {
     // Create a Vertex Buffer to hold the vertex information in memory so it doesn't have to be hardcoded!
     // Size denotes the size of the buffer in bytes, usage in this case is the buffer behaviour, using a bitwise OR.
     // Sharing mode denostes the same as the images in the swap chain! in this case, only the graphics queue uses this buffer, so we make it exclusive.
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+    VkDeviceSize bufferSize = sizeof(Global::vertices[0]) * Global::vertices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -143,7 +125,7 @@ namespace BuffersLibraries {
 
     void* data;
     vkMapMemory(Global::device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data(), (size_t) bufferSize);
+    memcpy(data, Global::vertices.data(), (size_t) bufferSize);
     vkUnmapMemory(Global::device, stagingBufferMemory);
 
     createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
@@ -167,12 +149,7 @@ namespace BuffersLibraries {
   VkBuffer buffers::getIndexBuffer() {
     return indexBuffer;
   }
-  std::vector<Global::Vertex> buffers::getVertices() {
-    return vertices;
-  }
-  std::vector<uint16_t> buffers::getIndices() {
-    return indices;
-  }
+  
 // ------------------------------ Uniform Buffer Setup -------------------------------- //
   void buffers::createDescriptorSetLayout() {
     // Create a table of pointers to data, a Descriptor Set!
@@ -231,10 +208,10 @@ namespace BuffersLibraries {
     Global::UniformBufferObject ubo{};
     ubo.time = time;
     // Modify the model projection transformation to rotate around the Z over time.
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(20.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     // Modify the view transformation to look at the object from above at a 45 degree angle.
     // This takes the eye position, center position, and the up direction.
-    ubo.view = glm::lookAt(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     // 45 degree field of view, set aspect ratio, and near and far clipping range.
     ubo.proj = glm::perspective(glm::radians(45.0f), deviceLibrary.getSwapChainExtent().width / (float) deviceLibrary.getSwapChainExtent().height, 0.1f, 10.0f);
     

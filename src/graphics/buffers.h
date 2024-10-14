@@ -11,8 +11,6 @@ namespace BuffersLibraries {
       void destroyBuffers();
       VkBuffer getVertexBuffer();
       VkBuffer getIndexBuffer();
-      std::vector<Global::Vertex> getVertices();
-      std::vector<uint16_t> getIndices();
       void createDescriptorSetLayout();
       void createUniformBuffers();
       void updateUniformBuffer(uint32_t currentImage);

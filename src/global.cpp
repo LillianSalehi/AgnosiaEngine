@@ -30,6 +30,9 @@ namespace Global {
   VkImage depthImage;
   VkDeviceMemory depthImageMemory;
 
+  std::vector<Vertex> vertices;
+  // Index buffer definition, showing which points to reuse.
+  std::vector<uint32_t> indices;
   Global::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
     // First we feed in a integer we want to use to hold the number of queued items, that fills it, then we create that amount of default constructed *VkQueueFamilyProperties* structs. 
     // These store the flags, the amount of queued items in the family, and timestamp data. Queue families are simply group collections of tasks we want to get done. 

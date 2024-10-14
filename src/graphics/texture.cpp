@@ -190,7 +190,7 @@ void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t 
     // Import pixels from image with data on color channels, width and height, and colorspace!
     // Its a lot of kind of complicated memory calls to bring it from a file -> to a buffer -> to a image object.
     int textureWidth, textureHeight, textureChannels;
-    stbi_uc* pixels = stbi_load("assets/textures/test.png", &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
+    stbi_uc* pixels = stbi_load(Global::TEXTURE_PATH.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
     
     VkDeviceSize imageSize = textureWidth * textureHeight * 4;
 

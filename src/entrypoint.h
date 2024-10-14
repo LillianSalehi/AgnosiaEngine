@@ -5,6 +5,7 @@
 #include "graphics/render.h"
 #include "graphics/texture.h"
 #include "global.h"
+#include "graphics/model.h"
 class EntryApp {
   public: 
     static EntryApp& getInstance();

@@ -1,5 +1,5 @@
 CPPFLAGS=-g
-LDFLAGS=-lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
+LDFLAGS=-lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -ltinyobjloader
 DEBUGFLAGS=-DDEBUG -fsanitize=address
 GDBFLAGS=
 SRC = $(shell find . -name "*.cpp")

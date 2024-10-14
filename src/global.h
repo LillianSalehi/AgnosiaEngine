@@ -6,6 +6,7 @@
 #include <glm/ext/vector_float3.hpp>
 #include <glm/fwd.hpp>
 #include <iostream>
+#include <ostream>
 #include <vector>
 #include <optional>
 #include <vulkan/vulkan_core.h>
@@ -40,6 +41,10 @@ namespace Global {
   extern VkImageView depthImageView;
   extern VkImage depthImage;
   extern VkDeviceMemory depthImageMemory;
+  const std::string MODEL_PATH = "assets/models/viking_room.obj";
+  const std::string TEXTURE_PATH = "assets/textures/viking_room.png";
+
+
 
   struct UniformBufferObject {
     float time;
@@ -82,9 +87,12 @@ namespace Global {
       return attributeDescriptions;
     }
   };
+
   const uint32_t WIDTH = 800;
   const uint32_t HEIGHT = 800;
-
+  extern std::vector<Vertex> vertices;
+  // Index buffer definition, showing which points to reuse.
+  extern std::vector<uint32_t> indices;
   struct QueueFamilyIndices {
     // We need to check that the Queue families support graphics operations and window presentation, sometimes they can support one or the other,
     // therefore, we take into account both for completion.
