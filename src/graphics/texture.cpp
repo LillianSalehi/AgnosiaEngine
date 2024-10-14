@@ -1,3 +1,4 @@
+#include <vulkan/vulkan_core.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 #include "texture.h"
@@ -10,6 +11,7 @@ VkImage textureImage;
 VkDeviceMemory textureImageMemory;
 VkPipelineStageFlags sourceStage;
 VkPipelineStageFlags destinationStage;
+
 
 
 namespace TextureLibraries {
@@ -164,6 +166,25 @@ void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t 
 
     endSingleTimeCommands(commandBuffer);
   }
+  VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
+    for(VkFormat format : candidates) {
+      VkFormatProperties props;
+      vkGetPhysicalDeviceFormatProperties(Global::physicalDevice, format, &props);
+      
+      // Do we support linear tiling?
+      if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+        return format;
+      // Or do we support optimal tiling?
+      } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+        return format;
+      }
+    }
+    throw std::runtime_error("failed to find supported depth buffering format!");
+  } 
+
+  bool hasStencilComponent(VkFormat format) {
+    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+  }
 // -------------------------------- Image Libraries ------------------------------- //
   void texture::createTextureImage() {
     // Import pixels from image with data on color channels, width and height, and colorspace!
@@ -198,7 +219,7 @@ void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t 
   }
   void texture::createTextureImageView() {
     // Create a texture image view, which is a struct of information about the image.
-    Global::textureImageView = deviceLibraries.createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB);
+    Global::textureImageView = deviceLibraries.createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
   }
   void texture::createTextureSampler() {
     // Create a sampler to access and parse the texture object.
@@ -250,5 +271,21 @@ void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t 
     vkDestroyImage(Global::device, textureImage, nullptr);
     vkFreeMemory(Global::device, textureImageMemory, nullptr);
   }
-  
+  VkFormat texture::findDepthFormat() {
+    return findSupportedFormat(
+        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+    );
+  }
+  void texture::createDepthResources() {
+    VkFormat depthFormat = findDepthFormat();
+    VkExtent2D swapChainExtent = deviceLibraries.getSwapChainExtent();
+    createImage(swapChainExtent.width, swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Global::depthImage, Global::depthImageMemory);
+    Global::depthImageView = deviceLibraries.createImageView(Global::depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+    // Explicit transition from the layout of the image to the depth attachment is unnecessary here, since that will be handled in the render pass!
+    
+    
+    
+  }
 }

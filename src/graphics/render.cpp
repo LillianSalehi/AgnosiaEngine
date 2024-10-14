@@ -2,6 +2,8 @@
 #include "graphicspipeline.h"
 #include "../devicelibrary.h"
 #include "../entrypoint.h"
+#include "texture.h"
+#include <vulkan/vulkan_core.h>
 namespace RenderPresent {
 
   std::vector<VkSemaphore> imageAvailableSemaphores;
@@ -10,6 +12,7 @@ namespace RenderPresent {
   Graphics::graphicspipeline pipeline;
   DeviceControl::devicelibrary deviceLibs;
   BuffersLibraries::buffers buffers;
+  TextureLibraries::texture tex;
 
   void recreateSwapChain() {
     int width = 0, height = 0;
@@ -30,6 +33,7 @@ namespace RenderPresent {
 
     deviceLibs.createSwapChain(Global::window);
     deviceLibs.createImageViews();
+    tex.createDepthResources();
     pipeline.createFramebuffers();
   }
   // At a high level, rendering in Vulkan consists of 5 steps:
@@ -153,6 +157,9 @@ namespace RenderPresent {
     }
   }
   void render::cleanupSwapChain() {
+    vkDestroyImageView(Global::device, Global::depthImageView, nullptr);
+    vkDestroyImage(Global::device, Global::depthImage, nullptr);
+    vkFreeMemory(Global::device, Global::depthImageMemory, nullptr);
     for(auto framebuffer : pipeline.getSwapChainFramebuffers()) {
       vkDestroyFramebuffer(Global::device, framebuffer, nullptr);
     }

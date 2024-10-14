@@ -26,6 +26,9 @@ namespace Global {
   uint32_t currentFrame = 0;
   VkImageView textureImageView;
   VkSampler textureSampler;
+  VkImageView depthImageView;
+  VkImage depthImage;
+  VkDeviceMemory depthImageMemory;
 
   Global::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
     // First we feed in a integer we want to use to hold the number of queued items, that fills it, then we create that amount of default constructed *VkQueueFamilyProperties* structs. 

@@ -6,6 +6,7 @@ RenderPresent::render renderPresentation;
 BuffersLibraries::buffers buffers;
 TextureLibraries::texture texture;
 VkInstance vulkaninstance;
+//TODO: add global instances?
 
 // Getters and Setters!
 void EntryApp::setFramebufferResized(bool setter) {
@@ -60,8 +61,9 @@ void initVulkan() {
   graphicsPipeline.createRenderPass();
   buffers.createDescriptorSetLayout();
   graphicsPipeline.createGraphicsPipeline();
-  graphicsPipeline.createFramebuffers();
   graphicsPipeline.createCommandPool();
+  texture.createDepthResources();
+  graphicsPipeline.createFramebuffers();
   texture.createTextureImage();
   texture.createTextureImageView();
   texture.createTextureSampler();

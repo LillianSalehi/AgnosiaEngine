@@ -1,5 +1,6 @@
 #pragma once
 #include "global.h"
+#include <GLFW/glfw3.h>
 #include <optional>
 #include <algorithm>
 #include <limits>
@@ -16,7 +17,7 @@ class devicelibrary {
       void destroySurface(VkInstance& instance);
       void createSwapChain(GLFWwindow* window);
       void destroySwapChain();
-      VkImageView createImageView(VkImage image, VkFormat format);
+      VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags flags);
       void createImageViews();
       void destroyImageViews();
       void createCommandPool();

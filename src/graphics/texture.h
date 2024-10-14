@@ -1,5 +1,6 @@
 #pragma once
 #include "../global.h"
+#include <vulkan/vulkan_core.h>
 
 namespace TextureLibraries {
   class texture {
@@ -9,5 +10,7 @@ namespace TextureLibraries {
       void createTextureSampler();
       void destroyTextureImage();
       void destroyTextureSampler();
+      VkFormat findDepthFormat();
+      void createDepthResources();
   };
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "graphics/texture.h"
 #include <cstdint>
 #include <glm/detail/qualifier.hpp>
 #include <glm/ext/vector_float2.hpp>
@@ -8,16 +9,20 @@
 #include <vector>
 #include <optional>
 #include <vulkan/vulkan_core.h>
-#include "debug/vulkandebuglibs.h"
+#include <glm/gtc/matrix_transform.hpp>
+#include <array>
+
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <array>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 namespace Global {
   // Global variables and includes we are going to use almost everywhere, validation layers hook into everything, and you need to check if they are enabled first,
   // so that's one obvious global, as well as the glfw includes!
+
   extern const std::vector<const char*> validationLayers;
   extern const bool enableValidationLayers;
   extern VkDevice device;  
@@ -32,6 +37,9 @@ namespace Global {
   extern std::vector<VkDescriptorSet> descriptorSets;
   extern VkImageView textureImageView;
   extern VkSampler textureSampler;
+  extern VkImageView depthImageView;
+  extern VkImage depthImage;
+  extern VkDeviceMemory depthImageMemory;
 
   struct UniformBufferObject {
     float time;
@@ -40,7 +48,9 @@ namespace Global {
     alignas(16) glm::mat4 proj;
   };
   struct Vertex {
-    glm::vec2 pos;
+    // This defines what a vertex is!
+    // We control the position, color and texture coordinate here! 
+    glm::vec3 pos;
     glm::vec3 color;
     glm::vec2 texCoord;
     
@@ -57,7 +67,7 @@ namespace Global {
 
       attributeDescriptions[0].binding = 0;
       attributeDescriptions[0].location = 0;
-      attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+      attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
       attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
       attributeDescriptions[1].binding = 0;
@@ -73,7 +83,7 @@ namespace Global {
     }
   };
   const uint32_t WIDTH = 800;
-  const uint32_t HEIGHT = 600;
+  const uint32_t HEIGHT = 800;
 
   struct QueueFamilyIndices {
     // We need to check that the Queue families support graphics operations and window presentation, sometimes they can support one or the other,
