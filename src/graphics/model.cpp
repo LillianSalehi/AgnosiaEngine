@@ -1,11 +1,23 @@
-#include "buffers.h"
-#include <stdexcept>
-#include <string>
 #define TINY_OBJ_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 #include "model.h"
+#include <unordered_map>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
+
+namespace std {
+  template<> struct hash<Global::Vertex> {
+    size_t operator()(Global::Vertex const& vertex) const {
+      return ((hash<glm::vec3>()(vertex.pos) ^
+              (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+              (hash<glm::vec2>()(vertex.texCoord) << 1);
+    }
+  };
+}
+
 namespace ModelLib {
-  BuffersLibraries::buffers buf;
+
+  std::unordered_map<Global::Vertex, uint32_t> uniqueVertices{};
 
   void model::loadModel() {
     tinyobj::ObjReaderConfig readerConfig;
@@ -24,7 +36,7 @@ namespace ModelLib {
 
     for (const auto& shape : shapes) {
       for (const auto& index : shape.mesh.indices) {
-        Global::Vertex vertex;
+        Global::Vertex vertex{};
 
         vertex.pos = {
           attrib.vertices[3 * index.vertex_index + 0],
@@ -39,9 +51,13 @@ namespace ModelLib {
 
         vertex.color = {1.0f, 1.0f, 1.0f};
 
-        Global::vertices.push_back(vertex);
-        Global::indices.push_back(Global::indices.size());       
-      } 
+        if (uniqueVertices.count(vertex) == 0) {
+          uniqueVertices[vertex] = static_cast<uint32_t>(Global::vertices.size());
+          Global::vertices.push_back(vertex);
+        }
+
+        Global::indices.push_back(uniqueVertices[vertex]);
+      }
     }
   }
 }

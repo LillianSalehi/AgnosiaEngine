@@ -86,6 +86,9 @@ namespace Global {
       attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
       return attributeDescriptions;
     }
+    bool operator==(const Vertex& other) const {
+      return pos == other.pos && color == other.color && texCoord == other.texCoord;
+    }
   };
 
   const uint32_t WIDTH = 800;
