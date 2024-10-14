@@ -292,6 +292,7 @@ namespace DeviceControl {
     if(Global::enableValidationLayers) std::cout << "Destroyed Swap Chain safely\n" << std::endl;   
   }
   VkImageView devicelibrary::createImageView(VkImage image, VkFormat format) {
+    // This defines the parameters of a newly created image object!
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;

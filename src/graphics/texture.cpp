@@ -1,4 +1,3 @@
-#include <vulkan/vulkan_core.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 #include "texture.h"
@@ -15,6 +14,7 @@ VkPipelineStageFlags destinationStage;
 
 namespace TextureLibraries {
   void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
+    // This function specifies all the data in an image object, this is called directly after the creation of an image object.
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -69,7 +69,6 @@ namespace TextureLibraries {
 
     return commandBuffer;
   }
-
   void endSingleTimeCommands(VkCommandBuffer commandBuffer) {
     // This function takes a command buffer with the data we wish to execute and submits it to the graphics queue.
     // Afterwards, it purges the command buffer.
@@ -85,7 +84,6 @@ namespace TextureLibraries {
 
     vkFreeCommandBuffers(Global::device, Global::commandPool, 1, &commandBuffer);
   }
-
   void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
     // Copy 1 buffer to another.
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
@@ -141,8 +139,7 @@ namespace TextureLibraries {
 
     endSingleTimeCommands(commandBuffer);
   }
-
-  void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
+void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
     //This handles copying from the buffer to the image, specifically what *parts* to copy to the image.
     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -167,7 +164,10 @@ namespace TextureLibraries {
 
     endSingleTimeCommands(commandBuffer);
   }
+// -------------------------------- Image Libraries ------------------------------- //
   void texture::createTextureImage() {
+    // Import pixels from image with data on color channels, width and height, and colorspace!
+    // Its a lot of kind of complicated memory calls to bring it from a file -> to a buffer -> to a image object.
     int textureWidth, textureHeight, textureChannels;
     stbi_uc* pixels = stbi_load("assets/textures/test.png", &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
     
@@ -197,28 +197,42 @@ namespace TextureLibraries {
     vkFreeMemory(Global::device, stagingBufferMemory, nullptr);
   }
   void texture::createTextureImageView() {
+    // Create a texture image view, which is a struct of information about the image.
     Global::textureImageView = deviceLibraries.createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB);
   }
   void texture::createTextureSampler() {
+    // Create a sampler to access and parse the texture object.
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    // These two options define the filtering method when sampling the texture. 
+    // It also handles zooming in versus out, min vs mag!
     samplerInfo.magFilter = VK_FILTER_LINEAR; // TODO: CUBIC
     samplerInfo.minFilter = VK_FILTER_LINEAR; // TODO: CUBIC
-
+    
+    // These options define UVW edge modes, ClampToEdge extends the last pixels to the edges when larger than the UVW.
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 
     VkPhysicalDeviceProperties properties{};
     vkGetPhysicalDeviceProperties(Global::physicalDevice, &properties);
+    // Enable or Disable Anisotropy, and set the amount.
     samplerInfo.anisotropyEnable = VK_TRUE;
     samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-
+    
+    // When sampling with Clamp to Border, the border color is defined here.
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    // Normalizing coordinates changes texCoords from [0, texWidth] to [0, 1].
+    // This is what should ALWAYS be used, because it means you can use varying texture sizes.
+    // Another TODO: Normalizing
     samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    // Compare texels to a value and use the output in filtering!
+    // This is mainly used in percentage-closer filtering on shadow maps, this will be revisted eventually...
     samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-
+    
+    // Mipmaps are basically LoD's for textures, different resolutions to load based on distance. 
+    // These settings simply describe how to apply mipmapping.
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     samplerInfo.mipLodBias = 0.0f;
     samplerInfo.minLod = 0.0f;

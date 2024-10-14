@@ -109,6 +109,29 @@ partition "**Graphics**" {
     buffer objects, pools manage the memory used for buffers.
   end note
 }
+partition "**TextureLibraries**" {
+  :createTextureImage();
+  note right 
+    This function imports the pixels from an image, puts them
+    into a buffer, and copies them from memory into a texture!
+    A bit complicated because we are moving and freeing lots of
+    memory, but quite useful.
+  end note
+  :createTextureImageView();
+  note right
+    This function creates a image view for the texture, just 
+    builds a struct holding information about the texture, like
+    layers, mip levels, and etc.
+  end note
+  :createTextureSampler();
+  note right
+    This function is **incredibly** important. This builds a 
+    texture sampler, information about what to do with the 
+    texture once its created. This defines settings like 
+    //UVW mode//, //Filtering//, //Anisotropy//, and 
+    //Mipmap modes//
+  end note
+}
 partition "**Buffers**" {
   :createVertexBuffer();
   note right 
@@ -146,13 +169,13 @@ partition "**Buffers**" {
     therefore necessary. (see **createDescriptorSets()**)
   end note
 }
-:Graphics::createCommandBuffer();
+:**Graphics**::createCommandBuffer();
 note right 
   This is the partner to the commandPool creator, 
   storing the commands we wish to perform whilst 
   waiting in a queue. These are very efficient.
 end note
-:RenderPresent::createSyncObject();
+:**RenderPresent**::createSyncObject();
 note right
   This is **HEAVILY** documented, create Semaphores
   and Fences, for halting and starting execution, basically 
