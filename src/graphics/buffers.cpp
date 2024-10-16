@@ -200,7 +200,7 @@ namespace buffers_libs {
     Global::UniformBufferObject ubo{};
     ubo.time = time;
     // Modify the model projection transformation to rotate around the Z over time.
-    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(30.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     // Modify the view transformation to look at the object from above at a 45 degree angle.
     // This takes the eye position, center position, and the up direction.
     ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));

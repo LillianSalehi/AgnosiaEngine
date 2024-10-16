@@ -23,11 +23,14 @@ namespace modellib {
       if(!reader.Error().empty()) {
         throw std::runtime_error(reader.Error());
       }
+      if(!reader.Warning().empty()) {
+        throw std::runtime_error(reader.Warning());
+      }
     }
     
     auto& attrib = reader.GetAttrib();
     auto& shapes = reader.GetShapes();
-    auto& materials = reader.GetMaterials();
+    //auto& materials = reader.GetMaterials();
 
     for (const auto& shape : shapes) {
       for (const auto& index : shape.mesh.indices) {
@@ -38,19 +41,19 @@ namespace modellib {
           attrib.vertices[3 * index.vertex_index + 1],
           attrib.vertices[3 * index.vertex_index + 2]
         };
-
+        
+        //TODO: Major fix here, running anything but the viking room OBJ crashes on texcoord assignment!
         vertex.texCoord = {
           attrib.texcoords[2 * index.texcoord_index + 0],
           1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
         };
-
         vertex.color = {1.0f, 1.0f, 1.0f};
 
         if (uniqueVertices.count(vertex) == 0) {
           uniqueVertices[vertex] = static_cast<uint32_t>(Global::vertices.size());
           Global::vertices.push_back(vertex);
         }
-
+        
         Global::indices.push_back(uniqueVertices[vertex]);
       }
     }

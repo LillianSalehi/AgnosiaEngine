@@ -1,4 +1,5 @@
 #include "entrypoint.h"
+#include "global.h"
 
 VkInstance vulkaninstance;
 
@@ -83,14 +84,13 @@ void mainLoop() {
 
 void cleanup() {
   render_present::Render::cleanupSwapChain();
-  texture_libs::Texture::createTextureSampler();
-  texture_libs::Texture::destroyTextureImage();
-  buffers_libs::Buffers::destroyUniformBuffer();
-  buffers_libs::Buffers::destroyDescriptorPool();
-  vkDestroyDescriptorSetLayout(Global::device, Global::descriptorSetLayout, nullptr);
   graphics_pipeline::Graphics::destroyGraphicsPipeline();
   graphics_pipeline::Graphics::destroyRenderPass();
-
+  buffers_libs::Buffers::destroyUniformBuffer();
+  buffers_libs::Buffers::destroyDescriptorPool();
+  texture_libs::Texture::destroyTextureSampler();
+  texture_libs::Texture::destroyTextureImage();
+  vkDestroyDescriptorSetLayout(Global::device, Global::descriptorSetLayout, nullptr);
   buffers_libs::Buffers::destroyBuffers();
   render_present::Render::destroyFenceSemaphores();
   graphics_pipeline::Graphics::destroyCommandPool();
