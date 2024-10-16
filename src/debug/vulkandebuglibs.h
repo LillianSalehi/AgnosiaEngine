@@ -1,17 +1,14 @@
 #pragma once
-#include <vulkan/vulkan_core.h>
-#include <cstdint>
 #include <cstring>
 #include "../global.h"
 
-namespace Debug {
-  class vulkandebuglibs {
-    
+namespace debug_libs {
+  class Debug {
     public:
-      void vulkanDebugSetup(VkInstanceCreateInfo& createInfo, VkInstance& instance);
-      bool checkValidationLayerSupport();
-      void checkUnavailableValidationLayers();
-      void setupDebugMessenger(VkInstance& vulkanInstance);
-      void DestroyDebugUtilsMessengerEXT(VkInstance instance, const VkAllocationCallbacks* pAllocator);
+      static void vulkanDebugSetup(VkInstanceCreateInfo& createInfo, VkInstance& instance);
+      static bool checkValidationLayerSupport();
+      static void checkUnavailableValidationLayers();
+      static void setupDebugMessenger(VkInstance& vulkanInstance);
+      static void DestroyDebugUtilsMessengerEXT(VkInstance instance, const VkAllocationCallbacks* pAllocator);
   };
 }

@@ -2,20 +2,22 @@
 #include "../global.h"
 #include "../devicelibrary.h"
 #include "buffers.h"
+#include "texture.h"
 #include <fstream>
-namespace Graphics {
-  class graphicspipeline {
+
+namespace graphics_pipeline {
+  class Graphics {
     public:
-      void createGraphicsPipeline();
-      void destroyGraphicsPipeline();
-      void createRenderPass();
-      void destroyRenderPass();
-      void createFramebuffers();
-      void destroyFramebuffers();
-      void createCommandPool();
-      void destroyCommandPool();
-      void createCommandBuffer();
-      void recordCommandBuffer(VkCommandBuffer cmndBuffer, uint32_t imageIndex);
-      std::vector<VkFramebuffer> getSwapChainFramebuffers();
+      static void createGraphicsPipeline();
+      static void destroyGraphicsPipeline();
+      static void createRenderPass();
+      static void destroyRenderPass();
+      static void createFramebuffers();
+      static void destroyFramebuffers();
+      static void createCommandPool();
+      static void destroyCommandPool();
+      static void createCommandBuffer();
+      static void recordCommandBuffer(VkCommandBuffer cmndBuffer, uint32_t imageIndex);
+      static std::vector<VkFramebuffer> getSwapChainFramebuffers();
   };
 }

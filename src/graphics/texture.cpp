@@ -1,20 +1,14 @@
-#include <vulkan/vulkan_core.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 #include "texture.h"
-#include "buffers.h"
-#include "../devicelibrary.h"
 
-BuffersLibraries::buffers buffer;
-DeviceControl::devicelibrary deviceLibraries;
+
 VkImage textureImage;
 VkDeviceMemory textureImageMemory;
 VkPipelineStageFlags sourceStage;
 VkPipelineStageFlags destinationStage;
 
-
-
-namespace TextureLibraries {
+namespace texture_libs {
   void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
     // This function specifies all the data in an image object, this is called directly after the creation of an image object.
     VkImageCreateInfo imageInfo{};
@@ -42,7 +36,7 @@ namespace TextureLibraries {
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = buffer.findMemoryType(memRequirements.memoryTypeBits, properties);
+    allocInfo.memoryTypeIndex = buffers_libs::Buffers::findMemoryType(memRequirements.memoryTypeBits, properties);
 
     if (vkAllocateMemory(Global::device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
       throw std::runtime_error("failed to allocate image memory!");
@@ -186,7 +180,7 @@ void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t 
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
   }
 // -------------------------------- Image Libraries ------------------------------- //
-  void texture::createTextureImage() {
+  void Texture::createTextureImage() {
     // Import pixels from image with data on color channels, width and height, and colorspace!
     // Its a lot of kind of complicated memory calls to bring it from a file -> to a buffer -> to a image object.
     int textureWidth, textureHeight, textureChannels;
@@ -199,7 +193,7 @@ void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t 
     }
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
-    buffer.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+    buffers_libs::Buffers::createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
     void* data;
     vkMapMemory(Global::device, stagingBufferMemory, 0, imageSize, 0, &data);
@@ -217,11 +211,11 @@ void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t 
     vkDestroyBuffer(Global::device, stagingBuffer, nullptr);
     vkFreeMemory(Global::device, stagingBufferMemory, nullptr);
   }
-  void texture::createTextureImageView() {
+  void Texture::createTextureImageView() {
     // Create a texture image view, which is a struct of information about the image.
-    Global::textureImageView = deviceLibraries.createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
+    Global::textureImageView = device_libs::DeviceControl::createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT);
   }
-  void texture::createTextureSampler() {
+  void Texture::createTextureSampler() {
     // Create a sampler to access and parse the texture object.
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -263,26 +257,26 @@ void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t 
         throw std::runtime_error("failed to create texture sampler!");
     }  
   }
-  void texture::destroyTextureSampler() {
+  void Texture::destroyTextureSampler() {
     vkDestroySampler(Global::device, Global::textureSampler, nullptr);
     vkDestroyImageView(Global::device, Global::textureImageView, nullptr);
   }
-  void texture::destroyTextureImage() {
+  void Texture::destroyTextureImage() {
     vkDestroyImage(Global::device, textureImage, nullptr);
     vkFreeMemory(Global::device, textureImageMemory, nullptr);
   }
-  VkFormat texture::findDepthFormat() {
+  VkFormat Texture::findDepthFormat() {
     return findSupportedFormat(
         {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
         VK_IMAGE_TILING_OPTIMAL,
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
     );
   }
-  void texture::createDepthResources() {
+  void Texture::createDepthResources() {
     VkFormat depthFormat = findDepthFormat();
-    VkExtent2D swapChainExtent = deviceLibraries.getSwapChainExtent();
+    VkExtent2D swapChainExtent = device_libs::DeviceControl::getSwapChainExtent();
     createImage(swapChainExtent.width, swapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Global::depthImage, Global::depthImageMemory);
-    Global::depthImageView = deviceLibraries.createImageView(Global::depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+    Global::depthImageView = device_libs::DeviceControl::createImageView(Global::depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
     // Explicit transition from the layout of the image to the depth attachment is unnecessary here, since that will be handled in the render pass!
     
     

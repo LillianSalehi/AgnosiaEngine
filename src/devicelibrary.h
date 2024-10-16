@@ -1,33 +1,30 @@
 #pragma once
 #include "global.h"
-#include <GLFW/glfw3.h>
-#include <optional>
 #include <algorithm>
 #include <limits>
-#include <ostream>
 #include <set>
 #include <string>
-#include <vector>
-namespace DeviceControl {
-class devicelibrary {
+
+namespace device_libs {
+class DeviceControl {
     public:
-      void pickPhysicalDevice(VkInstance& instance);
-      void createLogicalDevice();
-      void createSurface(VkInstance& instance, GLFWwindow* window);
-      void destroySurface(VkInstance& instance);
-      void createSwapChain(GLFWwindow* window);
-      void destroySwapChain();
-      VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags flags);
-      void createImageViews();
-      void destroyImageViews();
-      void createCommandPool();
-      void destroyCommandPool();
+      static void pickPhysicalDevice(VkInstance& instance);
+      static void createLogicalDevice();
+      static void createSurface(VkInstance& instance, GLFWwindow* window);
+      static void destroySurface(VkInstance& instance);
+      static void createSwapChain(GLFWwindow* window);
+      static void destroySwapChain();
+      static VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags flags);
+      static void createImageViews();
+      static void destroyImageViews();
+      static void createCommandPool();
+      static void destroyCommandPool();
 
       // ---------- Getters & Setters ----------- //
-      VkFormat getImageFormat();
-      std::vector<VkImageView> getSwapChainImageViews();
-      VkExtent2D getSwapChainExtent();
-      std::vector<VkFramebuffer> getSwapChainFramebuffers();
+      static VkFormat getImageFormat();
+      static std::vector<VkImageView> getSwapChainImageViews();
+      static VkExtent2D getSwapChainExtent();
+      static std::vector<VkFramebuffer> getSwapChainFramebuffers();
   };
 }
 

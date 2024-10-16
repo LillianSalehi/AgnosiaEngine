@@ -1,10 +1,6 @@
 #include "devicelibrary.h"
-#include "global.h"
-#include <vulkan/vulkan_core.h>
 
-
-namespace DeviceControl {
-
+namespace device_libs {
 
   VkPhysicalDeviceProperties deviceProperties;
 
@@ -13,8 +9,6 @@ namespace DeviceControl {
   VkExtent2D swapChainExtent;
   std::vector<VkImageView> swapChainImageViews;
 
-
-  
   struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
     std::vector<VkSurfaceFormatKHR> formats;
@@ -143,7 +137,7 @@ namespace DeviceControl {
     }
   }
 // --------------------------------------- External Functions ----------------------------------------- //
-  void devicelibrary::pickPhysicalDevice(VkInstance& instance) {
+  void DeviceControl::pickPhysicalDevice(VkInstance& instance) {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
@@ -165,17 +159,17 @@ namespace DeviceControl {
       throw std::runtime_error("Failed to find a suitable GPU!");
     }
   }
-  void devicelibrary::destroySurface(VkInstance& instance) {
+  void DeviceControl::destroySurface(VkInstance& instance) {
     vkDestroySurfaceKHR(instance, Global::surface, nullptr);
     if(Global::enableValidationLayers) std::cout << "Destroyed surface safely\n" << std::endl;
   }
-  void devicelibrary::createSurface(VkInstance& instance, GLFWwindow* window) {
+  void DeviceControl::createSurface(VkInstance& instance, GLFWwindow* window) {
     if(glfwCreateWindowSurface(instance, window, nullptr, &Global::surface) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create window surface!!");
     }
     if(Global::enableValidationLayers) std::cout << "GLFW Window Surface created successfully\n" << std::endl;
   }
-  void devicelibrary::createLogicalDevice() {
+  void DeviceControl::createLogicalDevice() {
     // Describe how many queues we want for a single family (1) here, right now we are solely interested in graphics capabilites,
     // but Compute Shaders, transfer ops, decode and encode operations can also queued with setup! We also assign each queue a priority.
     // We do this by looping over all the queueFamilies and sorting them by indices to fill the queue at the end!
@@ -221,7 +215,7 @@ namespace DeviceControl {
     vkGetDeviceQueue(Global::device, indices.graphicsFamily.value(), 0, &Global::graphicsQueue);  
     vkGetDeviceQueue(Global::device, indices.presentFamily.value(), 0, &Global::presentQueue);
   }
-  void devicelibrary::createSwapChain(GLFWwindow* window) {
+  void DeviceControl::createSwapChain(GLFWwindow* window) {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(Global::physicalDevice);
     
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -287,11 +281,11 @@ namespace DeviceControl {
     swapChainImageFormat = surfaceFormat.format;
     swapChainExtent = extent;
   }
-  void devicelibrary::destroySwapChain() {
+  void DeviceControl::destroySwapChain() {
     vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
     if(Global::enableValidationLayers) std::cout << "Destroyed Swap Chain safely\n" << std::endl;   
   }
-  VkImageView devicelibrary::createImageView(VkImage image, VkFormat format, VkImageAspectFlags flags) {
+  VkImageView DeviceControl::createImageView(VkImage image, VkFormat format, VkImageAspectFlags flags) {
     // This defines the parameters of a newly created image object!
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -311,28 +305,27 @@ namespace DeviceControl {
 
     return imageView;
   }
-  void devicelibrary::createImageViews() {
+  void DeviceControl::createImageViews() {
     swapChainImageViews.resize(swapChainImages.size());
 
     for (uint32_t i = 0; i < swapChainImages.size(); i++) {
         swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT);
     }
   }
-  void devicelibrary::destroyImageViews() {
+  void DeviceControl::destroyImageViews() {
     for (auto imageView : swapChainImageViews) {  
       vkDestroyImageView(Global::device, imageView, nullptr);
     }
     if(Global::enableValidationLayers) std::cout << "Image destroyed safely\n" << std::endl;
   }
 // --------------------------------------- Getters & Setters ------------------------------------------ //
-  VkFormat devicelibrary::getImageFormat() {
+  VkFormat DeviceControl::getImageFormat() {
     return swapChainImageFormat;
   }
-  std::vector<VkImageView> devicelibrary::getSwapChainImageViews() {
+  std::vector<VkImageView> DeviceControl::getSwapChainImageViews() {
     return swapChainImageViews;
   }
-
-  VkExtent2D devicelibrary::getSwapChainExtent() {
+  VkExtent2D DeviceControl::getSwapChainExtent() {
     return swapChainExtent;
   }
 }

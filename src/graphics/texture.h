@@ -1,16 +1,17 @@
 #pragma once
 #include "../global.h"
-#include <vulkan/vulkan_core.h>
+#include "buffers.h"
+#include "../devicelibrary.h"
 
-namespace TextureLibraries {
-  class texture {
+namespace texture_libs {
+  class Texture {
     public:
-      void createTextureImage();
-      void createTextureImageView();
-      void createTextureSampler();
-      void destroyTextureImage();
-      void destroyTextureSampler();
-      VkFormat findDepthFormat();
-      void createDepthResources();
+      static void createTextureImage();
+      static void createTextureImageView();
+      static void createTextureSampler();
+      static void destroyTextureImage();
+      static void destroyTextureSampler();
+      static VkFormat findDepthFormat();
+      static void createDepthResources();
   };
 }

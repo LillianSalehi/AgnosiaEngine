@@ -1,25 +1,17 @@
 #include "buffers.h"
-#include <chrono>
-#include <cstring>
-#include "../devicelibrary.h"
 
 VkBuffer vertexBuffer;
 VkDeviceMemory vertexBufferMemory;
 VkBuffer indexBuffer;
 VkDeviceMemory indexBufferMemory;
 VkDescriptorPool descriptorPool;
-DeviceControl::devicelibrary deviceLibrary;
 
 std::vector<VkBuffer> uniformBuffers;
 std::vector<VkDeviceMemory> uniformBuffersMemory;
 std::vector<void*> uniformBuffersMapped;
 
-
-namespace BuffersLibraries {
-
-
-
-  uint32_t buffers::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+namespace buffers_libs {
+  uint32_t Buffers::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
     // Graphics cards offer different types of memory to allocate from, here we query to find the right type of memory for our needs.
     // Query the available types of memory to iterate over.
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -66,7 +58,7 @@ namespace BuffersLibraries {
     vkFreeCommandBuffers(Global::device, Global::commandPool, 1, &commandBuffer);
   }
 
-  void buffers::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+  void Buffers::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
@@ -92,7 +84,7 @@ namespace BuffersLibraries {
     vkBindBufferMemory(Global::device, buffer, bufferMemory, 0);
   }
 
-  void buffers::createIndexBuffer() {
+  void Buffers::createIndexBuffer() {
     VkDeviceSize bufferSize = sizeof(Global::indices[0]) * Global::indices.size();
 
     VkBuffer stagingBuffer;
@@ -113,7 +105,7 @@ namespace BuffersLibraries {
     vkDestroyBuffer(Global::device, stagingBuffer, nullptr);
     vkFreeMemory(Global::device, stagingBufferMemory, nullptr);
   }
-  void buffers::createVertexBuffer() {
+  void Buffers::createVertexBuffer() {
     // Create a Vertex Buffer to hold the vertex information in memory so it doesn't have to be hardcoded!
     // Size denotes the size of the buffer in bytes, usage in this case is the buffer behaviour, using a bitwise OR.
     // Sharing mode denostes the same as the images in the swap chain! in this case, only the graphics queue uses this buffer, so we make it exclusive.
@@ -136,22 +128,22 @@ namespace BuffersLibraries {
     vkFreeMemory(Global::device, stagingBufferMemory, nullptr);
   }
 
-  void buffers::destroyBuffers() {
+  void Buffers::destroyBuffers() {
     vkDestroyBuffer(Global::device, indexBuffer, nullptr);
     vkFreeMemory(Global::device, indexBufferMemory, nullptr);
 
     vkDestroyBuffer(Global::device, vertexBuffer, nullptr);
     vkFreeMemory(Global::device, vertexBufferMemory, nullptr);
   }
-  VkBuffer buffers::getVertexBuffer() {
+  VkBuffer Buffers::getVertexBuffer() {
     return vertexBuffer;
   }
-  VkBuffer buffers::getIndexBuffer() {
+  VkBuffer Buffers::getIndexBuffer() {
     return indexBuffer;
   }
   
 // ------------------------------ Uniform Buffer Setup -------------------------------- //
-  void buffers::createDescriptorSetLayout() {
+  void Buffers::createDescriptorSetLayout() {
     // Create a table of pointers to data, a Descriptor Set!
     // --------------------- UBO Layout --------------------- //
     VkDescriptorSetLayoutBinding uboLayoutBinding{};
@@ -182,7 +174,7 @@ namespace BuffersLibraries {
       throw std::runtime_error("Failed to create descriptor set layout!");
     }
   }
-  void buffers::createUniformBuffers() {
+  void Buffers::createUniformBuffers() {
     // Map the uniform buffer to memory as a pointer we can use to write data to later. This stays mapped to memory for the applications lifetime.
     // This technique is called "persistent mapping", not having to map the buffer every time we need to update it increases performance, though not free
     VkDeviceSize bufferSize = sizeof(Global::UniformBufferObject);
@@ -196,7 +188,7 @@ namespace BuffersLibraries {
       vkMapMemory(Global::device, uniformBuffersMemory[i], 0, bufferSize, 0, &uniformBuffersMapped[i]);
     }
   }
-  void buffers::updateUniformBuffer(uint32_t currentImage) {
+  void Buffers::updateUniformBuffer(uint32_t currentImage) {
     // Update the uniform buffer every frame to change the position, but notably, use chrono to know exactly how much to move 
     // so we aren't locked to the framerate as the world time.
 
@@ -208,25 +200,25 @@ namespace BuffersLibraries {
     Global::UniformBufferObject ubo{};
     ubo.time = time;
     // Modify the model projection transformation to rotate around the Z over time.
-    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(30.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     // Modify the view transformation to look at the object from above at a 45 degree angle.
     // This takes the eye position, center position, and the up direction.
-    ubo.view = glm::lookAt(glm::vec3(4.0f, 4.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     // 45 degree field of view, set aspect ratio, and near and far clipping range.
-    ubo.proj = glm::perspective(glm::radians(45.0f), deviceLibrary.getSwapChainExtent().width / (float) deviceLibrary.getSwapChainExtent().height, 0.1f, 10.0f);
+    ubo.proj = glm::perspective(glm::radians(45.0f), device_libs::DeviceControl::getSwapChainExtent().width / (float) device_libs::DeviceControl::getSwapChainExtent().height, 0.1f, 10.0f);
     
     // GLM was created for OpenGL, where the Y coordinate was inverted. This simply flips the sign.
     ubo.proj[1][1] *= -1;
     
     memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
   }
-  void buffers::destroyUniformBuffer() {
+  void Buffers::destroyUniformBuffer() {
     for(size_t i = 0; i < Global::MAX_FRAMES_IN_FLIGHT; i++) {
       vkDestroyBuffer(Global::device, uniformBuffers[i],nullptr);
       vkFreeMemory(Global::device, uniformBuffersMemory[i], nullptr);
     }
   }
-  void buffers::createDescriptorPool() {
+  void Buffers::createDescriptorPool() {
     // Create a pool to be used to allocate descriptor sets.
     std::array<VkDescriptorPoolSize, 2> poolSizes{};
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -244,7 +236,7 @@ namespace BuffersLibraries {
       throw std::runtime_error("failed to create descriptor pool!");
     }
   }
-  void buffers::createDescriptorSets() {
+  void Buffers::createDescriptorSets() {
     std::vector<VkDescriptorSetLayout> layouts(Global::MAX_FRAMES_IN_FLIGHT, Global::descriptorSetLayout);
     VkDescriptorSetAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -289,7 +281,7 @@ namespace BuffersLibraries {
       vkUpdateDescriptorSets(Global::device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
   }
-  void buffers::destroyDescriptorPool() {
+  void Buffers::destroyDescriptorPool() {
     vkDestroyDescriptorPool(Global::device, descriptorPool, nullptr);
   }
 }

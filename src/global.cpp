@@ -1,6 +1,5 @@
 #include "global.h"
-#include "devicelibrary.h"
-#include <vulkan/vulkan_core.h>
+
 namespace Global {
 
   const std::vector<const char*> validationLayers = {
@@ -33,13 +32,13 @@ namespace Global {
   std::vector<Vertex> vertices;
   // Index buffer definition, showing which points to reuse.
   std::vector<uint32_t> indices;
+
   Global::QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
     // First we feed in a integer we want to use to hold the number of queued items, that fills it, then we create that amount of default constructed *VkQueueFamilyProperties* structs. 
     // These store the flags, the amount of queued items in the family, and timestamp data. Queue families are simply group collections of tasks we want to get done. 
     // Next, we check the flags of the queueFamily item, use a bitwise and to see if they match, i.e. support graphical operations, then return that to notify that we have at least one family that supports VK_QUEUE_GRAPHICS_BIT.
     // Which means this device supports graphical operations!
     // We also do the same thing for window presentation, just check to see if its supported.
-    DeviceControl::devicelibrary deviceLibs;
     Global::QueueFamilyIndices indices;
   
     uint32_t queueFamilyCount = 0;
@@ -67,5 +66,4 @@ namespace Global {
     }
     return indices;
   }
-
 }

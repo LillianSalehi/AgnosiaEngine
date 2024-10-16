@@ -1,22 +1,24 @@
 #pragma once
-#include "../global.h"
+#include <chrono>
+#include <cstring>
+#include "../devicelibrary.h"
 
-namespace BuffersLibraries {
-  class buffers {
+namespace buffers_libs {
+  class Buffers {
     public:
-      void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-      uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags flags);
-      void createIndexBuffer();
-      void createVertexBuffer();
-      void destroyBuffers();
-      VkBuffer getVertexBuffer();
-      VkBuffer getIndexBuffer();
-      void createDescriptorSetLayout();
-      void createUniformBuffers();
-      void updateUniformBuffer(uint32_t currentImage);
-      void destroyUniformBuffer();
-      void createDescriptorPool();
-      void createDescriptorSets();
-      void destroyDescriptorPool();
+      static void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+      static uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags flags);
+      static void createIndexBuffer();
+      static void createVertexBuffer();
+      static void destroyBuffers();
+      static VkBuffer getVertexBuffer();
+      static VkBuffer getIndexBuffer();
+      static void createDescriptorSetLayout();
+      static void createUniformBuffers();
+      static void updateUniformBuffer(uint32_t currentImage);
+      static void destroyUniformBuffer();
+      static void createDescriptorPool();
+      static void createDescriptorSets();
+      static void destroyDescriptorPool();
   };
 }

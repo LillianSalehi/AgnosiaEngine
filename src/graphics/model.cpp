@@ -1,9 +1,4 @@
-#define TINY_OBJ_IMPLEMENTATION
-#include <tiny_obj_loader.h>
 #include "model.h"
-#include <unordered_map>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
 
 namespace std {
   template<> struct hash<Global::Vertex> {
@@ -15,11 +10,11 @@ namespace std {
   };
 }
 
-namespace ModelLib {
+namespace modellib {
 
   std::unordered_map<Global::Vertex, uint32_t> uniqueVertices{};
 
-  void model::loadModel() {
+  void Model::loadModel() {
     tinyobj::ObjReaderConfig readerConfig;
     
     tinyobj::ObjReader reader;

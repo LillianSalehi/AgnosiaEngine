@@ -1,24 +1,27 @@
 #pragma once
-#include "graphics/texture.h"
-#include <cstdint>
+#include <vulkan/vulkan_core.h>
+
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/detail/qualifier.hpp>
 #include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float3.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/fwd.hpp>
+
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
+#include <cstdint>
 #include <iostream>
 #include <ostream>
 #include <vector>
 #include <optional>
-#include <vulkan/vulkan_core.h>
-#include <glm/gtc/matrix_transform.hpp>
 #include <array>
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
 
 namespace Global {
   // Global variables and includes we are going to use almost everywhere, validation layers hook into everything, and you need to check if they are enabled first,

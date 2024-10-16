@@ -1,14 +1,6 @@
 #include "entrypoint.h"
-DeviceControl::devicelibrary deviceLibs;
-Debug::vulkandebuglibs debugController;
-Graphics::graphicspipeline graphicsPipeline;
-RenderPresent::render renderPresentation;
-BuffersLibraries::buffers buffers;
-TextureLibraries::texture texture;
-ModelLib::model model;
-VkInstance vulkaninstance;
 
-//TODO: add global instances?
+VkInstance vulkaninstance;
 
 // Getters and Setters!
 void EntryApp::setFramebufferResized(bool setter) {
@@ -21,8 +13,9 @@ static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
   auto app = reinterpret_cast<EntryApp*>(glfwGetWindowUserPointer(window));
   app->setFramebufferResized(true);
 }
-    // Initialize GLFW Window. First, Initialize GLFW lib, disable resizing for
-    // now, and create window.
+
+// Initialize GLFW Window. First, Initialize GLFW lib, disable resizing for
+// now, and create window.
 void initWindow() {
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -33,7 +26,7 @@ void initWindow() {
 }
 
 void createInstance() {
-  debugController.checkUnavailableValidationLayers();           // Check if there is a mistake with our Validation Layers.
+  debug_libs::Debug::checkUnavailableValidationLayers();        // Check if there is a mistake with our Validation Layers.
 
   // Set application info for the vulkan instance!
 	VkApplicationInfo appInfo{};
@@ -49,67 +42,69 @@ void createInstance() {
   createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;    // Tell vulkan this is a info structure 
   createInfo.pApplicationInfo = &appInfo;                       // We just created a new appInfo structure, so we pass the pointer to it.
 
-  debugController.vulkanDebugSetup(createInfo, vulkaninstance);       // Handoff to the debug library to wrap the validation libs in! (And set the window up!)
+  debug_libs::Debug::vulkanDebugSetup(createInfo, vulkaninstance); // Handoff to the debug library to wrap the validation libs in! (And set the window up!)
 }
 
 void initVulkan() {
+  // Initialize vulkan and set up pipeline.
   createInstance();
-  debugController.setupDebugMessenger(vulkaninstance);                // The debug messenger is out holy grail, it gives us Vulkan related debug info when built with the -DDEBUG flag (as per the makefile)
-  deviceLibs.createSurface(vulkaninstance, Global::window);
-  deviceLibs.pickPhysicalDevice(vulkaninstance);
-  deviceLibs.createLogicalDevice();
-  deviceLibs.createSwapChain(Global::window);
-  deviceLibs.createImageViews();
-  graphicsPipeline.createRenderPass();
-  buffers.createDescriptorSetLayout();
-  graphicsPipeline.createGraphicsPipeline();
-  graphicsPipeline.createCommandPool();
-  texture.createDepthResources();
-  graphicsPipeline.createFramebuffers();
-  texture.createTextureImage();
-  texture.createTextureImageView();
-  texture.createTextureSampler();
-  model.loadModel();
-  buffers.createVertexBuffer();
-  buffers.createIndexBuffer();
-  buffers.createUniformBuffers();
-  buffers.createDescriptorPool();
-  buffers.createDescriptorSets();
-  graphicsPipeline.createCommandBuffer();
-  renderPresentation.createSyncObject();
+  debug_libs::Debug::setupDebugMessenger(vulkaninstance);        
+  device_libs::DeviceControl::createSurface(vulkaninstance, Global::window);
+  device_libs::DeviceControl::pickPhysicalDevice(vulkaninstance);
+  device_libs::DeviceControl::createLogicalDevice();
+  device_libs::DeviceControl::createSwapChain(Global::window);
+  device_libs::DeviceControl::createImageViews();
+  graphics_pipeline::Graphics::createRenderPass();
+  buffers_libs::Buffers::createDescriptorSetLayout();
+  graphics_pipeline::Graphics::createGraphicsPipeline();
+  graphics_pipeline::Graphics::createCommandPool();
+  texture_libs::Texture::createDepthResources();
+  graphics_pipeline::Graphics::createFramebuffers();
+  texture_libs::Texture::createTextureImage();
+  texture_libs::Texture::createTextureImageView();
+  texture_libs::Texture::createTextureSampler();
+  modellib::Model::loadModel();
+  buffers_libs::Buffers::createVertexBuffer();
+  buffers_libs::Buffers::createIndexBuffer();
+  buffers_libs::Buffers::createUniformBuffers();
+  buffers_libs::Buffers::createDescriptorPool();
+  buffers_libs::Buffers::createDescriptorSets();
+  graphics_pipeline::Graphics::createCommandBuffer();
+  render_present::Render::createSyncObject();
 }
 
-void mainLoop() {                                               // This loop just updates the GLFW window.
+void mainLoop() {
   while (!glfwWindowShouldClose(Global::window)) {
     glfwPollEvents();
-    renderPresentation.drawFrame();
+    render_present::Render::drawFrame();
   }
   vkDeviceWaitIdle(Global::device);
 }
 
-void cleanup() {                                                // Similar to the last handoff, destroy the utils in a safe manner in the library!
-  renderPresentation.cleanupSwapChain();
-  texture.createTextureSampler();
-  texture.destroyTextureImage();
-  buffers.destroyUniformBuffer();
-  buffers.destroyDescriptorPool();
+void cleanup() {
+  render_present::Render::cleanupSwapChain();
+  texture_libs::Texture::createTextureSampler();
+  texture_libs::Texture::destroyTextureImage();
+  buffers_libs::Buffers::destroyUniformBuffer();
+  buffers_libs::Buffers::destroyDescriptorPool();
   vkDestroyDescriptorSetLayout(Global::device, Global::descriptorSetLayout, nullptr);
-  graphicsPipeline.destroyGraphicsPipeline();
-  graphicsPipeline.destroyRenderPass();
+  graphics_pipeline::Graphics::destroyGraphicsPipeline();
+  graphics_pipeline::Graphics::destroyRenderPass();
 
-  buffers.destroyBuffers();
-  renderPresentation.destroyFenceSemaphores();
-  graphicsPipeline.destroyCommandPool();
+  buffers_libs::Buffers::destroyBuffers();
+  render_present::Render::destroyFenceSemaphores();
+  graphics_pipeline::Graphics::destroyCommandPool();
 
   vkDestroyDevice(Global::device, nullptr);
   if(Global::enableValidationLayers) {
-    debugController.DestroyDebugUtilsMessengerEXT(vulkaninstance, nullptr);
+    debug_libs::Debug::DestroyDebugUtilsMessengerEXT(vulkaninstance, nullptr);
   }
-  deviceLibs.destroySurface(vulkaninstance);
+  device_libs::DeviceControl::destroySurface(vulkaninstance);
   vkDestroyInstance(vulkaninstance, nullptr);
   glfwDestroyWindow(Global::window);
   glfwTerminate();
 }
+
 // External Functions
 EntryApp& EntryApp::getInstance() {
   static EntryApp instance;

@@ -1,23 +1,15 @@
-
 #include "graphicspipeline.h"
-#include "buffers.h"
-#include "texture.h"
-#include <cstdint>
-#include <vector>
-#include <vulkan/vulkan_core.h>
-namespace Graphics {
+
+namespace graphics_pipeline {
+
   std::vector<VkDynamicState> dynamicStates = {
     VK_DYNAMIC_STATE_VIEWPORT,
     VK_DYNAMIC_STATE_SCISSOR
   };
 
-
   VkRenderPass renderPass;
   VkPipelineLayout pipelineLayout;
   VkPipeline graphicsPipeline;
-  DeviceControl::devicelibrary deviceLibs;
-  BuffersLibraries::buffers buffers;
-  TextureLibraries::texture textureLibs;
   
   std::vector<VkFramebuffer> swapChainFramebuffers;
 
@@ -50,7 +42,7 @@ namespace Graphics {
     return shaderModule;
   }
 
-  void graphicspipeline::destroyGraphicsPipeline() {
+  void Graphics::destroyGraphicsPipeline() {
     vkDestroyPipeline(Global::device, graphicsPipeline, nullptr);
     if(Global::enableValidationLayers) std::cout << "Destroyed Graphics Pipeline safely\n" << std::endl; 
     vkDestroyPipelineLayout(Global::device, pipelineLayout, nullptr);
@@ -58,13 +50,12 @@ namespace Graphics {
     
   }
 
-  void graphicspipeline::createGraphicsPipeline() {
+  void Graphics::createGraphicsPipeline() {
     // Note to self, for some reason the working directory is not where a read file is called from, but the project folder!
     auto vertShaderCode = readFile("src/shaders/vertex.spv");
     auto fragShaderCode = readFile("src/shaders/fragment.spv");
     VkShaderModule vertShaderModule = createShaderModule(vertShaderCode, Global::device);
     VkShaderModule fragShaderModule = createShaderModule(fragShaderCode, Global::device);
-
     // ------------------ STAGE 1 - INPUT ASSEMBLER ---------------- //
     // This can get a little complicated, normally, vertices are loaded in sequential order, with an element buffer however, you can specify the indices yourself!
     // Using an element buffer means you can reuse vertices, which can lead to optimizations. If you set PrimRestart to TRUE, you can utilize the _STRIP modes with special indices
@@ -191,9 +182,9 @@ namespace Graphics {
     
     if(Global::enableValidationLayers) std::cout << "Pipeline Layout created successfully\n" << std::endl;
   }
-  void graphicspipeline::createRenderPass() {
+  void Graphics::createRenderPass() {
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = deviceLibs.getImageFormat();
+    colorAttachment.format = device_libs::DeviceControl::getImageFormat();
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -207,7 +198,7 @@ namespace Graphics {
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     VkAttachmentDescription depthAttachment{};
-    depthAttachment.format = textureLibs.findDepthFormat();
+    depthAttachment.format = texture_libs::Texture::findDepthFormat();
     depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -250,18 +241,18 @@ namespace Graphics {
     }
     if(Global::enableValidationLayers) std::cout << "Render pass created successfully\n" << std::endl;
   }
-  void graphicspipeline::destroyRenderPass() {
+  void Graphics::destroyRenderPass() {
     vkDestroyRenderPass(Global::device, renderPass, nullptr);
     if(Global::enableValidationLayers) std::cout << "Destroyed Render Pass Safely\n" << std::endl;
   }
-  void graphicspipeline::createFramebuffers() {
+  void Graphics::createFramebuffers() {
     // Resize the container to hold all the framebuffers.
-    int framebuffersSize = deviceLibs.getSwapChainImageViews().size();
+    int framebuffersSize = device_libs::DeviceControl::getSwapChainImageViews().size();
     swapChainFramebuffers.resize(framebuffersSize);
 
     for(size_t i = 0; i < framebuffersSize; i++) {
     std::array<VkImageView, 2> attachments = {
-        deviceLibs.getSwapChainImageViews()[i],
+      device_libs::DeviceControl::getSwapChainImageViews()[i],
         Global::depthImageView
       };
     
@@ -270,8 +261,8 @@ namespace Graphics {
       framebufferInfo.renderPass = renderPass;
       framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
       framebufferInfo.pAttachments = attachments.data();
-      framebufferInfo.width = deviceLibs.getSwapChainExtent().width;
-      framebufferInfo.height = deviceLibs.getSwapChainExtent().height;
+      framebufferInfo.width = device_libs::DeviceControl::getSwapChainExtent().width;
+      framebufferInfo.height = device_libs::DeviceControl::getSwapChainExtent().height;
       framebufferInfo.layers = 1;
 
       if(vkCreateFramebuffer(Global::device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
@@ -279,7 +270,7 @@ namespace Graphics {
       }
     }
   }
-  void graphicspipeline::createCommandPool() {
+  void Graphics::createCommandPool() {
     // Commands in Vulkan are not executed using function calls, you have to record the ops you wish to perform 
     // to command buffers, pools manage the memory used by the buffer!
     Global::QueueFamilyIndices queueFamilyIndices = Global::findQueueFamilies(Global::physicalDevice);
@@ -294,10 +285,10 @@ namespace Graphics {
     }
     if(Global::enableValidationLayers) std::cout << "Command pool created successfully\n" << std::endl;
   }
-  void graphicspipeline::destroyCommandPool() {
+  void Graphics::destroyCommandPool() {
     vkDestroyCommandPool(Global::device, Global::commandPool, nullptr);
   }
-  void graphicspipeline::createCommandBuffer() {
+  void Graphics::createCommandBuffer() {
     Global::commandBuffers.resize(Global::MAX_FRAMES_IN_FLIGHT);
 
     VkCommandBufferAllocateInfo allocInfo{};
@@ -312,7 +303,7 @@ namespace Graphics {
     if(Global::enableValidationLayers) std::cout << "Allocated command buffers successfully\n" << std::endl;
   }
 
-  void graphicspipeline::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+  void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -325,7 +316,7 @@ namespace Graphics {
     renderPassInfo.renderPass = renderPass;
     renderPassInfo.framebuffer = swapChainFramebuffers[imageIndex];
     renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = deviceLibs.getSwapChainExtent();
+    renderPassInfo.renderArea.extent = device_libs::DeviceControl::getSwapChainExtent();
 
     std::array<VkClearValue, 2> clearValues{};
     clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
@@ -340,21 +331,21 @@ namespace Graphics {
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float) deviceLibs.getSwapChainExtent().width;
-    viewport.height = (float) deviceLibs.getSwapChainExtent().height;
+    viewport.width = (float) device_libs::DeviceControl::getSwapChainExtent().width;
+    viewport.height = (float) device_libs::DeviceControl::getSwapChainExtent().height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
-    scissor.extent = deviceLibs.getSwapChainExtent();
+    scissor.extent = device_libs::DeviceControl::getSwapChainExtent();
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor); 
 
-    VkBuffer vertexBuffers[] = {buffers.getVertexBuffer()};
+    VkBuffer vertexBuffers[] = {buffers_libs::Buffers::getVertexBuffer()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, buffers.getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(commandBuffer, buffers_libs::Buffers::getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
     
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &Global::descriptorSets[Global::currentFrame], 0, nullptr);
 
@@ -365,7 +356,7 @@ namespace Graphics {
       throw std::runtime_error("failed to record command buffer!");
     }
   }
-  std::vector<VkFramebuffer> graphicspipeline::getSwapChainFramebuffers() {
+  std::vector<VkFramebuffer> Graphics::getSwapChainFramebuffers() {
     return swapChainFramebuffers;
   }  
 }

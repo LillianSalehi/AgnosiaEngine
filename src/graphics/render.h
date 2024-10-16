@@ -2,12 +2,12 @@
 #include "../global.h"
 
 
-namespace RenderPresent {
-class render {
+namespace render_present {
+class Render {
   public:
-    void drawFrame();
-    void createSyncObject();
-    void destroyFenceSemaphores();
-    void cleanupSwapChain();
+    static void drawFrame();
+    static void createSyncObject();
+    static void destroyFenceSemaphores();
+    static void cleanupSwapChain();
   };
 }

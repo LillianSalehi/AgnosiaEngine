@@ -3,16 +3,11 @@
 #include "../devicelibrary.h"
 #include "../entrypoint.h"
 #include "texture.h"
-#include <vulkan/vulkan_core.h>
-namespace RenderPresent {
+namespace render_present {
 
   std::vector<VkSemaphore> imageAvailableSemaphores;
   std::vector<VkSemaphore> renderFinishedSemaphores;
   std::vector<VkFence> inFlightFences;
-  Graphics::graphicspipeline pipeline;
-  DeviceControl::devicelibrary deviceLibs;
-  BuffersLibraries::buffers buffers;
-  TextureLibraries::texture tex;
 
   void recreateSwapChain() {
     int width = 0, height = 0;
@@ -23,24 +18,24 @@ namespace RenderPresent {
     }
     vkDeviceWaitIdle(Global::device);
     // Don't really wanna do this but I also don't want to create an extra class instance just to call the cleanup function.
-    for(auto framebuffer : pipeline.getSwapChainFramebuffers()) {
+    for(auto framebuffer : graphics_pipeline::Graphics::getSwapChainFramebuffers()) {
       vkDestroyFramebuffer(Global::device, framebuffer, nullptr);
     }
-    for(auto imageView : deviceLibs.getSwapChainImageViews()) {
+    for(auto imageView : device_libs::DeviceControl::getSwapChainImageViews()) {
       vkDestroyImageView(Global::device, imageView, nullptr);
     }
     vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
 
-    deviceLibs.createSwapChain(Global::window);
-    deviceLibs.createImageViews();
-    tex.createDepthResources();
-    pipeline.createFramebuffers();
+    device_libs::DeviceControl::createSwapChain(Global::window);
+    device_libs::DeviceControl::createImageViews();
+    texture_libs::Texture::createDepthResources();
+    graphics_pipeline::Graphics::createFramebuffers();
   }
   // At a high level, rendering in Vulkan consists of 5 steps:
   // Wait for the previous frame, acquire a image from the swap chain
   // record a comman d buffer which draws the scene onto that image
   // submit the recorded command buffer and present the image!
-  void render::drawFrame() {
+  void Render::drawFrame() {
 
     vkWaitForFences(Global::device, 1, &inFlightFences[Global::currentFrame], VK_TRUE, UINT64_MAX);
     vkResetFences(Global::device, 1, &inFlightFences[Global::currentFrame]);
@@ -54,12 +49,12 @@ namespace RenderPresent {
       throw std::runtime_error("failed to acquire swap chain image!");
     }
 
-    buffers.updateUniformBuffer(Global::currentFrame);
+    buffers_libs::Buffers::updateUniformBuffer(Global::currentFrame);
 
     vkResetFences(Global::device, 1, &inFlightFences[Global::currentFrame]);
 
     vkResetCommandBuffer(Global::commandBuffers[Global::currentFrame], /*VkCommandBufferResetFlagBits*/ 0);
-    pipeline.recordCommandBuffer(Global::commandBuffers[Global::currentFrame], imageIndex);
+    graphics_pipeline::Graphics::recordCommandBuffer(Global::commandBuffers[Global::currentFrame], imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -127,7 +122,7 @@ namespace RenderPresent {
   // doStuffOnceFenceDone()
   #pragma endinfo
 
-  void render::createSyncObject() {
+  void Render::createSyncObject() {
     imageAvailableSemaphores.resize(Global::MAX_FRAMES_IN_FLIGHT);
     renderFinishedSemaphores.resize(Global::MAX_FRAMES_IN_FLIGHT);
     inFlightFences.resize(Global::MAX_FRAMES_IN_FLIGHT);
@@ -149,21 +144,21 @@ namespace RenderPresent {
 
   
   }
-  void render::destroyFenceSemaphores() {
+  void Render::destroyFenceSemaphores() {
     for (size_t i = 0; i < Global::MAX_FRAMES_IN_FLIGHT; i++) {
       vkDestroySemaphore(Global::device, renderFinishedSemaphores[i], nullptr);
       vkDestroySemaphore(Global::device, imageAvailableSemaphores[i], nullptr);
       vkDestroyFence(Global::device, inFlightFences[i], nullptr);
     }
   }
-  void render::cleanupSwapChain() {
+  void Render::cleanupSwapChain() {
     vkDestroyImageView(Global::device, Global::depthImageView, nullptr);
     vkDestroyImage(Global::device, Global::depthImage, nullptr);
     vkFreeMemory(Global::device, Global::depthImageMemory, nullptr);
-    for(auto framebuffer : pipeline.getSwapChainFramebuffers()) {
+    for(auto framebuffer : graphics_pipeline::Graphics::getSwapChainFramebuffers()) {
       vkDestroyFramebuffer(Global::device, framebuffer, nullptr);
     }
-    for(auto imageView : deviceLibs.getSwapChainImageViews()) {
+    for(auto imageView : device_libs::DeviceControl::getSwapChainImageViews()) {
       vkDestroyImageView(Global::device, imageView, nullptr);
     }
     vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
