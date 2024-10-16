@@ -30,7 +30,7 @@ split again
 split
 ://**createInstance()**//; <<procedure>>
 split
-:Debug::checkUnavailableValidationLayers();
+:**Debug**::checkUnavailableValidationLayers();
 :**VkApplicationInfo** appInfo{};
 ://set appInfo data, Vulkan version,// 
 //Engine version and name, and title//;
@@ -39,16 +39,17 @@ split
 :Debug::vulkanDebugSetup(createInfo, vulkaninstance);
 end split
 split again
-:Debug::setupDebugMessenger(VkInstance&);
+:**Debug**::setupDebugMessenger(VkInstance&);
 note right: Setup debug messenger, print data to console
-:glfwCreateWindowSurface(...);
+
+partition "**DeviceControl**" {
+:createSurface(...);
 note right
   This function handles Window System Integration 
   automatically across platforms based on build environment.
   ====
   //Basically, this is an abstraction of the Window across platforms//
 end note
-partition "**DeviceControl**" {
   :pickPhysicalDevice(...);
   note right
     Enumerate through GPU's in the 
@@ -97,11 +98,6 @@ partition "**Graphics**" {
     step of the render pipeline and sets the settings we
     desire for each step! **HEAVILY** documented.
   end note
-  :createFramebuffers(...);
-  note right
-    This function creates framebuffers for all the images 
-    that are queued to be displayed, very important!
-  end note
   :createCommandPool(...);
   note right
     Commands in Vulkan are not executed using function calls 
@@ -109,7 +105,20 @@ partition "**Graphics**" {
     buffer objects, pools manage the memory used for buffers.
   end note
 }
-partition "**TextureLibraries**" {
+
+:**Texture**::createDepthResources();
+note right 
+  This function sets up the image views and sets for the 
+  depth testing buffer to handle objects above or below
+  other objects!
+end note
+:**Graphics**::createFramebuffers(...);
+note right
+  This function creates framebuffers for all the images 
+  that are queued to be displayed, very important!
+end note
+
+partition "**Texture**" {
   :createTextureImage();
   note right 
     This function imports the pixels from an image, puts them
@@ -130,6 +139,16 @@ partition "**TextureLibraries**" {
     texture once its created. This defines settings like 
     //UVW mode//, //Filtering//, //Anisotropy//, and 
     //Mipmap modes//
+  end note
+}
+partition "**Model**" {
+  :loadModel();
+  note right 
+    Exactly what it sounds like, as of now, call our function 
+    to load .OBJ files with STB. Obviously want to support FBX 
+    in the future but the format is quite complex.
+    This function simply loads vertices and indices into the 
+    arrays to be parsed!
   end note
 }
 partition "**Buffers**" {
