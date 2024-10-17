@@ -94,7 +94,7 @@ namespace graphics_pipeline {
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
       // How to cull the faces, right here we cull the back faces and tell the rasterizer front facing vertices are ordered clockwise.
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.cullMode = VK_CULL_MODE_NONE;
     rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     // Whether or not to add depth values. e.x. for shadow maps.
     rasterizer.depthBiasEnable = VK_FALSE;

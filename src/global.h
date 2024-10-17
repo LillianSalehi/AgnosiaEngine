@@ -44,8 +44,8 @@ namespace Global {
   extern VkImageView depthImageView;
   extern VkImage depthImage;
   extern VkDeviceMemory depthImageMemory;
-  const std::string MODEL_PATH = "assets/models/viking_room.obj";
-  const std::string TEXTURE_PATH = "assets/textures/viking_room.png";
+  const std::string MODEL_PATH = "assets/models/StanfordDragon800k.obj";
+  const std::string TEXTURE_PATH = "assets/textures/checkermap.png";
 
 
 
@@ -95,7 +95,7 @@ namespace Global {
   };
 
   const uint32_t WIDTH = 800;
-  const uint32_t HEIGHT = 800;
+  const uint32_t HEIGHT = 600;
   extern std::vector<Vertex> vertices;
   // Index buffer definition, showing which points to reuse.
   extern std::vector<uint32_t> indices;

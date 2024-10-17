@@ -16,7 +16,7 @@ namespace modellib {
 
   void Model::loadModel() {
     tinyobj::ObjReaderConfig readerConfig;
-    
+
     tinyobj::ObjReader reader;
 
     if(!reader.ParseFromFile(Global::MODEL_PATH, readerConfig)) {
@@ -30,7 +30,7 @@ namespace modellib {
     
     auto& attrib = reader.GetAttrib();
     auto& shapes = reader.GetShapes();
-    //auto& materials = reader.GetMaterials();
+    auto& materials = reader.GetMaterials();
 
     for (const auto& shape : shapes) {
       for (const auto& index : shape.mesh.indices) {
@@ -42,7 +42,10 @@ namespace modellib {
           attrib.vertices[3 * index.vertex_index + 2]
         };
         
-        //TODO: Major fix here, running anything but the viking room OBJ crashes on texcoord assignment!
+        //TODO: Small fix here, handle if there are no UV's unwrapped for the model.
+        //      As of now, if it is not unwrapped, it segfaults on texCoord assignment.
+        //      Obviously we should always have UV's, but it shouldn't crash, just unwrap 
+        //      in a default method.
         vertex.texCoord = {
           attrib.texcoords[2 * index.texcoord_index + 0],
           1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
