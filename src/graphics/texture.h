@@ -13,5 +13,8 @@ namespace texture_libs {
       static void destroyTextureSampler();
       static VkFormat findDepthFormat();
       static void createDepthResources();
+      
+      // ------------ Getters & Setters ------------ // 
+      static uint32_t getMipLevels();
   };
 }

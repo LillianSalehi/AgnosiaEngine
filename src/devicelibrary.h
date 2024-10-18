@@ -14,7 +14,7 @@ class DeviceControl {
       static void destroySurface(VkInstance& instance);
       static void createSwapChain(GLFWwindow* window);
       static void destroySwapChain();
-      static VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags flags);
+      static VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, uint32_t mipLevels);
       static void createImageViews();
       static void destroyImageViews();
       static void createCommandPool();
