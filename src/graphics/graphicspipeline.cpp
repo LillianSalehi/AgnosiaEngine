@@ -251,8 +251,8 @@ namespace graphics_pipeline {
     swapChainFramebuffers.resize(framebuffersSize);
 
     for(size_t i = 0; i < framebuffersSize; i++) {
-    std::array<VkImageView, 2> attachments = {
-      device_libs::DeviceControl::getSwapChainImageViews()[i],
+      std::array<VkImageView, 2> attachments = {
+        device_libs::DeviceControl::getSwapChainImageViews()[i],
         Global::depthImageView
       };
     
