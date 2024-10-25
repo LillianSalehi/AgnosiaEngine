@@ -1,4 +1,4 @@
-CPPFLAGS=-g
+CPPFLAGS=-std=c++23 -g
 LDFLAGS=-lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -ltinyobjloader
 DEBUGFLAGS=-DDEBUG -fsanitize=address
 GDBFLAGS=
@@ -42,7 +42,7 @@ $(BIN): $(OBJ) $(SPV)
 	g++ $(CPPFLAGS) -o $(BIN) $(OBJ) $(LDFLAGS)
 
 %.o: %.cpp
-	g++ -c -g $< -o $@ $(LDFLAGS)
+	g++ -c $(CPPFLAGS) $< -o $@ $(LDFLAGS)
 
 %.spv: %.frag
 	glslc $< -o $@

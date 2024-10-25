@@ -18,10 +18,8 @@ namespace render_present {
     }
     vkDeviceWaitIdle(Global::device);
     // Don't really wanna do this but I also don't want to create an extra class instance just to call the cleanup function.
-    for(auto framebuffer : graphics_pipeline::Graphics::getSwapChainFramebuffers()) {
-      vkDestroyFramebuffer(Global::device, framebuffer, nullptr);
-    }
-    for(auto imageView : device_libs::DeviceControl::getSwapChainImageViews()) {
+
+    for(auto imageView : Global::swapChainImageViews) {
       vkDestroyImageView(Global::device, imageView, nullptr);
     }
     vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
@@ -29,7 +27,6 @@ namespace render_present {
     device_libs::DeviceControl::createSwapChain(Global::window);
     device_libs::DeviceControl::createImageViews();
     texture_libs::Texture::createDepthResources();
-    graphics_pipeline::Graphics::createFramebuffers();
   }
   // At a high level, rendering in Vulkan consists of 5 steps:
   // Wait for the previous frame, acquire a image from the swap chain
@@ -155,10 +152,8 @@ namespace render_present {
     vkDestroyImageView(Global::device, Global::depthImageView, nullptr);
     vkDestroyImage(Global::device, Global::depthImage, nullptr);
     vkFreeMemory(Global::device, Global::depthImageMemory, nullptr);
-    for(auto framebuffer : graphics_pipeline::Graphics::getSwapChainFramebuffers()) {
-      vkDestroyFramebuffer(Global::device, framebuffer, nullptr);
-    }
-    for(auto imageView : device_libs::DeviceControl::getSwapChainImageViews()) {
+
+    for(auto imageView : Global::swapChainImageViews) {
       vkDestroyImageView(Global::device, imageView, nullptr);
     }
     vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);

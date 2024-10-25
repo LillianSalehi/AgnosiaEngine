@@ -2,15 +2,6 @@
 
 namespace Global {
 
-  const std::vector<const char*> validationLayers = {
-    "VK_LAYER_KHRONOS_validation"
-  };
-  #ifdef DEBUG
-    const bool enableValidationLayers = true;
-  #else 
-    const bool enableValidationLayers = false;
-  #endif
-
   VkSurfaceKHR surface;
   VkDevice device;
   VkPhysicalDevice physicalDevice;
@@ -29,6 +20,7 @@ namespace Global {
   VkImage depthImage;
   VkDeviceMemory depthImageMemory;
 
+  std::vector<VkImageView> swapChainImageViews;
   std::vector<Vertex> vertices;
   // Index buffer definition, showing which points to reuse.
   std::vector<uint32_t> indices;

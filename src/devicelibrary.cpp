@@ -1,4 +1,5 @@
 #include "devicelibrary.h"
+#include <vulkan/vulkan_core.h>
 
 namespace device_libs {
 
@@ -7,7 +8,6 @@ namespace device_libs {
   std::vector<VkImage> swapChainImages;
   VkFormat swapChainImageFormat;
   VkExtent2D swapChainExtent;
-  std::vector<VkImageView> swapChainImageViews;
 
   struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
@@ -19,10 +19,12 @@ namespace device_libs {
   };
   SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
 
-    // Swap chains are weird ngl, it's another one of those Vulkan platform agnosticity. The swapchain is basically a wrapper for GDI+, DXGI, X11, Wayland, etc.
-    // It lets us use the swap chain rather than create a different framebuffer handler for every targeted platform. 
-    // Swap chains handle the ownership of buffers before sending them to the presentation engine.
-    // (still no fucking clue how it works though)
+    /* Swap chains are weird ngl, it's another one of those Vulkan platform agnosticity.
+    The swapchain is basically a wrapper for GDI+, DXGI, X11, Wayland, etc.
+    It lets us use the swap chain rather than create a different framebuffer
+    handler for every targeted platform.  Swap chains handle the ownership
+    of buffers before sending them to the presentation engine.  (still no
+    fucking clue how it works though) */
     SwapChainSupportDetails details;
 
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, Global::surface, &details.capabilities);
@@ -32,7 +34,7 @@ namespace device_libs {
 
     if(formatCount != 0) {
       details.formats.resize(formatCount);
-      vkGetPhysicalDeviceSurfaceFormatsKHR(device, Global::surface, &formatCount, details.formats.data());
+     vkGetPhysicalDeviceSurfaceFormatsKHR(device, Global::surface, &formatCount, details.formats.data());
     }
     
     uint32_t presentModeCount;
@@ -106,12 +108,10 @@ namespace device_libs {
     // This is most similarly to standard V-Sync.
     for(const auto& availablePresentMode : availablePresentModes) {
       if(availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-        if(Global::enableValidationLayers) std::cout << "Using Triple Buffering\n" << std::endl;
         return availablePresentMode;
       }
     }
 
-    if(Global::enableValidationLayers) std::cout << "Using FIFO (V-Sync)\n" << std::endl;
     return VK_PRESENT_MODE_FIFO_KHR;
   }
   VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, GLFWwindow* window) {
@@ -149,7 +149,6 @@ namespace device_libs {
 
     for(const auto& device : devices) {
       if(isDeviceSuitable(device)) {
-        if(Global::enableValidationLayers) std::cout << "Using device: " << deviceProperties.deviceName << std::endl;
         //Once we have buttons or such, maybe ask the user or write a config file for which GPU to use?
         Global::physicalDevice = device;
         break;
@@ -161,13 +160,11 @@ namespace device_libs {
   }
   void DeviceControl::destroySurface(VkInstance& instance) {
     vkDestroySurfaceKHR(instance, Global::surface, nullptr);
-    if(Global::enableValidationLayers) std::cout << "Destroyed surface safely\n" << std::endl;
   }
   void DeviceControl::createSurface(VkInstance& instance, GLFWwindow* window) {
     if(glfwCreateWindowSurface(instance, window, nullptr, &Global::surface) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create window surface!!");
     }
-    if(Global::enableValidationLayers) std::cout << "GLFW Window Surface created successfully\n" << std::endl;
   }
   void DeviceControl::createLogicalDevice() {
     // Describe how many queues we want for a single family (1) here, right now we are solely interested in graphics capabilites,
@@ -190,28 +187,33 @@ namespace device_libs {
       queueCreateSingularInfo.pQueuePriorities = &queuePriority;
       queueCreateInfos.push_back(queueCreateSingularInfo);
     }
-    VkPhysicalDeviceFeatures deviceFeatures{};
-    deviceFeatures.samplerAnisotropy = VK_TRUE;
+  
+    VkPhysicalDeviceVulkan13Features features13 {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+      .pNext = nullptr,
+      .dynamicRendering = true,
+    };
+    VkPhysicalDeviceFeatures featuresBase {
+      .samplerAnisotropy = true,
+    };
+
+    VkPhysicalDeviceFeatures2 deviceFeatures {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+      .pNext = &features13,
+      .features = featuresBase,
+    };
 
     VkDeviceCreateInfo createDeviceInfo = {};
+    createDeviceInfo.pNext = &deviceFeatures;
     createDeviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO; 
     createDeviceInfo.pQueueCreateInfos = queueCreateInfos.data();
     createDeviceInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    createDeviceInfo.pEnabledFeatures = &deviceFeatures;
     createDeviceInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     createDeviceInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-    if(Global::enableValidationLayers) {
-      createDeviceInfo.enabledLayerCount = static_cast<uint32_t>(Global::validationLayers.size());
-      createDeviceInfo.ppEnabledLayerNames = Global::validationLayers.data();
-    } else {
-      createDeviceInfo.enabledLayerCount = 0;
-    }
     if(vkCreateDevice(Global::physicalDevice, &createDeviceInfo, nullptr, &Global::device) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create logical device");
     }
-    if(Global::enableValidationLayers) std::cout << "Created Logical device successfully!\n" << std::endl;
-
     vkGetDeviceQueue(Global::device, indices.graphicsFamily.value(), 0, &Global::graphicsQueue);  
     vkGetDeviceQueue(Global::device, indices.presentFamily.value(), 0, &Global::presentQueue);
   }
@@ -272,7 +274,6 @@ namespace device_libs {
     if(vkCreateSwapchainKHR(Global::device, &createSwapChainInfo, nullptr, &Global::swapChain) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create the swap chain!!");
     }
-    if(Global::enableValidationLayers) std::cout << "Swap Chain created successfully\n" << std::endl;
 
     vkGetSwapchainImagesKHR(Global::device, Global::swapChain, &imageCount, nullptr);
     swapChainImages.resize(imageCount);
@@ -283,7 +284,6 @@ namespace device_libs {
   }
   void DeviceControl::destroySwapChain() {
     vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
-    if(Global::enableValidationLayers) std::cout << "Destroyed Swap Chain safely\n" << std::endl;   
   }
   VkImageView DeviceControl::createImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, uint32_t mipLevels) {
     // This defines the parameters of a newly created image object!
@@ -307,27 +307,26 @@ namespace device_libs {
     return imageView;
   }
   void DeviceControl::createImageViews() {
-    swapChainImageViews.resize(swapChainImages.size());
+   Global::swapChainImageViews.resize(swapChainImages.size());
 
     for (uint32_t i = 0; i < swapChainImages.size(); i++) {
-        swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+      Global::swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
     }
   }
   void DeviceControl::destroyImageViews() {
-    for (auto imageView : swapChainImageViews) {  
+    for (auto imageView : Global::swapChainImageViews) {  
       vkDestroyImageView(Global::device, imageView, nullptr);
     }
-    if(Global::enableValidationLayers) std::cout << "Image destroyed safely\n" << std::endl;
   }
 // --------------------------------------- Getters & Setters ------------------------------------------ //
-  VkFormat DeviceControl::getImageFormat() {
-    return swapChainImageFormat;
-  }
-  std::vector<VkImageView> DeviceControl::getSwapChainImageViews() {
-    return swapChainImageViews;
+  VkFormat* DeviceControl::getImageFormat() {
+    return &swapChainImageFormat;
   }
   VkExtent2D DeviceControl::getSwapChainExtent() {
     return swapChainExtent;
   }
+  std::vector<VkImage> DeviceControl::getSwapChainImages() {
+    return swapChainImages;
+  }
+ 
 }
-

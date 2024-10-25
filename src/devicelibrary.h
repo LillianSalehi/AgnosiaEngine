@@ -21,9 +21,9 @@ class DeviceControl {
       static void destroyCommandPool();
 
       // ---------- Getters & Setters ----------- //
-      static VkFormat getImageFormat();
-      static std::vector<VkImageView> getSwapChainImageViews();
+      static VkFormat* getImageFormat();
       static VkExtent2D getSwapChainExtent();
+      static std::vector<VkImage> getSwapChainImages();
       static std::vector<VkFramebuffer> getSwapChainFramebuffers();
   };
 }
