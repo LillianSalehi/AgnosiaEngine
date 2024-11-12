@@ -1,3 +1,4 @@
+#pragma once
 #include "../global.h"
 
 #define TINY_OBJ_IMPLEMENTATION
@@ -7,8 +8,8 @@
 #include <glm/gtx/hash.hpp>
 
 namespace modellib {
-  class Model {
-    public:
-      static void loadModel();
-  };
-}
+class Model {
+public:
+  static void loadModel();
+};
+} // namespace modellib

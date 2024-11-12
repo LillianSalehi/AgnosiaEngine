@@ -1,5 +1,4 @@
 #include "devicelibrary.h"
-#include <vulkan/vulkan_core.h>
 
 namespace device_libs {
 
@@ -15,7 +14,9 @@ struct SwapChainSupportDetails {
   std::vector<VkPresentModeKHR> presentModes;
 };
 const std::vector<const char *> deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+    VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+};
 SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
 
   /* Swap chains are weird ngl, it's another one of those Vulkan platform

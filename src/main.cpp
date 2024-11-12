@@ -1,5 +1,6 @@
 #include "entrypoint.h"
 
+#define VOLK_IMPLEMENTATION
 int main() {
   EntryApp::getInstance().initialize();
   try {

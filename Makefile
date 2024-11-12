@@ -1,12 +1,14 @@
 CPPFLAGS=-std=c++23 -g
-LDFLAGS=-lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -ltinyobjloader
-DEBUGFLAGS=-DDEBUG -fsanitize=address
-GDBFLAGS=
+CFLAGS = -g
+LDFLAGS=-lglfw -Ilib -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -ltinyobjloader -Ilib/imgui -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES
+MAKEFLAGS += -j16
+
 SRC = $(shell find . -name "*.cpp")
+CSRC = $(shell find . -name "*.c")
 SHDRSRC = $(shell find . -name "*.frag" -o -name "*vert")
 SPV = $(SHDRSRC:%.vert=%.spv) $(SHDRSRC:%.frag=%.spv)
 OBJ = $(SRC:%.cpp=%.o)
-MAKEFLAGS += -j16
+COBJ=$(CSRC:%.c=%.o)
 BIN=build/agnosiaengine
 
 .PHONY: all
@@ -17,11 +19,9 @@ run: $(BIN)
 	./$(BIN)
 
 .PHONY: gdb
-gdb: LDFLAGS+=$(GDBFLAGS)
 gdb: $(BIN)
 	gdb -q $(BIN)
 .PHONY: debug
-debug: LDFLAGS+=$(DEBUGFLAGS)
 debug: $(BIN)
 	./$(BIN)
 
@@ -37,13 +37,14 @@ info:
 	@echo "make clean:	Clean all files"
 	@echo "make run: 	Run the executable after building"
 
-$(BIN): $(OBJ) $(SPV)
+$(BIN): $(OBJ) $(COBJ) $(SPV)
 	mkdir -p build
-	g++ $(CPPFLAGS) -o $(BIN) $(OBJ) $(LDFLAGS)
+	g++ $(CPPFLAGS) -o $(BIN) $(OBJ) $(COBJ) $(LDFLAGS)
 
 %.o: %.cpp
 	g++ -c $(CPPFLAGS) $< -o $@ $(LDFLAGS)
-
+%.o : %.c
+	gcc -c $(CFLAGS) $< -o $@ $(LDFLAGS)
 %.spv: %.frag
 	glslc $< -o $@
 %.spv: %.vert

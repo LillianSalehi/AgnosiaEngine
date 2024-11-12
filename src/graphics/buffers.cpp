@@ -340,4 +340,5 @@ void Buffers::createDescriptorSets() {
 void Buffers::destroyDescriptorPool() {
   vkDestroyDescriptorPool(Global::device, descriptorPool, nullptr);
 }
+VkDescriptorPool Buffers::getDescriptorPool() { return descriptorPool; }
 } // namespace buffers_libs

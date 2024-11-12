@@ -74,11 +74,15 @@ void createInstance() {
 }
 
 void initVulkan() {
+  // Initialize volk and continue if successful.
+  volkInitialize();
   // Initialize vulkan and set up pipeline.
   createInstance();
+  volkLoadInstance(vulkaninstance);
   device_libs::DeviceControl::createSurface(vulkaninstance, Global::window);
   device_libs::DeviceControl::pickPhysicalDevice(vulkaninstance);
   device_libs::DeviceControl::createLogicalDevice();
+  volkLoadDevice(Global::device);
   device_libs::DeviceControl::createSwapChain(Global::window);
   device_libs::DeviceControl::createImageViews();
   buffers_libs::Buffers::createDescriptorSetLayout();
@@ -96,11 +100,14 @@ void initVulkan() {
   buffers_libs::Buffers::createDescriptorSets();
   graphics_pipeline::Graphics::createCommandBuffer();
   render_present::Render::createSyncObject();
+  render_present::Render::init_imgui(vulkaninstance);
 }
 
 void mainLoop() {
   while (!glfwWindowShouldClose(Global::window)) {
     glfwPollEvents();
+
+    render_present::Render::drawImGui();
     render_present::Render::drawFrame();
   }
   vkDeviceWaitIdle(Global::device);

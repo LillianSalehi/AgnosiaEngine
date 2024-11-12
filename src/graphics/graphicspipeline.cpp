@@ -1,6 +1,7 @@
 #include "graphicspipeline.h"
+#include "imgui.h"
+#include "imgui_impl_vulkan.h"
 #include "texture.h"
-#include <vulkan/vulkan_core.h>
 
 namespace graphics_pipeline {
 
@@ -352,6 +353,8 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
   vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Global::indices.size()),
                    1, 0, 0, 0);
+
+  ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 
   vkCmdEndRendering(commandBuffer);
 
