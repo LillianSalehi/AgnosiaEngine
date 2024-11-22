@@ -258,6 +258,7 @@ void DeviceControl::createLogicalDevice() {
       .dynamicRendering = true,
   };
   VkPhysicalDeviceFeatures featuresBase{
+      .sampleRateShading = true,
       .samplerAnisotropy = true,
   };
 

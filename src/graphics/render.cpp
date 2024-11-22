@@ -267,7 +267,7 @@ void Render::init_imgui(VkInstance instance) {
       .DescriptorPool = imGuiDescriptorPool,
       .MinImageCount = Global::MAX_FRAMES_IN_FLIGHT,
       .ImageCount = Global::MAX_FRAMES_IN_FLIGHT,
-      .MSAASamples = VK_SAMPLE_COUNT_1_BIT,
+      .MSAASamples = Global::perPixelSampleCount,
       .UseDynamicRendering = true,
       .PipelineRenderingCreateInfo = pipelineRenderingCreateInfo,
   };

@@ -2,7 +2,6 @@
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
 #include "texture.h"
-#include <vulkan/vulkan_core.h>
 
 namespace graphics_pipeline {
 
@@ -149,7 +148,7 @@ void Graphics::createGraphicsPipeline() {
   VkPipelineMultisampleStateCreateInfo multisampling{};
   multisampling.sType =
       VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-  multisampling.sampleShadingEnable = VK_FALSE;
+  multisampling.sampleShadingEnable = VK_TRUE;
   multisampling.rasterizationSamples = Global::perPixelSampleCount;
   // TODO: Document!
   VkPipelineDepthStencilStateCreateInfo depthStencil{};
