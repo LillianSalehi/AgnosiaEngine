@@ -5,6 +5,7 @@ namespace Global {
 VkSurfaceKHR surface;
 VkDevice device;
 VkPhysicalDevice physicalDevice;
+VkSampleCountFlagBits perPixelSampleCount;
 VkSwapchainKHR swapChain;
 VkCommandPool commandPool;
 std::vector<VkCommandBuffer> commandBuffers;
@@ -16,6 +17,9 @@ std::vector<VkDescriptorSet> descriptorSets;
 uint32_t currentFrame = 0;
 VkImageView textureImageView;
 VkSampler textureSampler;
+VkImageView colorImageView;
+VkImage colorImage;
+VkDeviceMemory colorImageMemory;
 VkImageView depthImageView;
 VkImage depthImage;
 VkDeviceMemory depthImageMemory;

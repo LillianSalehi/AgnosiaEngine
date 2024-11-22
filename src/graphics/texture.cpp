@@ -1,4 +1,3 @@
-#include <cstdint>
 #define STB_IMAGE_IMPLEMENTATION
 #include "texture.h"
 #include <stb/stb_image.h>
@@ -12,7 +11,8 @@ VkPipelineStageFlags destinationStage;
 
 namespace texture_libs {
 void createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
-                 VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+                 VkSampleCountFlagBits sampleNum, VkFormat format,
+                 VkImageTiling tiling, VkImageUsageFlags usage,
                  VkMemoryPropertyFlags properties, VkImage &image,
                  VkDeviceMemory &imageMemory) {
   // This function specifies all the data in an image object, this is called
@@ -29,7 +29,7 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
   imageInfo.tiling = tiling;
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   imageInfo.usage = usage;
-  imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+  imageInfo.samples = sampleNum;
   imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.mipLevels = mipLevels;
 
@@ -309,8 +309,8 @@ void Texture::createTextureImage() {
 
   stbi_image_free(pixels);
 
-  createImage(textureWidth, textureHeight, mipLevels, VK_FORMAT_R8G8B8A8_SRGB,
-              VK_IMAGE_TILING_OPTIMAL,
+  createImage(textureWidth, textureHeight, mipLevels, VK_SAMPLE_COUNT_1_BIT,
+              VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
               VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
                   VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage,
@@ -395,11 +395,24 @@ VkFormat Texture::findDepthFormat() {
        VK_FORMAT_D24_UNORM_S8_UINT},
       VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
+void Texture::createColorResources() {
+  VkFormat colorFormat = *device_libs::DeviceControl::getImageFormat();
+  VkExtent2D swapChainExtent = device_libs::DeviceControl::getSwapChainExtent();
+
+  createImage(swapChainExtent.width, swapChainExtent.height, 1,
+              Global::perPixelSampleCount, colorFormat, VK_IMAGE_TILING_OPTIMAL,
+              VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
+                  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Global::colorImage,
+              Global::colorImageMemory);
+  Global::colorImageView = device_libs::DeviceControl::createImageView(
+      Global::colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+}
 void Texture::createDepthResources() {
   VkFormat depthFormat = findDepthFormat();
   VkExtent2D swapChainExtent = device_libs::DeviceControl::getSwapChainExtent();
-  createImage(swapChainExtent.width, swapChainExtent.height, 1, depthFormat,
-              VK_IMAGE_TILING_OPTIMAL,
+  createImage(swapChainExtent.width, swapChainExtent.height, 1,
+              Global::perPixelSampleCount, depthFormat, VK_IMAGE_TILING_OPTIMAL,
               VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Global::depthImage,
               Global::depthImageMemory);

@@ -2,6 +2,7 @@
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
 #include "texture.h"
+#include <vulkan/vulkan_core.h>
 
 namespace graphics_pipeline {
 
@@ -149,8 +150,7 @@ void Graphics::createGraphicsPipeline() {
   multisampling.sType =
       VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
   multisampling.sampleShadingEnable = VK_FALSE;
-  multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
+  multisampling.rasterizationSamples = Global::perPixelSampleCount;
   // TODO: Document!
   VkPipelineDepthStencilStateCreateInfo depthStencil{};
   depthStencil.sType =
@@ -295,8 +295,11 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
   const VkRenderingAttachmentInfo colorAttachmentInfo{
       .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-      .imageView = Global::swapChainImageViews[imageIndex],
+      .imageView = Global::colorImageView,
       .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+      .resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT,
+      .resolveImageView = Global::swapChainImageViews[imageIndex],
+      .resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
       .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
       .clearValue = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
@@ -306,7 +309,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
       .imageView = Global::depthImageView,
       .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
       .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+      .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
       .clearValue = {.depthStencil = {1.0f, 0}},
   };
 

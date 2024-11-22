@@ -4,10 +4,9 @@
 #include "graphicspipeline.h"
 #include "render.h"
 #include "texture.h"
-#include <cstdint>
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
 
+#include "../agnosiaimgui.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
@@ -18,6 +17,8 @@ std::vector<VkSemaphore> imageAvailableSemaphores;
 std::vector<VkSemaphore> renderFinishedSemaphores;
 std::vector<VkFence> inFlightFences;
 VkDescriptorPool imGuiDescriptorPool;
+
+static float floatBar = 0.0f;
 
 void recreateSwapChain() {
   int width = 0, height = 0;
@@ -37,6 +38,7 @@ void recreateSwapChain() {
 
   device_libs::DeviceControl::createSwapChain(Global::window);
   device_libs::DeviceControl::createImageViews();
+  texture_libs::Texture::createColorResources();
   texture_libs::Texture::createDepthResources();
 }
 // At a high level, rendering in Vulkan consists of 5 steps:
@@ -123,28 +125,23 @@ void Render::drawImGui() {
   ImGui::NewFrame();
   // 2. Show a simple window that we create ourselves. We use a Begin/End pair
   // to create a named window.
-  {
-    static float f = 0.0f;
-    static int counter = 0;
 
-    ImGui::Begin("Agnosia Debug"); // Create a window called "Hello, world!" and
-                                   // append into it.
+  static int counter = 0;
 
-    ImGui::Text("This is some useful text."); // Display some text (you can use
-                                              // a format strings too)
-    ImGui::SliderFloat("float", &f, 0.0f,
-                       1.0f); // Edit 1 float using a slider from 0.0f to 1.0f
+  ImGui::Begin("Agnosia Debug"); // Create a window called "Hello, world!" and
+                                 // append into it.
 
-    if (ImGui::Button("Button")) // Buttons return true when clicked (most
-                                 // widgets return true when edited/activated)
-      counter++;
-    ImGui::SameLine();
-    ImGui::Text("counter = %d", counter);
+  ImGui::Text("This is some useful text."); // Display some text (you can use
+                                            // a format strings too)
+  ImGui::SliderFloat("float", &floatBar, 0.0f,
+                     1.0f); // Edit 1 float using a slider from 0.0f to 1.0f
 
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-                1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-    ImGui::End();
-  }
+  agnosia_imgui::Gui::drawTabs();
+
+  ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
+              1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+  ImGui::End();
+
   ImGui::Render();
 }
 #pragma info
@@ -202,6 +199,9 @@ void Render::destroyFenceSemaphores() {
   }
 }
 void Render::cleanupSwapChain() {
+  vkDestroyImageView(Global::device, Global::colorImageView, nullptr);
+  vkDestroyImage(Global::device, Global::colorImage, nullptr);
+  vkFreeMemory(Global::device, Global::colorImageMemory, nullptr);
   vkDestroyImageView(Global::device, Global::depthImageView, nullptr);
   vkDestroyImage(Global::device, Global::depthImage, nullptr);
   vkFreeMemory(Global::device, Global::depthImageMemory, nullptr);
@@ -273,6 +273,5 @@ void Render::init_imgui(VkInstance instance) {
   };
 
   ImGui_ImplVulkan_Init(&initInfo);
-
-} // namespace render_present
+}
 } // namespace render_present

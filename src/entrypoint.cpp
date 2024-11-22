@@ -1,5 +1,9 @@
 #include "entrypoint.h"
 #include "global.h"
+#include "graphics/texture.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_vulkan.h"
 
 VkInstance vulkaninstance;
 
@@ -88,6 +92,7 @@ void initVulkan() {
   buffers_libs::Buffers::createDescriptorSetLayout();
   graphics_pipeline::Graphics::createGraphicsPipeline();
   graphics_pipeline::Graphics::createCommandPool();
+  texture_libs::Texture::createColorResources();
   texture_libs::Texture::createDepthResources();
   texture_libs::Texture::createTextureImage();
   texture_libs::Texture::createTextureImageView();
@@ -125,6 +130,10 @@ void cleanup() {
   buffers_libs::Buffers::destroyBuffers();
   render_present::Render::destroyFenceSemaphores();
   graphics_pipeline::Graphics::destroyCommandPool();
+
+  ImGui_ImplVulkan_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
 
   vkDestroyDevice(Global::device, nullptr);
   device_libs::DeviceControl::destroySurface(vulkaninstance);

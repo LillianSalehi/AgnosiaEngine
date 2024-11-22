@@ -28,6 +28,7 @@ namespace Global {
 // enabled first, so that's one obvious global, as well as the glfw includes!
 
 extern VkPhysicalDevice physicalDevice;
+extern VkSampleCountFlagBits perPixelSampleCount;
 extern VkDevice device;
 
 extern VkCommandPool commandPool;
@@ -46,6 +47,10 @@ extern VkDescriptorSetLayout descriptorSetLayout;
 extern VkImageView textureImageView;
 extern VkSampler textureSampler;
 
+extern VkImage colorImage;
+extern VkImageView colorImageView;
+extern VkDeviceMemory colorImageMemory;
+
 extern VkImage depthImage;
 extern VkImageView depthImageView;
 extern VkDeviceMemory depthImageMemory;
@@ -53,8 +58,8 @@ extern VkDeviceMemory depthImageMemory;
 extern VkSwapchainKHR swapChain;
 extern std::vector<VkImageView> swapChainImageViews;
 
-const std::string MODEL_PATH = "assets/models/teapot.obj";
-const std::string TEXTURE_PATH = "assets/textures/checkermap.png";
+const std::string MODEL_PATH = "assets/models/viking_room.obj";
+const std::string TEXTURE_PATH = "assets/textures/viking_room.png";
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;

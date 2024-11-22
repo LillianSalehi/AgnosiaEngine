@@ -1,4 +1,5 @@
 #include "devicelibrary.h"
+#include "global.h"
 
 namespace device_libs {
 
@@ -162,6 +163,36 @@ VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities,
     return actualExtent;
   }
 }
+
+VkSampleCountFlagBits getMaxUsableSampleCount() {
+  VkPhysicalDeviceProperties physicalDeviceProps;
+  VkSampleCountFlags maxCounts;
+  vkGetPhysicalDeviceProperties(Global::physicalDevice, &physicalDeviceProps);
+
+  VkSampleCountFlags counts =
+      physicalDeviceProps.limits.framebufferColorSampleCounts &
+      physicalDeviceProps.limits.framebufferDepthSampleCounts;
+  if (counts & VK_SAMPLE_COUNT_64_BIT) {
+    return VK_SAMPLE_COUNT_64_BIT;
+  }
+  if (counts & VK_SAMPLE_COUNT_32_BIT) {
+    return VK_SAMPLE_COUNT_32_BIT;
+  }
+  if (counts & VK_SAMPLE_COUNT_16_BIT) {
+    return VK_SAMPLE_COUNT_16_BIT;
+  }
+  if (counts & VK_SAMPLE_COUNT_8_BIT) {
+    return VK_SAMPLE_COUNT_8_BIT;
+  }
+  if (counts & VK_SAMPLE_COUNT_4_BIT) {
+    return VK_SAMPLE_COUNT_4_BIT;
+  }
+  if (counts & VK_SAMPLE_COUNT_2_BIT) {
+    return VK_SAMPLE_COUNT_2_BIT;
+  }
+
+  return VK_SAMPLE_COUNT_1_BIT;
+}
 // --------------------------------------- External Functions
 // ----------------------------------------- //
 void DeviceControl::pickPhysicalDevice(VkInstance &instance) {
@@ -180,6 +211,7 @@ void DeviceControl::pickPhysicalDevice(VkInstance &instance) {
       // Once we have buttons or such, maybe ask the user or write a config file
       // for which GPU to use?
       Global::physicalDevice = device;
+      Global::perPixelSampleCount = getMaxUsableSampleCount();
       break;
     }
   }
@@ -378,6 +410,7 @@ void DeviceControl::destroyImageViews() {
     vkDestroyImageView(Global::device, imageView, nullptr);
   }
 }
+
 // --------------------------------------- Getters & Setters
 // ------------------------------------------ //
 VkFormat *DeviceControl::getImageFormat() { return &swapChainImageFormat; }
