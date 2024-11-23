@@ -1,4 +1,5 @@
 #include "buffers.h"
+#include <glm/fwd.hpp>
 
 VkBuffer vertexBuffer;
 VkDeviceMemory vertexBufferMemory;
@@ -9,6 +10,13 @@ VkDescriptorPool descriptorPool;
 std::vector<VkBuffer> uniformBuffers;
 std::vector<VkDeviceMemory> uniformBuffersMemory;
 std::vector<void *> uniformBuffersMapped;
+
+float objPos[4] = {0.0f, 0.0f, 0.0f, 0.44f};
+float camPos[4] = {2.0f, 2.0f, 2.0f, 0.44f};
+float centerPos[4] = {0.0f, 0.0f, 0.0f, 0.44f};
+float upDir[4] = {0.0f, 0.0f, 1.0f, 0.44f};
+float depthField = 45.0f;
+float distanceField[2] = {0.1f, 100.0f};
 
 namespace buffers_libs {
 uint32_t Buffers::findMemoryType(uint32_t typeFilter,
@@ -238,20 +246,22 @@ void Buffers::updateUniformBuffer(uint32_t currentImage) {
   ubo.time = time;
   // Modify the model projection transformation to rotate around the Z over
   // time.
-  ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(30.0f),
-                          glm::vec3(0.0f, 0.0f, 1.0f));
+  ubo.model = glm::translate(glm::mat4(1.0f),
+                             glm::vec3(objPos[0], objPos[1], objPos[2]));
+  // ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(30.0f),
+  //                         glm::vec3(0.0f, 0.0f, 1.0f));
   // Modify the view transformation to look at the object from above at a 45
   // degree angle. This takes the eye position, center position, and the up
   // direction.
-  ubo.view =
-      glm::lookAt(glm::vec3(2.0f, 2.0f * sin(time), 2.0f),
-                  glm::vec3(0.0f, 0.0f, 0.5f), glm::vec3(0.0f, 0.0f, 1.0f));
+  ubo.view = glm::lookAt(glm::vec3(camPos[0], camPos[1], camPos[2]),
+                         glm::vec3(centerPos[0], centerPos[1], centerPos[2]),
+                         glm::vec3(upDir[0], upDir[1], upDir[2]));
   // 45 degree field of view, set aspect ratio, and near and far clipping range.
   ubo.proj = glm::perspective(
-      glm::radians(45.0f),
+      glm::radians(depthField),
       device_libs::DeviceControl::getSwapChainExtent().width /
           (float)device_libs::DeviceControl::getSwapChainExtent().height,
-      0.1f, 100.0f);
+      distanceField[0], distanceField[1]);
 
   // GLM was created for OpenGL, where the Y coordinate was inverted. This
   // simply flips the sign.
@@ -341,4 +351,10 @@ void Buffers::destroyDescriptorPool() {
   vkDestroyDescriptorPool(Global::device, descriptorPool, nullptr);
 }
 VkDescriptorPool Buffers::getDescriptorPool() { return descriptorPool; }
+float *Buffers::getObjPos() { return objPos; }
+float *Buffers::getCamPos() { return camPos; }
+float *Buffers::getCenterPos() { return centerPos; }
+float *Buffers::getUpDir() { return upDir; }
+float *Buffers::getDepthField() { return &depthField; }
+float *Buffers::getDistanceField() { return distanceField; }
 } // namespace buffers_libs

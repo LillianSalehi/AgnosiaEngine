@@ -1,3 +1,4 @@
+#include "agnosiaimgui.h"
 #include "entrypoint.h"
 #include "global.h"
 #include "graphics/texture.h"
@@ -105,14 +106,14 @@ void initVulkan() {
   buffers_libs::Buffers::createDescriptorSets();
   graphics_pipeline::Graphics::createCommandBuffer();
   render_present::Render::createSyncObject();
-  render_present::Render::init_imgui(vulkaninstance);
+  agnosia_imgui::Gui::initImgui(vulkaninstance);
 }
 
 void mainLoop() {
   while (!glfwWindowShouldClose(Global::window)) {
     glfwPollEvents();
 
-    render_present::Render::drawImGui();
+    agnosia_imgui::Gui::drawImGui();
     render_present::Render::drawFrame();
   }
   vkDeviceWaitIdle(Global::device);

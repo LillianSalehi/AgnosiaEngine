@@ -24,5 +24,12 @@ public:
   static void createDescriptorSets();
   static void destroyDescriptorPool();
   static VkDescriptorPool getDescriptorPool();
+
+  static float *getObjPos();
+  static float *getCamPos();
+  static float *getCenterPos();
+  static float *getUpDir();
+  static float *getDepthField();
+  static float *getDistanceField();
 };
 } // namespace buffers_libs

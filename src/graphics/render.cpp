@@ -6,9 +6,7 @@
 #include "texture.h"
 #include <stdexcept>
 
-#include "../agnosiaimgui.h"
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 
 namespace render_present {
@@ -16,9 +14,6 @@ namespace render_present {
 std::vector<VkSemaphore> imageAvailableSemaphores;
 std::vector<VkSemaphore> renderFinishedSemaphores;
 std::vector<VkFence> inFlightFences;
-VkDescriptorPool imGuiDescriptorPool;
-
-static float floatBar = 0.0f;
 
 void recreateSwapChain() {
   int width = 0, height = 0;
@@ -118,32 +113,7 @@ void Render::drawFrame() {
   Global::currentFrame =
       (Global::currentFrame + 1) % Global::MAX_FRAMES_IN_FLIGHT;
 }
-void Render::drawImGui() {
 
-  ImGui_ImplVulkan_NewFrame();
-  ImGui_ImplGlfw_NewFrame();
-  ImGui::NewFrame();
-  // 2. Show a simple window that we create ourselves. We use a Begin/End pair
-  // to create a named window.
-
-  static int counter = 0;
-
-  ImGui::Begin("Agnosia Debug"); // Create a window called "Hello, world!" and
-                                 // append into it.
-
-  ImGui::Text("This is some useful text."); // Display some text (you can use
-                                            // a format strings too)
-  ImGui::SliderFloat("float", &floatBar, 0.0f,
-                     1.0f); // Edit 1 float using a slider from 0.0f to 1.0f
-
-  agnosia_imgui::Gui::drawTabs();
-
-  ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-              1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-  ImGui::End();
-
-  ImGui::Render();
-}
 #pragma info
 // SEMAPHORES
 // Synchronization of execution on the GPU in Vulkan is *explicit* The Order of
@@ -212,66 +182,4 @@ void Render::cleanupSwapChain() {
   vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
 }
 
-void Render::init_imgui(VkInstance instance) {
-  auto load_vk_func = [&](const char *fn) {
-    if (auto proc = vkGetDeviceProcAddr(Global::device, fn))
-      return proc;
-    return vkGetInstanceProcAddr(instance, fn);
-  };
-  ImGui_ImplVulkan_LoadFunctions(
-      [](const char *fn, void *data) {
-        return (*(decltype(load_vk_func) *)data)(fn);
-      },
-      &load_vk_func);
-
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  // TODO
-  ImGuiIO &io = ImGui::GetIO();
-  (void)io;
-  io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-
-  ImGui::StyleColorsDark();
-
-  ImGui_ImplGlfw_InitForVulkan(Global::window, true);
-
-  VkDescriptorPoolSize ImGuiPoolSizes[]{
-      {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
-  };
-  VkDescriptorPoolCreateInfo ImGuiPoolInfo{
-      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-      .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
-      .maxSets = 1,
-      .poolSizeCount = 1,
-      .pPoolSizes = ImGuiPoolSizes,
-  };
-  if (vkCreateDescriptorPool(Global::device, &ImGuiPoolInfo, nullptr,
-                             &imGuiDescriptorPool) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create ImGui descriptor pool!");
-  }
-
-  VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-      .colorAttachmentCount = 1,
-      .pColorAttachmentFormats = device_libs::DeviceControl::getImageFormat(),
-      .depthAttachmentFormat = texture_libs::Texture::findDepthFormat(),
-  };
-
-  ImGui_ImplVulkan_InitInfo initInfo{
-      .Instance = instance,
-      .PhysicalDevice = Global::physicalDevice,
-      .Device = Global::device,
-      .QueueFamily = Global::findQueueFamilies(Global::physicalDevice)
-                         .graphicsFamily.value(),
-      .Queue = Global::graphicsQueue,
-      .DescriptorPool = imGuiDescriptorPool,
-      .MinImageCount = Global::MAX_FRAMES_IN_FLIGHT,
-      .ImageCount = Global::MAX_FRAMES_IN_FLIGHT,
-      .MSAASamples = Global::perPixelSampleCount,
-      .UseDynamicRendering = true,
-      .PipelineRenderingCreateInfo = pipelineRenderingCreateInfo,
-  };
-
-  ImGui_ImplVulkan_Init(&initInfo);
-}
 } // namespace render_present
