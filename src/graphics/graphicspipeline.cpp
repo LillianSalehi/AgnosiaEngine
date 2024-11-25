@@ -1,9 +1,11 @@
+#include "../devicelibrary.h"
+#include "buffers.h"
 #include "graphicspipeline.h"
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
+#include "render.h"
 #include "texture.h"
-
-namespace graphics_pipeline {
+#include <fstream>
 
 std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
                                              VK_DYNAMIC_STATE_SCISSOR};
@@ -43,8 +45,8 @@ VkShaderModule createShaderModule(const std::vector<char> &code,
 }
 
 void Graphics::destroyGraphicsPipeline() {
-  vkDestroyPipeline(Global::device, graphicsPipeline, nullptr);
-  vkDestroyPipelineLayout(Global::device, pipelineLayout, nullptr);
+  vkDestroyPipeline(DeviceControl::getDevice(), graphicsPipeline, nullptr);
+  vkDestroyPipelineLayout(DeviceControl::getDevice(), pipelineLayout, nullptr);
 }
 
 void Graphics::createGraphicsPipeline() {
@@ -53,9 +55,9 @@ void Graphics::createGraphicsPipeline() {
   auto vertShaderCode = readFile("src/shaders/vertex.spv");
   auto fragShaderCode = readFile("src/shaders/fragment.spv");
   VkShaderModule vertShaderModule =
-      createShaderModule(vertShaderCode, Global::device);
+      createShaderModule(vertShaderCode, DeviceControl::getDevice());
   VkShaderModule fragShaderModule =
-      createShaderModule(fragShaderCode, Global::device);
+      createShaderModule(fragShaderCode, DeviceControl::getDevice());
   // ------------------ STAGE 1 - INPUT ASSEMBLER ---------------- //
   // This can get a little complicated, normally, vertices are loaded in
   // sequential order, with an element buffer however, you can specify the
@@ -81,8 +83,8 @@ void Graphics::createGraphicsPipeline() {
   vertexInputInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-  auto bindingDescription = Global::Vertex::getBindingDescription();
-  auto attributeDescriptions = Global::Vertex::getAttributeDescriptions();
+  auto bindingDescription = Buffers::Vertex::getBindingDescription();
+  auto attributeDescriptions = Buffers::Vertex::getAttributeDescriptions();
 
   vertexInputInfo.vertexBindingDescriptionCount = 1;
   vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
@@ -149,7 +151,7 @@ void Graphics::createGraphicsPipeline() {
   multisampling.sType =
       VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
   multisampling.sampleShadingEnable = VK_TRUE;
-  multisampling.rasterizationSamples = Global::perPixelSampleCount;
+  multisampling.rasterizationSamples = DeviceControl::getPerPixelSampleCount();
   // TODO: Document!
   VkPipelineDepthStencilStateCreateInfo depthStencil{};
   depthStencil.sType =
@@ -175,18 +177,18 @@ void Graphics::createGraphicsPipeline() {
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   pipelineLayoutInfo.setLayoutCount = 1;
-  pipelineLayoutInfo.pSetLayouts = &Global::descriptorSetLayout;
+  pipelineLayoutInfo.pSetLayouts = &Buffers::getDescriptorSetLayout();
 
-  if (vkCreatePipelineLayout(Global::device, &pipelineLayoutInfo, nullptr,
-                             &pipelineLayout) != VK_SUCCESS) {
+  if (vkCreatePipelineLayout(DeviceControl::getDevice(), &pipelineLayoutInfo,
+                             nullptr, &pipelineLayout) != VK_SUCCESS) {
     throw std::runtime_error("failed to create pipeline layout!");
   }
 
   VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
       .colorAttachmentCount = 1,
-      .pColorAttachmentFormats = device_libs::DeviceControl::getImageFormat(),
-      .depthAttachmentFormat = texture_libs::Texture::findDepthFormat(),
+      .pColorAttachmentFormats = &DeviceControl::getImageFormat(),
+      .depthAttachmentFormat = Texture::findDepthFormat(),
   };
 
   // Here we combine all of the structures we created to make the final
@@ -209,46 +211,48 @@ void Graphics::createGraphicsPipeline() {
       .subpass = 0,
   };
 
-  if (vkCreateGraphicsPipelines(Global::device, VK_NULL_HANDLE, 1,
+  if (vkCreateGraphicsPipelines(DeviceControl::getDevice(), VK_NULL_HANDLE, 1,
                                 &pipelineInfo, nullptr,
                                 &graphicsPipeline) != VK_SUCCESS) {
     throw std::runtime_error("failed to create graphics pipeline!");
   }
-  vkDestroyShaderModule(Global::device, fragShaderModule, nullptr);
-  vkDestroyShaderModule(Global::device, vertShaderModule, nullptr);
+  vkDestroyShaderModule(DeviceControl::getDevice(), fragShaderModule, nullptr);
+  vkDestroyShaderModule(DeviceControl::getDevice(), vertShaderModule, nullptr);
 }
 
 void Graphics::createCommandPool() {
   // Commands in Vulkan are not executed using function calls, you have to
   // record the ops you wish to perform to command buffers, pools manage the
   // memory used by the buffer!
-  Global::QueueFamilyIndices queueFamilyIndices =
-      Global::findQueueFamilies(Global::physicalDevice);
+  DeviceControl::QueueFamilyIndices queueFamilyIndices =
+      DeviceControl::findQueueFamilies(DeviceControl::getPhysicalDevice());
 
   VkCommandPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-  if (vkCreateCommandPool(Global::device, &poolInfo, nullptr,
-                          &Global::commandPool) != VK_SUCCESS) {
+  if (vkCreateCommandPool(DeviceControl::getDevice(), &poolInfo, nullptr,
+                          &Buffers::getCommandPool()) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create command pool!");
   }
 }
 void Graphics::destroyCommandPool() {
-  vkDestroyCommandPool(Global::device, Global::commandPool, nullptr);
+  vkDestroyCommandPool(DeviceControl::getDevice(), Buffers::getCommandPool(),
+                       nullptr);
 }
 void Graphics::createCommandBuffer() {
-  Global::commandBuffers.resize(Global::MAX_FRAMES_IN_FLIGHT);
+  Buffers::getCommandBuffers().resize(Buffers::getMaxFramesInFlight());
 
   VkCommandBufferAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.commandPool = Global::commandPool;
+  allocInfo.commandPool = Buffers::getCommandPool();
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandBufferCount = (uint32_t)Global::commandBuffers.size();
+  allocInfo.commandBufferCount = (uint32_t)Buffers::getCommandBuffers().size();
 
-  if (vkAllocateCommandBuffers(Global::device, &allocInfo,
-                               Global::commandBuffers.data()) != VK_SUCCESS) {
+  if (vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo,
+                               Buffers::getCommandBuffers().data()) !=
+      VK_SUCCESS) {
     throw std::runtime_error("Failed to allocate command buffers");
   }
 }
@@ -272,7 +276,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
       .newLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .image = device_libs::DeviceControl::getSwapChainImages()[imageIndex],
+      .image = DeviceControl::getSwapChainImages()[imageIndex],
       .subresourceRange =
           {
               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -294,10 +298,10 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
   const VkRenderingAttachmentInfo colorAttachmentInfo{
       .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-      .imageView = Global::colorImageView,
+      .imageView = Texture::getColorImageView(),
       .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
       .resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT,
-      .resolveImageView = Global::swapChainImageViews[imageIndex],
+      .resolveImageView = DeviceControl::getSwapChainImageViews()[imageIndex],
       .resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
       .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -305,7 +309,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   };
   const VkRenderingAttachmentInfo depthAttachmentInfo{
       .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-      .imageView = Global::depthImageView,
+      .imageView = Texture::getDepthImageView(),
       .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
       .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
       .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -315,8 +319,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   const VkRenderingInfo renderInfo{
       .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
       .renderArea = {.offset = {0, 0},
-                     .extent =
-                         device_libs::DeviceControl::getSwapChainExtent()},
+                     .extent = DeviceControl::getSwapChainExtent()},
       .layerCount = 1,
       .colorAttachmentCount = 1,
       .pColorAttachments = &colorAttachmentInfo,
@@ -330,31 +333,30 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   VkViewport viewport{};
   viewport.x = 0.0f;
   viewport.y = 0.0f;
-  viewport.width =
-      (float)device_libs::DeviceControl::getSwapChainExtent().width;
-  viewport.height =
-      (float)device_libs::DeviceControl::getSwapChainExtent().height;
+  viewport.width = (float)DeviceControl::getSwapChainExtent().width;
+  viewport.height = (float)DeviceControl::getSwapChainExtent().height;
   viewport.minDepth = 0.0f;
   viewport.maxDepth = 1.0f;
   vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
   VkRect2D scissor{};
   scissor.offset = {0, 0};
-  scissor.extent = device_libs::DeviceControl::getSwapChainExtent();
+  scissor.extent = DeviceControl::getSwapChainExtent();
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-  VkBuffer vertexBuffers[] = {buffers_libs::Buffers::getVertexBuffer()};
+  VkBuffer vertexBuffers[] = {Buffers::getVertexBuffer()};
   VkDeviceSize offsets[] = {0};
   vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-  vkCmdBindIndexBuffer(commandBuffer, buffers_libs::Buffers::getIndexBuffer(),
-                       0, VK_INDEX_TYPE_UINT32);
+  vkCmdBindIndexBuffer(commandBuffer, Buffers::getIndexBuffer(), 0,
+                       VK_INDEX_TYPE_UINT32);
 
   vkCmdBindDescriptorSets(
       commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1,
-      &Global::descriptorSets[Global::currentFrame], 0, nullptr);
+      &Buffers::getDescriptorSets()[Render::getCurrentFrame()], 0, nullptr);
 
-  vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(Global::indices.size()),
-                   1, 0, 0, 0);
+  vkCmdDrawIndexed(commandBuffer,
+                   static_cast<uint32_t>(Buffers::getIndices().size()), 1, 0, 0,
+                   0);
 
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 
@@ -371,7 +373,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
       .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .image = device_libs::DeviceControl::getSwapChainImages()[imageIndex],
+      .image = DeviceControl::getSwapChainImages()[imageIndex],
       .subresourceRange =
           {
               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -388,11 +390,10 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
       .pImageMemoryBarriers = &prePresentImageBarrier,
   };
 
-  vkCmdPipelineBarrier2(Global::commandBuffers[Global::currentFrame], &depInfo);
+  vkCmdPipelineBarrier2(
+      Buffers ::getCommandBuffers()[Render::getCurrentFrame()], &depInfo);
 
   if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
     throw std::runtime_error("failed to record command buffer!");
   }
 }
-
-} // namespace graphics_pipeline

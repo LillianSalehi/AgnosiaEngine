@@ -1,10 +1,7 @@
 #pragma once
-#include "../devicelibrary.h"
-#include "../global.h"
-#include "buffers.h"
+#define VK_NO_PROTOTYPES
+#include "volk.h"
 #include <cstdint>
-
-namespace texture_libs {
 class Texture {
 public:
   static void createTextureImage();
@@ -17,5 +14,14 @@ public:
   static void createColorResources();
   // ------------ Getters & Setters ------------ //
   static uint32_t getMipLevels();
+  static VkImageView &getTextureImageView();
+  static VkSampler &getTextureSampler();
+
+  static VkImage &getColorImage();
+  static VkImageView &getColorImageView();
+  static VkDeviceMemory &getColorImageMemory();
+
+  static VkImage &getDepthImage();
+  static VkImageView &getDepthImageView();
+  static VkDeviceMemory &getDepthImageMemory();
 };
-} // namespace texture_libs

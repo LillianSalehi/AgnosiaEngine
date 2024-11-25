@@ -1,55 +1,56 @@
+
+#include <stdexcept>
+
+#include "imgui.h"
+#include "imgui_impl_vulkan.h"
+
 #include "../devicelibrary.h"
 #include "../entrypoint.h"
 #include "buffers.h"
 #include "graphicspipeline.h"
 #include "render.h"
 #include "texture.h"
-#include <stdexcept>
 
-#include "imgui.h"
-#include "imgui_impl_vulkan.h"
-
-namespace render_present {
-
+uint32_t currentFrame;
 std::vector<VkSemaphore> imageAvailableSemaphores;
 std::vector<VkSemaphore> renderFinishedSemaphores;
 std::vector<VkFence> inFlightFences;
 
 void recreateSwapChain() {
   int width = 0, height = 0;
-  glfwGetFramebufferSize(Global::window, &width, &height);
+  glfwGetFramebufferSize(EntryApp::getWindow(), &width, &height);
   while (width == 0 || height == 0) {
-    glfwGetFramebufferSize(Global::window, &width, &height);
+    glfwGetFramebufferSize(EntryApp::getWindow(), &width, &height);
     glfwWaitEvents();
   }
-  vkDeviceWaitIdle(Global::device);
+  vkDeviceWaitIdle(DeviceControl::getDevice());
   // Don't really wanna do this but I also don't want to create an extra class
   // instance just to call the cleanup function.
 
-  for (auto imageView : Global::swapChainImageViews) {
-    vkDestroyImageView(Global::device, imageView, nullptr);
+  for (auto imageView : DeviceControl::getSwapChainImageViews()) {
+    vkDestroyImageView(DeviceControl::getDevice(), imageView, nullptr);
   }
-  vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
+  vkDestroySwapchainKHR(DeviceControl::getDevice(),
+                        DeviceControl::getSwapChain(), nullptr);
 
-  device_libs::DeviceControl::createSwapChain(Global::window);
-  device_libs::DeviceControl::createImageViews();
-  texture_libs::Texture::createColorResources();
-  texture_libs::Texture::createDepthResources();
+  DeviceControl::createSwapChain(EntryApp::getWindow());
+  DeviceControl::createImageViews();
+  Texture::createColorResources();
+  Texture::createDepthResources();
 }
 // At a high level, rendering in Vulkan consists of 5 steps:
 // Wait for the previous frame, acquire a image from the swap chain
 // record a comman d buffer which draws the scene onto that image
 // submit the recorded command buffer and present the image!
 void Render::drawFrame() {
-  vkWaitForFences(Global::device, 1, &inFlightFences[Global::currentFrame],
+  vkWaitForFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame],
                   VK_TRUE, UINT64_MAX);
-  vkResetFences(Global::device, 1, &inFlightFences[Global::currentFrame]);
+  vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
 
   uint32_t imageIndex;
-  VkResult result =
-      vkAcquireNextImageKHR(Global::device, Global::swapChain, UINT64_MAX,
-                            imageAvailableSemaphores[Global::currentFrame],
-                            VK_NULL_HANDLE, &imageIndex);
+  VkResult result = vkAcquireNextImageKHR(
+      DeviceControl::getDevice(), DeviceControl::getSwapChain(), UINT64_MAX,
+      imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
   if (result == VK_ERROR_OUT_OF_DATE_KHR) {
     recreateSwapChain();
     return;
@@ -57,36 +58,34 @@ void Render::drawFrame() {
     throw std::runtime_error("failed to acquire swap chain image!");
   }
 
-  buffers_libs::Buffers::updateUniformBuffer(Global::currentFrame);
+  Buffers::updateUniformBuffer(currentFrame);
 
-  vkResetFences(Global::device, 1, &inFlightFences[Global::currentFrame]);
+  vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
 
-  vkResetCommandBuffer(Global::commandBuffers[Global::currentFrame],
+  vkResetCommandBuffer(Buffers::getCommandBuffers()[currentFrame],
                        /*VkCommandBufferResetFlagBits*/ 0);
-  graphics_pipeline::Graphics::recordCommandBuffer(
-      Global::commandBuffers[Global::currentFrame], imageIndex);
+  Graphics::recordCommandBuffer(Buffers::getCommandBuffers()[currentFrame],
+                                imageIndex);
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),
-                                  Global::commandBuffers[Global::currentFrame]);
+                                  Buffers::getCommandBuffers()[currentFrame]);
   VkSubmitInfo submitInfo{};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-  VkSemaphore waitSemaphores[] = {
-      imageAvailableSemaphores[Global::currentFrame]};
+  VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
   VkPipelineStageFlags waitStages[] = {
       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
   submitInfo.waitSemaphoreCount = 1;
   submitInfo.pWaitSemaphores = waitSemaphores;
   submitInfo.pWaitDstStageMask = waitStages;
   submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &Global::commandBuffers[Global::currentFrame];
+  submitInfo.pCommandBuffers = &Buffers::getCommandBuffers()[currentFrame];
 
-  VkSemaphore signalSemaphores[] = {
-      renderFinishedSemaphores[Global::currentFrame]};
+  VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores = signalSemaphores;
 
-  if (vkQueueSubmit(Global::graphicsQueue, 1, &submitInfo,
-                    inFlightFences[Global::currentFrame]) != VK_SUCCESS) {
+  if (vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo,
+                    inFlightFences[currentFrame]) != VK_SUCCESS) {
     throw std::runtime_error("failed to submit draw command buffer!");
   }
 
@@ -96,12 +95,12 @@ void Render::drawFrame() {
   presentInfo.waitSemaphoreCount = 1;
   presentInfo.pWaitSemaphores = signalSemaphores;
 
-  VkSwapchainKHR swapChains[] = {Global::swapChain};
+  VkSwapchainKHR swapChains[] = {DeviceControl::getSwapChain()};
   presentInfo.swapchainCount = 1;
   presentInfo.pSwapchains = swapChains;
   presentInfo.pImageIndices = &imageIndex;
 
-  result = vkQueuePresentKHR(Global::presentQueue, &presentInfo);
+  result = vkQueuePresentKHR(DeviceControl::getPresentQueue(), &presentInfo);
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
       EntryApp::getInstance().getFramebufferResized()) {
@@ -110,8 +109,7 @@ void Render::drawFrame() {
   } else if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to present swap chain image!");
   }
-  Global::currentFrame =
-      (Global::currentFrame + 1) % Global::MAX_FRAMES_IN_FLIGHT;
+  currentFrame = (currentFrame + 1) % Buffers::getMaxFramesInFlight();
 }
 
 #pragma info
@@ -139,9 +137,9 @@ void Render::drawFrame() {
 #pragma endinfo
 
 void Render::createSyncObject() {
-  imageAvailableSemaphores.resize(Global::MAX_FRAMES_IN_FLIGHT);
-  renderFinishedSemaphores.resize(Global::MAX_FRAMES_IN_FLIGHT);
-  inFlightFences.resize(Global::MAX_FRAMES_IN_FLIGHT);
+  imageAvailableSemaphores.resize(Buffers::getMaxFramesInFlight());
+  renderFinishedSemaphores.resize(Buffers::getMaxFramesInFlight());
+  inFlightFences.resize(Buffers::getMaxFramesInFlight());
 
   VkSemaphoreCreateInfo semaphoreInfo{};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -150,36 +148,42 @@ void Render::createSyncObject() {
   fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-  for (size_t i = 0; i < Global::MAX_FRAMES_IN_FLIGHT; i++) {
-    if (vkCreateSemaphore(Global::device, &semaphoreInfo, nullptr,
+  for (size_t i = 0; i < Buffers::getMaxFramesInFlight(); i++) {
+    if (vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr,
                           &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-        vkCreateSemaphore(Global::device, &semaphoreInfo, nullptr,
+        vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr,
                           &renderFinishedSemaphores[i]) != VK_SUCCESS ||
-        vkCreateFence(Global::device, &fenceInfo, nullptr,
+        vkCreateFence(DeviceControl::getDevice(), &fenceInfo, nullptr,
                       &inFlightFences[i]) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create semaphores!");
     }
   }
 }
 void Render::destroyFenceSemaphores() {
-  for (size_t i = 0; i < Global::MAX_FRAMES_IN_FLIGHT; i++) {
-    vkDestroySemaphore(Global::device, renderFinishedSemaphores[i], nullptr);
-    vkDestroySemaphore(Global::device, imageAvailableSemaphores[i], nullptr);
-    vkDestroyFence(Global::device, inFlightFences[i], nullptr);
+  for (size_t i = 0; i < Buffers::getMaxFramesInFlight(); i++) {
+    vkDestroySemaphore(DeviceControl::getDevice(), renderFinishedSemaphores[i],
+                       nullptr);
+    vkDestroySemaphore(DeviceControl::getDevice(), imageAvailableSemaphores[i],
+                       nullptr);
+    vkDestroyFence(DeviceControl::getDevice(), inFlightFences[i], nullptr);
   }
 }
 void Render::cleanupSwapChain() {
-  vkDestroyImageView(Global::device, Global::colorImageView, nullptr);
-  vkDestroyImage(Global::device, Global::colorImage, nullptr);
-  vkFreeMemory(Global::device, Global::colorImageMemory, nullptr);
-  vkDestroyImageView(Global::device, Global::depthImageView, nullptr);
-  vkDestroyImage(Global::device, Global::depthImage, nullptr);
-  vkFreeMemory(Global::device, Global::depthImageMemory, nullptr);
+  vkDestroyImageView(DeviceControl::getDevice(), Texture::getColorImageView(),
+                     nullptr);
+  vkDestroyImage(DeviceControl::getDevice(), Texture::getColorImage(), nullptr);
+  vkFreeMemory(DeviceControl::getDevice(), Texture::getColorImageMemory(),
+               nullptr);
+  vkDestroyImageView(DeviceControl::getDevice(), Texture::getDepthImageView(),
+                     nullptr);
+  vkDestroyImage(DeviceControl::getDevice(), Texture::getDepthImage(), nullptr);
+  vkFreeMemory(DeviceControl::getDevice(), Texture::getDepthImageMemory(),
+               nullptr);
 
-  for (auto imageView : Global::swapChainImageViews) {
-    vkDestroyImageView(Global::device, imageView, nullptr);
+  for (auto imageView : DeviceControl::getSwapChainImageViews()) {
+    vkDestroyImageView(DeviceControl::getDevice(), imageView, nullptr);
   }
-  vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
+  vkDestroySwapchainKHR(DeviceControl::getDevice(),
+                        DeviceControl::getSwapChain(), nullptr);
 }
-
-} // namespace render_present
+uint32_t Render::getCurrentFrame() { return currentFrame; }

@@ -1,13 +1,26 @@
 #include "agnosiaimgui.h"
+#include "devicelibrary.h"
 #include "entrypoint.h"
-#include "global.h"
+#include "graphics/buffers.h"
+#include "graphics/graphicspipeline.h"
+#include "graphics/model.h"
+#include "graphics/render.h"
 #include "graphics/texture.h"
+
+#define VK_NO_PROTOTYPES
+#include "volk.h"
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 
+#include <stdexcept>
 VkInstance vulkaninstance;
-
+GLFWwindow *window;
+const uint32_t WIDTH = 800;
+const uint32_t HEIGHT = 600;
 // Getters and Setters!
 void EntryApp::setFramebufferResized(bool setter) {
   framebufferResized = setter;
@@ -25,10 +38,9 @@ void initWindow() {
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   // Settings for the window are set, create window reference.
-  Global::window = glfwCreateWindow(Global::WIDTH, Global::HEIGHT,
-                                    "Trimgles :o", nullptr, nullptr);
-  glfwSetWindowUserPointer(Global::window, &EntryApp::getInstance());
-  glfwSetFramebufferSizeCallback(Global::window, framebufferResizeCallback);
+  window = glfwCreateWindow(WIDTH, HEIGHT, "Trimgles :o", nullptr, nullptr);
+  glfwSetWindowUserPointer(window, &EntryApp::getInstance());
+  glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
 void createInstance() {
@@ -84,62 +96,62 @@ void initVulkan() {
   // Initialize vulkan and set up pipeline.
   createInstance();
   volkLoadInstance(vulkaninstance);
-  device_libs::DeviceControl::createSurface(vulkaninstance, Global::window);
-  device_libs::DeviceControl::pickPhysicalDevice(vulkaninstance);
-  device_libs::DeviceControl::createLogicalDevice();
-  volkLoadDevice(Global::device);
-  device_libs::DeviceControl::createSwapChain(Global::window);
-  device_libs::DeviceControl::createImageViews();
-  buffers_libs::Buffers::createDescriptorSetLayout();
-  graphics_pipeline::Graphics::createGraphicsPipeline();
-  graphics_pipeline::Graphics::createCommandPool();
-  texture_libs::Texture::createColorResources();
-  texture_libs::Texture::createDepthResources();
-  texture_libs::Texture::createTextureImage();
-  texture_libs::Texture::createTextureImageView();
-  texture_libs::Texture::createTextureSampler();
-  modellib::Model::loadModel();
-  buffers_libs::Buffers::createVertexBuffer();
-  buffers_libs::Buffers::createIndexBuffer();
-  buffers_libs::Buffers::createUniformBuffers();
-  buffers_libs::Buffers::createDescriptorPool();
-  buffers_libs::Buffers::createDescriptorSets();
-  graphics_pipeline::Graphics::createCommandBuffer();
-  render_present::Render::createSyncObject();
-  agnosia_imgui::Gui::initImgui(vulkaninstance);
+  DeviceControl::createSurface(vulkaninstance, window);
+  DeviceControl::pickPhysicalDevice(vulkaninstance);
+  DeviceControl::createLogicalDevice();
+  volkLoadDevice(DeviceControl::getDevice());
+  DeviceControl::createSwapChain(window);
+  DeviceControl::createImageViews();
+  Buffers::createDescriptorSetLayout();
+  Graphics::createGraphicsPipeline();
+  Graphics::createCommandPool();
+  Texture::createColorResources();
+  Texture::createDepthResources();
+  Texture::createTextureImage();
+  Texture::createTextureImageView();
+  Texture::createTextureSampler();
+  Model::loadModel();
+  Buffers::createVertexBuffer();
+  Buffers::createIndexBuffer();
+  Buffers::createUniformBuffers();
+  Buffers::createDescriptorPool();
+  Buffers::createDescriptorSets();
+  Graphics::createCommandBuffer();
+  Render::createSyncObject();
+  Gui::initImgui(vulkaninstance);
 }
 
 void mainLoop() {
-  while (!glfwWindowShouldClose(Global::window)) {
+  while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
-    agnosia_imgui::Gui::drawImGui();
-    render_present::Render::drawFrame();
+    Gui::drawImGui();
+    Render::drawFrame();
   }
-  vkDeviceWaitIdle(Global::device);
+  vkDeviceWaitIdle(DeviceControl::getDevice());
 }
 
 void cleanup() {
-  render_present::Render::cleanupSwapChain();
-  graphics_pipeline::Graphics::destroyGraphicsPipeline();
-  buffers_libs::Buffers::destroyUniformBuffer();
-  buffers_libs::Buffers::destroyDescriptorPool();
-  texture_libs::Texture::destroyTextureSampler();
-  texture_libs::Texture::destroyTextureImage();
-  vkDestroyDescriptorSetLayout(Global::device, Global::descriptorSetLayout,
-                               nullptr);
-  buffers_libs::Buffers::destroyBuffers();
-  render_present::Render::destroyFenceSemaphores();
-  graphics_pipeline::Graphics::destroyCommandPool();
+  Render::cleanupSwapChain();
+  Graphics::destroyGraphicsPipeline();
+  Buffers::destroyUniformBuffer();
+  Buffers::destroyDescriptorPool();
+  Texture::destroyTextureSampler();
+  Texture::destroyTextureImage();
+  vkDestroyDescriptorSetLayout(DeviceControl::getDevice(),
+                               Buffers::getDescriptorSetLayout(), nullptr);
+  Buffers::destroyBuffers();
+  Render::destroyFenceSemaphores();
+  Graphics::destroyCommandPool();
 
   ImGui_ImplVulkan_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext();
 
-  vkDestroyDevice(Global::device, nullptr);
-  device_libs::DeviceControl::destroySurface(vulkaninstance);
+  vkDestroyDevice(DeviceControl::getDevice(), nullptr);
+  DeviceControl::destroySurface(vulkaninstance);
   vkDestroyInstance(vulkaninstance, nullptr);
-  glfwDestroyWindow(Global::window);
+  glfwDestroyWindow(window);
   glfwTerminate();
 }
 
@@ -152,7 +164,7 @@ EntryApp::EntryApp() : initialized(false), framebufferResized(false) {}
 
 void EntryApp::initialize() { initialized = true; }
 bool EntryApp::isInitialized() const { return initialized; }
-
+GLFWwindow *EntryApp::getWindow() { return window; }
 void EntryApp::run() {
   initWindow();
   initVulkan();

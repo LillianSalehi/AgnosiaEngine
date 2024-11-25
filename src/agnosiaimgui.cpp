@@ -1,26 +1,30 @@
 #include "agnosiaimgui.h"
+#include "devicelibrary.h"
+#include "entrypoint.h"
 #include "graphics/buffers.h"
-
-namespace agnosia_imgui {
+#include "graphics/texture.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_vulkan.h"
+#include <stdexcept>
 
 VkDescriptorPool imGuiDescriptorPool;
 
-void initWindow() {
+void initImGuiWindow() {
 
-  ImGui::DragFloat3("Object Position", buffers_libs::Buffers::getObjPos());
-  ImGui::DragFloat3("Camera Position", buffers_libs::Buffers::getCamPos());
-  ImGui::DragFloat3("Center Position", buffers_libs::Buffers::getCenterPos());
-  ImGui::DragFloat3("Up Direction", buffers_libs::Buffers::getUpDir());
-  ImGui::DragFloat("Depth of Field", buffers_libs::Buffers::getDepthField(),
-                   0.1f, 1.0f, 180.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
-  ImGui::DragFloat2("Near and Far fields",
-                    buffers_libs::Buffers::getDistanceField());
+  ImGui::DragFloat3("Object Position", Buffers::getObjPos());
+  ImGui::DragFloat3("Camera Position", Buffers::getCamPos());
+  ImGui::DragFloat3("Center Position", Buffers::getCenterPos());
+  ImGui::DragFloat3("Up Direction", Buffers::getUpDir());
+  ImGui::DragFloat("Depth of Field", &Buffers::getDepthField(), 0.1f, 1.0f,
+                   180.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
+  ImGui::DragFloat2("Near and Far fields", Buffers::getDistanceField());
 }
 
 void drawTabs() {
   if (ImGui::BeginTabBar("MainTabBar", ImGuiTabBarFlags_Reorderable)) {
     if (ImGui::BeginTabItem("Transforms Control")) {
-      initWindow();
+      initImGuiWindow();
       ImGui::EndTabItem();
     }
 
@@ -50,7 +54,7 @@ void Gui::drawImGui() {
 
 void Gui::initImgui(VkInstance instance) {
   auto load_vk_func = [&](const char *fn) {
-    if (auto proc = vkGetDeviceProcAddr(Global::device, fn))
+    if (auto proc = vkGetDeviceProcAddr(DeviceControl::getDevice(), fn))
       return proc;
     return vkGetInstanceProcAddr(instance, fn);
   };
@@ -69,7 +73,7 @@ void Gui::initImgui(VkInstance instance) {
 
   ImGui::StyleColorsDark();
 
-  ImGui_ImplGlfw_InitForVulkan(Global::window, true);
+  ImGui_ImplGlfw_InitForVulkan(EntryApp::getWindow(), true);
 
   VkDescriptorPoolSize ImGuiPoolSizes[]{
       {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1},
@@ -81,33 +85,33 @@ void Gui::initImgui(VkInstance instance) {
       .poolSizeCount = 1,
       .pPoolSizes = ImGuiPoolSizes,
   };
-  if (vkCreateDescriptorPool(Global::device, &ImGuiPoolInfo, nullptr,
-                             &imGuiDescriptorPool) != VK_SUCCESS) {
+  if (vkCreateDescriptorPool(DeviceControl::getDevice(), &ImGuiPoolInfo,
+                             nullptr, &imGuiDescriptorPool) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create ImGui descriptor pool!");
   }
 
   VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
       .colorAttachmentCount = 1,
-      .pColorAttachmentFormats = device_libs::DeviceControl::getImageFormat(),
-      .depthAttachmentFormat = texture_libs::Texture::findDepthFormat(),
+      .pColorAttachmentFormats = &DeviceControl::getImageFormat(),
+      .depthAttachmentFormat = Texture::findDepthFormat(),
   };
 
   ImGui_ImplVulkan_InitInfo initInfo{
       .Instance = instance,
-      .PhysicalDevice = Global::physicalDevice,
-      .Device = Global::device,
-      .QueueFamily = Global::findQueueFamilies(Global::physicalDevice)
-                         .graphicsFamily.value(),
-      .Queue = Global::graphicsQueue,
+      .PhysicalDevice = DeviceControl::getPhysicalDevice(),
+      .Device = DeviceControl::getDevice(),
+      .QueueFamily =
+          DeviceControl::findQueueFamilies(DeviceControl::getPhysicalDevice())
+              .graphicsFamily.value(),
+      .Queue = DeviceControl::getGraphicsQueue(),
       .DescriptorPool = imGuiDescriptorPool,
-      .MinImageCount = Global::MAX_FRAMES_IN_FLIGHT,
-      .ImageCount = Global::MAX_FRAMES_IN_FLIGHT,
-      .MSAASamples = Global::perPixelSampleCount,
+      .MinImageCount = Buffers::getMaxFramesInFlight(),
+      .ImageCount = Buffers::getMaxFramesInFlight(),
+      .MSAASamples = DeviceControl::getPerPixelSampleCount(),
       .UseDynamicRendering = true,
       .PipelineRenderingCreateInfo = pipelineRenderingCreateInfo,
   };
 
   ImGui_ImplVulkan_Init(&initInfo);
 }
-} // namespace agnosia_imgui

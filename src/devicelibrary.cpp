@@ -1,11 +1,22 @@
 #include "devicelibrary.h"
-#include "global.h"
-
-namespace device_libs {
+#include <algorithm>
+#include <limits>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <vulkan/vulkan_core.h>
 
 VkPhysicalDeviceProperties deviceProperties;
+VkDevice device;
+VkSurfaceKHR surface;
+VkQueue graphicsQueue;
+VkQueue presentQueue;
+VkPhysicalDevice physicalDevice;
+VkSampleCountFlagBits perPixelSampleCount;
 
+VkSwapchainKHR swapChain;
 std::vector<VkImage> swapChainImages;
+std::vector<VkImageView> swapChainImageViews;
 VkFormat swapChainImageFormat;
 VkExtent2D swapChainExtent;
 
@@ -18,6 +29,47 @@ const std::vector<const char *> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
 };
+
+DeviceControl::QueueFamilyIndices
+DeviceControl::findQueueFamilies(VkPhysicalDevice device) {
+  // First we feed in a integer we want to use to hold the number of queued
+  // items, that fills it, then we create that amount of default constructed
+  // *VkQueueFamilyProperties* structs. These store the flags, the amount of
+  // queued items in the family, and timestamp data. Queue families are simply
+  // group collections of tasks we want to get done. Next, we check the flags of
+  // the queueFamily item, use a bitwise and to see if they match, i.e. support
+  // graphical operations, then return that to notify that we have at least one
+  // family that supports VK_QUEUE_GRAPHICS_BIT. Which means this device
+  // supports graphical operations! We also do the same thing for window
+  // presentation, just check to see if its supported.
+  DeviceControl::QueueFamilyIndices indices;
+  uint32_t queueFamilyCount = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
+                                           queueFamilies.data());
+
+  int i = 0;
+  for (const auto &queueFamily : queueFamilies) {
+    if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+      indices.graphicsFamily = i;
+    }
+
+    VkBool32 presentSupport = false;
+    vkGetPhysicalDeviceSurfaceSupportKHR(device, i, DeviceControl::getSurface(),
+                                         &presentSupport);
+    if (presentSupport) {
+      indices.presentFamily = i;
+    }
+
+    if (indices.isComplete()) {
+      break;
+    }
+    i++;
+  }
+  return indices;
+}
 SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
 
   /* Swap chains are weird ngl, it's another one of those Vulkan platform
@@ -28,28 +80,26 @@ SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
   no fucking clue how it works though) */
   SwapChainSupportDetails details;
 
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, Global::surface,
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
                                             &details.capabilities);
 
   uint32_t formatCount;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, Global::surface, &formatCount,
-                                       nullptr);
+  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
 
   if (formatCount != 0) {
     details.formats.resize(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, Global::surface, &formatCount,
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
                                          details.formats.data());
   }
 
   uint32_t presentModeCount;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(
-      device, Global::surface, &presentModeCount, details.presentModes.data());
+  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount,
+                                            details.presentModes.data());
 
   if (presentModeCount != 0) {
     details.presentModes.resize(presentModeCount);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device, Global::surface,
-                                              &presentModeCount,
-                                              details.presentModes.data());
+    vkGetPhysicalDeviceSurfacePresentModesKHR(
+        device, surface, &presentModeCount, details.presentModes.data());
   }
 
   return details;
@@ -88,7 +138,8 @@ bool isDeviceSuitable(VkPhysicalDevice device) {
   // We need to find a device that supports graphical operations, or else we
   // cant do much with it! This function just runs over all the queueFamilies
   // and sees if there is a queue family with the VK_QUEUE_GRAPHICS_BIT flipped!
-  Global::QueueFamilyIndices indices = Global::findQueueFamilies(device);
+  DeviceControl::QueueFamilyIndices indices =
+      DeviceControl::findQueueFamilies(device);
   bool extensionSupported = checkDeviceExtensionSupport(device);
   bool swapChainAdequate = false;
 
@@ -167,7 +218,7 @@ VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities,
 VkSampleCountFlagBits getMaxUsableSampleCount() {
   VkPhysicalDeviceProperties physicalDeviceProps;
   VkSampleCountFlags maxCounts;
-  vkGetPhysicalDeviceProperties(Global::physicalDevice, &physicalDeviceProps);
+  vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProps);
 
   VkSampleCountFlags counts =
       physicalDeviceProps.limits.framebufferColorSampleCounts &
@@ -210,20 +261,20 @@ void DeviceControl::pickPhysicalDevice(VkInstance &instance) {
     if (isDeviceSuitable(device)) {
       // Once we have buttons or such, maybe ask the user or write a config file
       // for which GPU to use?
-      Global::physicalDevice = device;
-      Global::perPixelSampleCount = getMaxUsableSampleCount();
+      physicalDevice = device;
+      perPixelSampleCount = getMaxUsableSampleCount();
       break;
     }
   }
-  if (Global::physicalDevice == VK_NULL_HANDLE) {
+  if (physicalDevice == VK_NULL_HANDLE) {
     throw std::runtime_error("Failed to find a suitable GPU!");
   }
 }
 void DeviceControl::destroySurface(VkInstance &instance) {
-  vkDestroySurfaceKHR(instance, Global::surface, nullptr);
+  vkDestroySurfaceKHR(instance, surface, nullptr);
 }
 void DeviceControl::createSurface(VkInstance &instance, GLFWwindow *window) {
-  if (glfwCreateWindowSurface(instance, window, nullptr, &Global::surface) !=
+  if (glfwCreateWindowSurface(instance, window, nullptr, &surface) !=
       VK_SUCCESS) {
     throw std::runtime_error("Failed to create window surface!!");
   }
@@ -234,8 +285,7 @@ void DeviceControl::createLogicalDevice() {
   // transfer ops, decode and encode operations can also queued with setup! We
   // also assign each queue a priority. We do this by looping over all the
   // queueFamilies and sorting them by indices to fill the queue at the end!
-  Global::QueueFamilyIndices indices =
-      Global::findQueueFamilies(Global::physicalDevice);
+  QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
   std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
   std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(),
@@ -278,18 +328,16 @@ void DeviceControl::createLogicalDevice() {
       static_cast<uint32_t>(deviceExtensions.size());
   createDeviceInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-  if (vkCreateDevice(Global::physicalDevice, &createDeviceInfo, nullptr,
-                     &Global::device) != VK_SUCCESS) {
+  if (vkCreateDevice(physicalDevice, &createDeviceInfo, nullptr, &device) !=
+      VK_SUCCESS) {
     throw std::runtime_error("Failed to create logical device");
   }
-  vkGetDeviceQueue(Global::device, indices.graphicsFamily.value(), 0,
-                   &Global::graphicsQueue);
-  vkGetDeviceQueue(Global::device, indices.presentFamily.value(), 0,
-                   &Global::presentQueue);
+  vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+  vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }
 void DeviceControl::createSwapChain(GLFWwindow *window) {
   SwapChainSupportDetails swapChainSupport =
-      querySwapChainSupport(Global::physicalDevice);
+      querySwapChainSupport(physicalDevice);
 
   VkSurfaceFormatKHR surfaceFormat =
       chooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -311,7 +359,7 @@ void DeviceControl::createSwapChain(GLFWwindow *window) {
 
   VkSwapchainCreateInfoKHR createSwapChainInfo{};
   createSwapChainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-  createSwapChainInfo.surface = Global::surface;
+  createSwapChainInfo.surface = surface;
   createSwapChainInfo.minImageCount = imageCount;
   createSwapChainInfo.imageFormat = surfaceFormat.format;
   createSwapChainInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -327,8 +375,7 @@ void DeviceControl::createSwapChain(GLFWwindow *window) {
 
   // This handles swap chain images across multiple queue families, ie, if the
   // graphics queue family is different from the present queue
-  Global::QueueFamilyIndices indices =
-      Global::findQueueFamilies(Global::physicalDevice);
+  QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
   uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(),
                                    indices.presentFamily.value()};
   // Usage across multiple queue families without explicit transfer of ownership
@@ -357,22 +404,21 @@ void DeviceControl::createSwapChain(GLFWwindow *window) {
   // it and reference the old one specified here, will revisit in a few days.
   // createSwapChainInfo.oldSwapchain = VK_NULL_HANDLE;
 
-  if (vkCreateSwapchainKHR(Global::device, &createSwapChainInfo, nullptr,
-                           &Global::swapChain) != VK_SUCCESS) {
+  if (vkCreateSwapchainKHR(device, &createSwapChainInfo, nullptr, &swapChain) !=
+      VK_SUCCESS) {
     throw std::runtime_error("Failed to create the swap chain!!");
   }
 
-  vkGetSwapchainImagesKHR(Global::device, Global::swapChain, &imageCount,
-                          nullptr);
+  vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
   swapChainImages.resize(imageCount);
-  vkGetSwapchainImagesKHR(Global::device, Global::swapChain, &imageCount,
+  vkGetSwapchainImagesKHR(device, swapChain, &imageCount,
                           swapChainImages.data());
 
   swapChainImageFormat = surfaceFormat.format;
   swapChainExtent = extent;
 }
 void DeviceControl::destroySwapChain() {
-  vkDestroySwapchainKHR(Global::device, Global::swapChain, nullptr);
+  vkDestroySwapchainKHR(device, swapChain, nullptr);
 }
 VkImageView DeviceControl::createImageView(VkImage image, VkFormat format,
                                            VkImageAspectFlags flags,
@@ -391,33 +437,43 @@ VkImageView DeviceControl::createImageView(VkImage image, VkFormat format,
   viewInfo.subresourceRange.levelCount = mipLevels;
 
   VkImageView imageView;
-  if (vkCreateImageView(Global::device, &viewInfo, nullptr, &imageView) !=
-      VK_SUCCESS) {
+  if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
     throw std::runtime_error("failed to create image view!");
   }
 
   return imageView;
 }
 void DeviceControl::createImageViews() {
-  Global::swapChainImageViews.resize(swapChainImages.size());
+  swapChainImageViews.resize(swapChainImages.size());
 
   for (uint32_t i = 0; i < swapChainImages.size(); i++) {
-    Global::swapChainImageViews[i] = createImageView(
+    swapChainImageViews[i] = createImageView(
         swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
   }
 }
 void DeviceControl::destroyImageViews() {
-  for (auto imageView : Global::swapChainImageViews) {
-    vkDestroyImageView(Global::device, imageView, nullptr);
+  for (auto imageView : swapChainImageViews) {
+    vkDestroyImageView(device, imageView, nullptr);
   }
 }
 
 // --------------------------------------- Getters & Setters
 // ------------------------------------------ //
-VkFormat *DeviceControl::getImageFormat() { return &swapChainImageFormat; }
-VkExtent2D DeviceControl::getSwapChainExtent() { return swapChainExtent; }
-std::vector<VkImage> DeviceControl::getSwapChainImages() {
+VkFormat &DeviceControl::getImageFormat() { return swapChainImageFormat; }
+VkSwapchainKHR &DeviceControl::getSwapChain() { return swapChain; }
+VkExtent2D &DeviceControl::getSwapChainExtent() { return swapChainExtent; }
+std::vector<VkImage> &DeviceControl::getSwapChainImages() {
   return swapChainImages;
 }
 
-} // namespace device_libs
+std::vector<VkImageView> &DeviceControl::getSwapChainImageViews() {
+  return swapChainImageViews;
+}
+VkDevice &DeviceControl::getDevice() { return device; }
+VkPhysicalDevice &DeviceControl::getPhysicalDevice() { return physicalDevice; }
+VkSampleCountFlagBits &DeviceControl::getPerPixelSampleCount() {
+  return perPixelSampleCount;
+}
+VkQueue &DeviceControl::getGraphicsQueue() { return graphicsQueue; }
+VkQueue &DeviceControl::getPresentQueue() { return presentQueue; }
+VkSurfaceKHR &DeviceControl::getSurface() { return surface; }

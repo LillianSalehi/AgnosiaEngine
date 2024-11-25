@@ -1,5 +1,9 @@
-#define STB_IMAGE_IMPLEMENTATION
+#include "../devicelibrary.h"
+#include "buffers.h"
 #include "texture.h"
+#include <stdexcept>
+#include <string>
+#define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
 uint32_t mipLevels;
@@ -9,7 +13,19 @@ VkDeviceMemory textureImageMemory;
 VkPipelineStageFlags sourceStage;
 VkPipelineStageFlags destinationStage;
 
-namespace texture_libs {
+VkImageView textureImageView;
+VkSampler textureSampler;
+
+VkImage colorImage;
+VkImageView colorImageView;
+VkDeviceMemory colorImageMemory;
+
+VkImage depthImage;
+VkImageView depthImageView;
+VkDeviceMemory depthImageMemory;
+
+std::string TEXTURE_PATH = "assets/textures/viking_room.png";
+
 void createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
                  VkSampleCountFlagBits sampleNum, VkFormat format,
                  VkImageTiling tiling, VkImageUsageFlags usage,
@@ -33,26 +49,27 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
   imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.mipLevels = mipLevels;
 
-  if (vkCreateImage(Global::device, &imageInfo, nullptr, &image) !=
+  if (vkCreateImage(DeviceControl::getDevice(), &imageInfo, nullptr, &image) !=
       VK_SUCCESS) {
     throw std::runtime_error("failed to create image!");
   }
 
   VkMemoryRequirements memRequirements;
-  vkGetImageMemoryRequirements(Global::device, image, &memRequirements);
+  vkGetImageMemoryRequirements(DeviceControl::getDevice(), image,
+                               &memRequirements);
 
   VkMemoryAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex = buffers_libs::Buffers::findMemoryType(
-      memRequirements.memoryTypeBits, properties);
+  allocInfo.memoryTypeIndex =
+      Buffers::findMemoryType(memRequirements.memoryTypeBits, properties);
 
-  if (vkAllocateMemory(Global::device, &allocInfo, nullptr, &imageMemory) !=
-      VK_SUCCESS) {
+  if (vkAllocateMemory(DeviceControl::getDevice(), &allocInfo, nullptr,
+                       &imageMemory) != VK_SUCCESS) {
     throw std::runtime_error("failed to allocate image memory!");
   }
 
-  vkBindImageMemory(Global::device, image, imageMemory, 0);
+  vkBindImageMemory(DeviceControl::getDevice(), image, imageMemory, 0);
 }
 
 VkCommandBuffer beginSingleTimeCommands() {
@@ -61,11 +78,12 @@ VkCommandBuffer beginSingleTimeCommands() {
   VkCommandBufferAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandPool = Global::commandPool;
+  allocInfo.commandPool = Buffers::getCommandPool();
   allocInfo.commandBufferCount = 1;
 
   VkCommandBuffer commandBuffer;
-  vkAllocateCommandBuffers(Global::device, &allocInfo, &commandBuffer);
+  vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo,
+                           &commandBuffer);
 
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -85,21 +103,14 @@ void endSingleTimeCommands(VkCommandBuffer commandBuffer) {
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers = &commandBuffer;
 
-  vkQueueSubmit(Global::graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-  vkQueueWaitIdle(Global::graphicsQueue);
+  vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo,
+                VK_NULL_HANDLE);
+  vkQueueWaitIdle(DeviceControl::getGraphicsQueue());
 
-  vkFreeCommandBuffers(Global::device, Global::commandPool, 1, &commandBuffer);
+  vkFreeCommandBuffers(DeviceControl::getDevice(), Buffers::getCommandPool(), 1,
+                       &commandBuffer);
 }
-void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-  // Copy 1 buffer to another.
-  VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
-  VkBufferCopy copyRegion{};
-  copyRegion.size = size;
-  vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-  endSingleTimeCommands(commandBuffer);
-}
 void transitionImageLayout(VkImage image, VkFormat format,
                            VkImageLayout oldLayout, VkImageLayout newLayout,
                            uint32_t mipLevels) {
@@ -173,7 +184,8 @@ VkFormat findSupportedFormat(const std::vector<VkFormat> &candidates,
                              VkFormatFeatureFlags features) {
   for (VkFormat format : candidates) {
     VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(Global::physicalDevice, format, &props);
+    vkGetPhysicalDeviceFormatProperties(DeviceControl::getPhysicalDevice(),
+                                        format, &props);
 
     // Do we support linear tiling?
     if (tiling == VK_IMAGE_TILING_LINEAR &&
@@ -195,8 +207,8 @@ void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t textureWidth,
                      int32_t textureHeight, uint32_t mipLevels) {
   // Check if image format supports linear blitting
   VkFormatProperties formatProperties;
-  vkGetPhysicalDeviceFormatProperties(Global::physicalDevice, imageFormat,
-                                      &formatProperties);
+  vkGetPhysicalDeviceFormatProperties(DeviceControl::getPhysicalDevice(),
+                                      imageFormat, &formatProperties);
 
   if (!(formatProperties.optimalTilingFeatures &
         VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
@@ -283,7 +295,7 @@ void Texture::createTextureImage() {
   // colorspace! Its a lot of kind of complicated memory calls to bring it from
   // a file -> to a buffer -> to a image object.
   int textureWidth, textureHeight, textureChannels;
-  stbi_uc *pixels = stbi_load(Global::TEXTURE_PATH.c_str(), &textureWidth,
+  stbi_uc *pixels = stbi_load(TEXTURE_PATH.c_str(), &textureWidth,
                               &textureHeight, &textureChannels, STBI_rgb_alpha);
   mipLevels = static_cast<uint32_t>(std::floor(
                   std::log2(std::max(textureWidth, textureHeight)))) +
@@ -296,16 +308,16 @@ void Texture::createTextureImage() {
   }
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
-  buffers_libs::Buffers::createBuffer(imageSize,
-                                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                      stagingBuffer, stagingBufferMemory);
+  Buffers::createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                        stagingBuffer, stagingBufferMemory);
 
   void *data;
-  vkMapMemory(Global::device, stagingBufferMemory, 0, imageSize, 0, &data);
+  vkMapMemory(DeviceControl::getDevice(), stagingBufferMemory, 0, imageSize, 0,
+              &data);
   memcpy(data, pixels, static_cast<size_t>(imageSize));
-  vkUnmapMemory(Global::device, stagingBufferMemory);
+  vkUnmapMemory(DeviceControl::getDevice(), stagingBufferMemory);
 
   stbi_image_free(pixels);
 
@@ -323,8 +335,8 @@ void Texture::createTextureImage() {
                     static_cast<uint32_t>(textureWidth),
                     static_cast<uint32_t>(textureHeight));
 
-  vkDestroyBuffer(Global::device, stagingBuffer, nullptr);
-  vkFreeMemory(Global::device, stagingBufferMemory, nullptr);
+  vkDestroyBuffer(DeviceControl::getDevice(), stagingBuffer, nullptr);
+  vkFreeMemory(DeviceControl::getDevice(), stagingBufferMemory, nullptr);
 
   generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_SRGB, textureWidth,
                   textureHeight, mipLevels);
@@ -332,9 +344,9 @@ void Texture::createTextureImage() {
 void Texture::createTextureImageView() {
   // Create a texture image view, which is a struct of information about the
   // image.
-  Global::textureImageView = device_libs::DeviceControl::createImageView(
-      textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT,
-      mipLevels);
+  textureImageView =
+      DeviceControl::createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB,
+                                     VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
 }
 void Texture::createTextureSampler() {
   // Create a sampler to access and parse the texture object.
@@ -352,7 +364,8 @@ void Texture::createTextureSampler() {
   samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 
   VkPhysicalDeviceProperties properties{};
-  vkGetPhysicalDeviceProperties(Global::physicalDevice, &properties);
+  vkGetPhysicalDeviceProperties(DeviceControl::getPhysicalDevice(),
+                                &properties);
   // Enable or Disable Anisotropy, and set the amount.
   samplerInfo.anisotropyEnable = VK_TRUE;
   samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
@@ -376,18 +389,18 @@ void Texture::createTextureSampler() {
   samplerInfo.minLod = 0.0f;
   samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
-  if (vkCreateSampler(Global::device, &samplerInfo, nullptr,
-                      &Global::textureSampler) != VK_SUCCESS) {
+  if (vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr,
+                      &textureSampler) != VK_SUCCESS) {
     throw std::runtime_error("failed to create texture sampler!");
   }
 }
 void Texture::destroyTextureSampler() {
-  vkDestroySampler(Global::device, Global::textureSampler, nullptr);
-  vkDestroyImageView(Global::device, Global::textureImageView, nullptr);
+  vkDestroySampler(DeviceControl::getDevice(), textureSampler, nullptr);
+  vkDestroyImageView(DeviceControl::getDevice(), textureImageView, nullptr);
 }
 void Texture::destroyTextureImage() {
-  vkDestroyImage(Global::device, textureImage, nullptr);
-  vkFreeMemory(Global::device, textureImageMemory, nullptr);
+  vkDestroyImage(DeviceControl::getDevice(), textureImage, nullptr);
+  vkFreeMemory(DeviceControl::getDevice(), textureImageMemory, nullptr);
 }
 VkFormat Texture::findDepthFormat() {
   return findSupportedFormat(
@@ -396,32 +409,42 @@ VkFormat Texture::findDepthFormat() {
       VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 void Texture::createColorResources() {
-  VkFormat colorFormat = *device_libs::DeviceControl::getImageFormat();
-  VkExtent2D swapChainExtent = device_libs::DeviceControl::getSwapChainExtent();
+  VkFormat colorFormat = DeviceControl::getImageFormat();
+  VkExtent2D swapChainExtent = DeviceControl::getSwapChainExtent();
 
   createImage(swapChainExtent.width, swapChainExtent.height, 1,
-              Global::perPixelSampleCount, colorFormat, VK_IMAGE_TILING_OPTIMAL,
+              DeviceControl::getPerPixelSampleCount(), colorFormat,
+              VK_IMAGE_TILING_OPTIMAL,
               VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Global::colorImage,
-              Global::colorImageMemory);
-  Global::colorImageView = device_libs::DeviceControl::createImageView(
-      Global::colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, colorImage,
+              colorImageMemory);
+  colorImageView = DeviceControl::createImageView(colorImage, colorFormat,
+                                                  VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
 void Texture::createDepthResources() {
   VkFormat depthFormat = findDepthFormat();
-  VkExtent2D swapChainExtent = device_libs::DeviceControl::getSwapChainExtent();
-  createImage(swapChainExtent.width, swapChainExtent.height, 1,
-              Global::perPixelSampleCount, depthFormat, VK_IMAGE_TILING_OPTIMAL,
-              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, Global::depthImage,
-              Global::depthImageMemory);
-  Global::depthImageView = device_libs::DeviceControl::createImageView(
-      Global::depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+  VkExtent2D swapChainExtent = DeviceControl::getSwapChainExtent();
+  createImage(
+      swapChainExtent.width, swapChainExtent.height, 1,
+      DeviceControl::getPerPixelSampleCount(), depthFormat,
+      VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
+  depthImageView = DeviceControl::createImageView(depthImage, depthFormat,
+                                                  VK_IMAGE_ASPECT_DEPTH_BIT, 1);
   // Explicit transition from the layout of the image to the depth attachment is
   // unnecessary here, since that will be handled in the render pass!
 }
 // ---------------------------- Getters & Setters
 // ---------------------------------//
 uint32_t Texture::getMipLevels() { return mipLevels; }
-} // namespace texture_libs
+VkImageView &Texture::getTextureImageView() { return textureImageView; }
+VkSampler &Texture::getTextureSampler() { return textureSampler; }
+
+VkImage &Texture::getColorImage() { return colorImage; }
+VkImageView &Texture::getColorImageView() { return colorImageView; }
+VkDeviceMemory &Texture::getColorImageMemory() { return colorImageMemory; }
+
+VkImage &Texture::getDepthImage() { return depthImage; }
+VkImageView &Texture::getDepthImageView() { return depthImageView; }
+VkDeviceMemory &Texture::getDepthImageMemory() { return depthImageMemory; }

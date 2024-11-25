@@ -1,10 +1,6 @@
 #pragma once
-#include "global.h"
-#include "graphics/graphicspipeline.h"
-#include "graphics/model.h"
-#include "graphics/render.h"
-#include "graphics/texture.h"
 
+#include <GLFW/glfw3.h>
 class EntryApp {
 public:
   static EntryApp &getInstance();
@@ -13,6 +9,7 @@ public:
   void run();
   void setFramebufferResized(bool frame);
   bool getFramebufferResized() const;
+  static GLFWwindow *getWindow();
 
 private:
   EntryApp();

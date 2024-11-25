@@ -1,7 +1,6 @@
 #pragma once
-#include "../global.h"
 
-namespace render_present {
+#include <cstdint>
 class Render {
 public:
   static void drawFrame();
@@ -9,5 +8,5 @@ public:
   static void destroyFenceSemaphores();
   static void cleanupSwapChain();
   static float getFloatBar();
+  static uint32_t getCurrentFrame();
 };
-} // namespace render_present
