@@ -9,8 +9,8 @@
 #include <glm/gtx/hash.hpp>
 
 namespace std {
-template <> struct hash<Buffers::Vertex> {
-  size_t operator()(Buffers::Vertex const &vertex) const {
+template <> struct hash<Agnosia_T::Vertex> {
+  size_t operator()(Agnosia_T::Vertex const &vertex) const {
     return ((hash<glm::vec3>()(vertex.pos) ^
              (hash<glm::vec3>()(vertex.color) << 1)) >>
             1) ^
@@ -21,7 +21,7 @@ template <> struct hash<Buffers::Vertex> {
 
 const std::string MODEL_PATH = "assets/models/viking_room.obj";
 
-void Model::loadModel() {
+void Model::loadModel(glm::vec3 position) {
   tinyobj::ObjReaderConfig readerConfig;
 
   tinyobj::ObjReader reader;
@@ -38,15 +38,15 @@ void Model::loadModel() {
   auto &attrib = reader.GetAttrib();
   auto &shapes = reader.GetShapes();
   auto &materials = reader.GetMaterials();
-  std::unordered_map<Buffers::Vertex, uint32_t> uniqueVertices{};
+  std::unordered_map<Agnosia_T::Vertex, uint32_t> uniqueVertices{};
 
   for (const auto &shape : shapes) {
     for (const auto &index : shape.mesh.indices) {
-      Buffers::Vertex vertex{};
+      Agnosia_T::Vertex vertex{};
 
-      vertex.pos = {attrib.vertices[3 * index.vertex_index + 0],
-                    attrib.vertices[3 * index.vertex_index + 1],
-                    attrib.vertices[3 * index.vertex_index + 2]};
+      vertex.pos = {attrib.vertices[3 * index.vertex_index + 0] + position.x,
+                    attrib.vertices[3 * index.vertex_index + 1] + position.y,
+                    attrib.vertices[3 * index.vertex_index + 2] + position.z};
 
       // TODO: Small fix here, handle if there are no UV's unwrapped for the
       // model.

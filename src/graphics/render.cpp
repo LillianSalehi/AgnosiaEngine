@@ -45,6 +45,7 @@ void recreateSwapChain() {
 void Render::drawFrame() {
   vkWaitForFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame],
                   VK_TRUE, UINT64_MAX);
+
   vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
 
   uint32_t imageIndex;

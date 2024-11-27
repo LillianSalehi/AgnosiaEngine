@@ -2,7 +2,6 @@ CPPFLAGS=-std=c++23 -g
 CFLAGS = -g
 LDFLAGS=-lglfw -Ilib -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -ltinyobjloader -Ilib/imgui -DIMGUI_IMPL_VULKAN_NO_PROTOTYPES
 MAKEFLAGS += -j16
-
 SRC = $(shell find . -name "*.cpp")
 CSRC = $(shell find . -name "*.c")
 SHDRSRC = $(shell find . -name "*.frag" -o -name "*vert")

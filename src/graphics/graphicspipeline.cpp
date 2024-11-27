@@ -6,6 +6,7 @@
 #include "render.h"
 #include "texture.h"
 #include <fstream>
+#include <iostream>
 
 std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
                                              VK_DYNAMIC_STATE_SCISSOR};
@@ -83,8 +84,8 @@ void Graphics::createGraphicsPipeline() {
   vertexInputInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-  auto bindingDescription = Buffers::Vertex::getBindingDescription();
-  auto attributeDescriptions = Buffers::Vertex::getAttributeDescriptions();
+  auto bindingDescription = Agnosia_T::Vertex::getBindingDescription();
+  auto attributeDescriptions = Agnosia_T::Vertex::getAttributeDescriptions();
 
   vertexInputInfo.vertexBindingDescriptionCount = 1;
   vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
@@ -174,10 +175,18 @@ void Graphics::createGraphicsPipeline() {
   dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
   dynamicState.pDynamicStates = dynamicStates.data();
 
+  VkPushConstantRange pushConstant{
+      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+      .offset = 0,
+      .size = sizeof(Agnosia_T::GPUPushConstants),
+  };
+
   VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
   pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   pipelineLayoutInfo.setLayoutCount = 1;
   pipelineLayoutInfo.pSetLayouts = &Buffers::getDescriptorSetLayout();
+  pipelineLayoutInfo.pPushConstantRanges = &pushConstant;
+  pipelineLayoutInfo.pushConstantRangeCount = 1;
 
   if (vkCreatePipelineLayout(DeviceControl::getDevice(), &pipelineLayoutInfo,
                              nullptr, &pipelineLayout) != VK_SUCCESS) {
@@ -256,7 +265,6 @@ void Graphics::createCommandBuffer() {
     throw std::runtime_error("Failed to allocate command buffers");
   }
 }
-
 void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
                                    uint32_t imageIndex) {
   VkCommandBufferBeginInfo beginInfo{};
@@ -344,10 +352,15 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   scissor.extent = DeviceControl::getSwapChainExtent();
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-  VkBuffer vertexBuffers[] = {Buffers::getVertexBuffer()};
-  VkDeviceSize offsets[] = {0};
-  vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-  vkCmdBindIndexBuffer(commandBuffer, Buffers::getIndexBuffer(), 0,
+  Agnosia_T::GPUMeshBuffers Model =
+      Buffers::sendMesh(Buffers::getIndices(), Buffers::getVertices());
+
+  Agnosia_T::GPUPushConstants pushConsts;
+  pushConsts.vertexBuffer = Model.vertexBufferAddress;
+
+  vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
+                     0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
+  vkCmdBindIndexBuffer(commandBuffer, Model.indexBuffer.buffer, 0,
                        VK_INDEX_TYPE_UINT32);
 
   vkCmdBindDescriptorSets(

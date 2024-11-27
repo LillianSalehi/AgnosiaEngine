@@ -21,6 +21,7 @@ VkInstance vulkaninstance;
 GLFWwindow *window;
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
+
 // Getters and Setters!
 void EntryApp::setFramebufferResized(bool setter) {
   framebufferResized = setter;
@@ -76,12 +77,8 @@ void createInstance() {
                                        glfwExtensions + glfwExtensionCount);
 
   VkInstanceCreateInfo createInfo{}; // Define parameters of new vulkan instance
-  createInfo.sType =
-      VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO; // Tell vulkan this is a info
-                                              // structure
-  createInfo.pApplicationInfo =
-      &appInfo; // We just created a new appInfo structure, so we pass the
-                // pointer to it.
+  createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+  createInfo.pApplicationInfo = &appInfo;
   createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
   createInfo.ppEnabledExtensionNames = extensions.data();
 
@@ -101,6 +98,7 @@ void initVulkan() {
   DeviceControl::createLogicalDevice();
   volkLoadDevice(DeviceControl::getDevice());
   DeviceControl::createSwapChain(window);
+  Buffers::createMemoryAllocator(vulkaninstance);
   DeviceControl::createImageViews();
   Buffers::createDescriptorSetLayout();
   Graphics::createGraphicsPipeline();
@@ -110,14 +108,13 @@ void initVulkan() {
   Texture::createTextureImage();
   Texture::createTextureImageView();
   Texture::createTextureSampler();
-  Model::loadModel();
-  Buffers::createVertexBuffer();
-  Buffers::createIndexBuffer();
+  Model::loadModel(glm::vec3(0.0, 0.0, 0.0));
   Buffers::createUniformBuffers();
   Buffers::createDescriptorPool();
   Buffers::createDescriptorSets();
   Graphics::createCommandBuffer();
   Render::createSyncObject();
+
   Gui::initImgui(vulkaninstance);
 }
 

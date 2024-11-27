@@ -300,14 +300,19 @@ void DeviceControl::createLogicalDevice() {
     queueCreateSingularInfo.pQueuePriorities = &queuePriority;
     queueCreateInfos.push_back(queueCreateSingularInfo);
   }
-
+  VkPhysicalDeviceVulkan12Features features12{
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+      .pNext = nullptr,
+      .bufferDeviceAddress = true,
+  };
   VkPhysicalDeviceVulkan13Features features13{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-      .pNext = nullptr,
+      .pNext = &features12,
       .synchronization2 = true,
       .dynamicRendering = true,
   };
   VkPhysicalDeviceFeatures featuresBase{
+      .robustBufferAccess = true,
       .sampleRateShading = true,
       .samplerAnisotropy = true,
   };

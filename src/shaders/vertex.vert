@@ -1,4 +1,5 @@
 #version 450
+#extension GL_EXT_buffer_reference : require
 
 layout(binding = 0) uniform UniformBufferObject {
     float time;
@@ -6,20 +7,26 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
 } ubo;
+struct Vertex {
 
-// inPosition and inColor are vertex attributes, per-vertex properties defined in the vertex buffer!
-// Layout assigns indices to access these inputs, dvec3 takes 2 slots so we must index it at 2. https://www.khronos.org/opengl/wiki/Layout_Qualifier_(GLSL)
+	vec3 pos;
+    vec3 color;
+    vec2 texCoord;
+}; 
 
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inColor;
-layout(location = 2) in vec2 inTexCoord;
+layout(buffer_reference, std430) readonly buffer VertexBuffer{ 
+	Vertex vertices[];
+};
+layout( push_constant ) uniform constants {
+    VertexBuffer vertBuffer;
+}PushConstants;
 
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 
 void main() {
-    
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
-    fragColor = inColor;
-    fragTexCoord = inTexCoord;
+    Vertex v = PushConstants.vertBuffer.vertices[gl_VertexIndex];
+    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(v.pos, 1.0f);
+    fragColor = v.color.xyz;
+    fragTexCoord = v.texCoord;
 }

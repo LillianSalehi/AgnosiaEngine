@@ -1,20 +1,33 @@
 #include "../devicelibrary.h"
+#include "../types.h"
 #include "buffers.h"
 #include "texture.h"
+
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
+#include <stdexcept>
+#include <vulkan/vulkan_core.h>
+
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
 
 VkBuffer vertexBuffer;
 VkDeviceMemory vertexBufferMemory;
 VkBuffer indexBuffer;
 VkDeviceMemory indexBufferMemory;
 
-std::vector<Buffers::Vertex> vertices;
+std::vector<Agnosia_T::Vertex> vertices;
 // Index buffer definition, showing which points to reuse.
 std::vector<uint32_t> indices;
+
+VmaAllocator _allocator;
+Agnosia_T::GPUPushConstants pushConstants;
 
 VkDescriptorPool descriptorPool;
 VkDescriptorSetLayout descriptorSetLayout;
@@ -60,6 +73,40 @@ uint32_t Buffers::findMemoryType(uint32_t typeFilter,
   throw std::runtime_error("failed to find suitable memory type!");
 }
 
+void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) {
+  VkCommandBufferAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandPool = commandPool;
+  allocInfo.commandBufferCount = 1;
+
+  VkCommandBuffer commandBuffer;
+  vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo,
+                           &commandBuffer);
+
+  VkCommandBufferBeginInfo beginInfo{};
+  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+  vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+  function(commandBuffer);
+
+  vkEndCommandBuffer(commandBuffer);
+
+  VkSubmitInfo submitInfo{};
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = &commandBuffer;
+
+  vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo,
+                VK_NULL_HANDLE);
+  vkQueueWaitIdle(DeviceControl::getGraphicsQueue());
+
+  vkFreeCommandBuffers(DeviceControl::getDevice(), commandPool, 1,
+                       &commandBuffer);
+}
+
 void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
   VkCommandBufferAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -95,6 +142,101 @@ void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
   vkFreeCommandBuffers(DeviceControl::getDevice(), commandPool, 1,
                        &commandBuffer);
 }
+void Buffers::createMemoryAllocator(VkInstance vkInstance) {
+  VmaVulkanFunctions vulkanFuncs{
+      .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+      .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+  };
+  VmaAllocatorCreateInfo allocInfo{
+      .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
+      .physicalDevice = DeviceControl::getPhysicalDevice(),
+      .device = DeviceControl::getDevice(),
+      .pVulkanFunctions = &vulkanFuncs,
+      .instance = vkInstance,
+      .vulkanApiVersion = VK_API_VERSION_1_3,
+
+  };
+  vmaCreateAllocator(&allocInfo, &_allocator);
+}
+Agnosia_T::AllocatedBuffer Buffers::createBuffer(size_t allocSize,
+                                                 VkBufferUsageFlags usage,
+                                                 VmaMemoryUsage memUsage) {
+  // Allocate the buffer we will use for Device Addresses
+  VkBufferCreateInfo bufferInfo{.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                                .pNext = nullptr,
+                                .size = allocSize,
+                                .usage = usage};
+  VmaAllocationCreateInfo vmaAllocInfo{
+      .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT, .usage = memUsage};
+
+  Agnosia_T::AllocatedBuffer newBuffer;
+  if (vmaCreateBuffer(_allocator, &bufferInfo, &vmaAllocInfo, &newBuffer.buffer,
+                      &newBuffer.allocation, &newBuffer.info) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate a buffer using VMA!");
+  }
+  return newBuffer;
+}
+
+Agnosia_T::GPUMeshBuffers
+Buffers::sendMesh(std::span<uint32_t> indices,
+                  std::span<Agnosia_T::Vertex> vertices) {
+
+  const size_t vertexBufferSize = vertices.size() * sizeof(Agnosia_T::Vertex);
+  const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
+
+  Agnosia_T::GPUMeshBuffers newSurface;
+
+  // Create a Vertex Buffer here, infinitely easier than the old Vulkan method!
+  newSurface.vertexBuffer = createBuffer(
+      vertexBufferSize,
+      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+          VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+      VMA_MEMORY_USAGE_GPU_ONLY);
+  // Find the address of the vertex buffer!
+  VkBufferDeviceAddressInfo deviceAddressInfo{
+      .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+      .buffer = newSurface.vertexBuffer.buffer,
+  };
+  newSurface.vertexBufferAddress =
+      vkGetBufferDeviceAddress(DeviceControl::getDevice(), &deviceAddressInfo);
+
+  // Create the index buffer to iterate over and check for duplicate vertices
+  newSurface.indexBuffer = createBuffer(indexBufferSize,
+                                        VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                                            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                        VMA_MEMORY_USAGE_GPU_ONLY);
+
+  Agnosia_T::AllocatedBuffer stagingBuffer =
+      createBuffer(vertexBufferSize + indexBufferSize,
+                   VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+
+  void *data = stagingBuffer.allocation->GetMappedData();
+
+  // Copy the vertex buffer
+  memcpy(data, vertices.data(), vertexBufferSize);
+  // Copy the index buffer
+  memcpy((char *)data + vertexBufferSize, indices.data(), indexBufferSize);
+
+  immediate_submit([&](VkCommandBuffer cmd) {
+    VkBufferCopy vertexCopy{0};
+    vertexCopy.dstOffset = 0;
+    vertexCopy.srcOffset = 0;
+    vertexCopy.size = vertexBufferSize;
+
+    vkCmdCopyBuffer(cmd, stagingBuffer.buffer, newSurface.vertexBuffer.buffer,
+                    1, &vertexCopy);
+
+    VkBufferCopy indexCopy{0};
+    indexCopy.dstOffset = 0;
+    indexCopy.srcOffset = vertexBufferSize;
+    indexCopy.size = indexBufferSize;
+
+    vkCmdCopyBuffer(cmd, stagingBuffer.buffer, newSurface.indexBuffer.buffer, 1,
+                    &indexCopy);
+  });
+  vmaDestroyBuffer(_allocator, stagingBuffer.buffer, stagingBuffer.allocation);
+  return newSurface;
+}
 
 void Buffers::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                            VkMemoryPropertyFlags properties, VkBuffer &buffer,
@@ -126,68 +268,6 @@ void Buffers::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
   }
 
   vkBindBufferMemory(DeviceControl::getDevice(), buffer, bufferMemory, 0);
-}
-
-void Buffers::createIndexBuffer() {
-  VkDeviceSize bufferSize = sizeof(indices[0]) * indices.size();
-
-  VkBuffer stagingBuffer;
-  VkDeviceMemory stagingBufferMemory;
-
-  createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-               stagingBuffer, stagingBufferMemory);
-
-  void *data;
-  vkMapMemory(DeviceControl::getDevice(), stagingBufferMemory, 0, bufferSize, 0,
-              &data);
-  memcpy(data, indices.data(), (size_t)bufferSize);
-
-  vkUnmapMemory(DeviceControl::getDevice(), stagingBufferMemory);
-
-  createBuffer(
-      bufferSize,
-      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
-
-  copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-
-  vkDestroyBuffer(DeviceControl::getDevice(), stagingBuffer, nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), stagingBufferMemory, nullptr);
-}
-void Buffers::createVertexBuffer() {
-  // Create a Vertex Buffer to hold the vertex information in memory so it
-  // doesn't have to be hardcoded! Size denotes the size of the buffer in bytes,
-  // usage in this case is the buffer behaviour, using a bitwise OR. Sharing
-  // mode denostes the same as the images in the swap chain! in this case, only
-  // the graphics queue uses this buffer, so we make it exclusive.
-  VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
-
-  VkBuffer stagingBuffer;
-  VkDeviceMemory stagingBufferMemory;
-  createBuffer(bufferSize,
-               VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-                   VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-               stagingBuffer, stagingBufferMemory);
-
-  void *data;
-  vkMapMemory(DeviceControl::getDevice(), stagingBufferMemory, 0, bufferSize, 0,
-              &data);
-  memcpy(data, vertices.data(), (size_t)bufferSize);
-  vkUnmapMemory(DeviceControl::getDevice(), stagingBufferMemory);
-
-  createBuffer(
-      bufferSize,
-      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
-
-  copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-
-  vkDestroyBuffer(DeviceControl::getDevice(), stagingBuffer, nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), stagingBufferMemory, nullptr);
 }
 
 void Buffers::destroyBuffers() {
@@ -373,8 +453,6 @@ void Buffers::createDescriptorSets() {
 void Buffers::destroyDescriptorPool() {
   vkDestroyDescriptorPool(DeviceControl::getDevice(), descriptorPool, nullptr);
 }
-VkBuffer &Buffers::getVertexBuffer() { return vertexBuffer; }
-VkBuffer &Buffers::getIndexBuffer() { return indexBuffer; }
 VkDescriptorPool &Buffers::getDescriptorPool() { return descriptorPool; }
 std::vector<VkDescriptorSet> &Buffers::getDescriptorSets() {
   return descriptorSets;
@@ -397,5 +475,5 @@ VkCommandPool &Buffers::getCommandPool() { return commandPool; }
 VkDescriptorSetLayout &Buffers::getDescriptorSetLayout() {
   return descriptorSetLayout;
 }
-std::vector<Buffers::Vertex> &Buffers::getVertices() { return vertices; }
+std::vector<Agnosia_T::Vertex> &Buffers::getVertices() { return vertices; }
 std::vector<uint32_t> &Buffers::getIndices() { return indices; }

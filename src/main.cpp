@@ -1,4 +1,5 @@
 #include "entrypoint.h"
+
 #include <iostream>
 
 #define VOLK_IMPLEMENTATION

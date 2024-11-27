@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+
 class EntryApp {
 public:
   static EntryApp &getInstance();
