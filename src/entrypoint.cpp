@@ -3,6 +3,7 @@
 #include "entrypoint.h"
 #include "graphics/buffers.h"
 #include "graphics/graphicspipeline.h"
+
 #include "graphics/model.h"
 #include "graphics/render.h"
 #include "graphics/texture.h"
@@ -88,6 +89,22 @@ void createInstance() {
 }
 
 void initVulkan() {
+  Material *vikingRoomMaterial =
+      new Material("vikingRoomMaterial", "assets/textures/viking_room.png");
+  Material *stanfordDragonMaterial =
+      new Material("stanfordDragonMaterial", "assets/textures/checkermap.png");
+  Material *teapotMaterial =
+      new Material("teapotMaterial", "assets/textures/checkermap.png");
+  Model *vikingRoom =
+      new Model("vikingRoom", *vikingRoomMaterial,
+                "assets/models/viking_room.obj", glm::vec3(0.0f, 0.0f, 0.0f));
+  Model *stanfordDragon = new Model("stanfordDragon", *stanfordDragonMaterial,
+                                    "assets/models/StanfordDragon800k.obj",
+                                    glm::vec3(0.0f, 2.0f, 0.0f));
+  Model *teapot =
+      new Model("teapot", *teapotMaterial, "assets/models/teapot.obj",
+                glm::vec3(1.0f, -3.0f, -1.0f));
+
   // Initialize volk and continue if successful.
   volkInitialize();
   // Initialize vulkan and set up pipeline.
@@ -98,20 +115,22 @@ void initVulkan() {
   DeviceControl::createLogicalDevice();
   volkLoadDevice(DeviceControl::getDevice());
   DeviceControl::createSwapChain(window);
-  Buffers::createMemoryAllocator(vulkaninstance);
+  Model::createMemoryAllocator(vulkaninstance);
   DeviceControl::createImageViews();
   Buffers::createDescriptorSetLayout();
   Graphics::createGraphicsPipeline();
   Graphics::createCommandPool();
+  // Image creation MUST be after command pool, because command
+  // buffers.
+  vikingRoom->populateData();
+  stanfordDragon->populateData();
+  teapot->populateData();
+  Texture::createMaterialTextures(Model::getInstances());
   Texture::createColorResources();
   Texture::createDepthResources();
-  Texture::createTextureImage();
-  Texture::createTextureImageView();
-  Texture::createTextureSampler();
-  Model::loadModel(glm::vec3(0.0, 0.0, 0.0));
-  Buffers::createUniformBuffers();
+
   Buffers::createDescriptorPool();
-  Buffers::createDescriptorSets();
+  Buffers::createDescriptorSet(Model::getInstances());
   Graphics::createCommandBuffer();
   Render::createSyncObject();
 
@@ -131,12 +150,7 @@ void mainLoop() {
 void cleanup() {
   Render::cleanupSwapChain();
   Graphics::destroyGraphicsPipeline();
-  Buffers::destroyUniformBuffer();
-  Buffers::destroyDescriptorPool();
-  Texture::destroyTextureSampler();
-  Texture::destroyTextureImage();
-  vkDestroyDescriptorSetLayout(DeviceControl::getDevice(),
-                               Buffers::getDescriptorSetLayout(), nullptr);
+
   Buffers::destroyBuffers();
   Render::destroyFenceSemaphores();
   Graphics::destroyCommandPool();
@@ -163,6 +177,7 @@ void EntryApp::initialize() { initialized = true; }
 bool EntryApp::isInitialized() const { return initialized; }
 GLFWwindow *EntryApp::getWindow() { return window; }
 void EntryApp::run() {
+
   initWindow();
   initVulkan();
   mainLoop();

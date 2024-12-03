@@ -6,7 +6,18 @@
 #include "render.h"
 #include "texture.h"
 #include <fstream>
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+
 #include <iostream>
+#include <vulkan/vulkan_core.h>
+
+float camPos[4] = {3.0f, 3.0f, 3.0f, 0.44f};
+float centerPos[4] = {0.0f, 0.0f, 0.0f, 0.44f};
+float upDir[4] = {0.0f, 0.0f, 1.0f, 0.44f};
+float depthField = 45.0f;
+float distanceField[2] = {0.1f, 100.0f};
 
 std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
                                              VK_DYNAMIC_STATE_SCISSOR};
@@ -83,15 +94,6 @@ void Graphics::createGraphicsPipeline() {
   VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
   vertexInputInfo.sType =
       VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-  auto bindingDescription = Agnosia_T::Vertex::getBindingDescription();
-  auto attributeDescriptions = Agnosia_T::Vertex::getAttributeDescriptions();
-
-  vertexInputInfo.vertexBindingDescriptionCount = 1;
-  vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-  vertexInputInfo.vertexAttributeDescriptionCount =
-      static_cast<uint32_t>(attributeDescriptions.size());
-  vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
   // ------------------- STAGE 5 - RASTERIZATION ----------------- //
   // Take Vertex shader vertices and fragmentize them for the frament shader.
@@ -176,7 +178,7 @@ void Graphics::createGraphicsPipeline() {
   dynamicState.pDynamicStates = dynamicStates.data();
 
   VkPushConstantRange pushConstant{
-      .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+      .stageFlags = VK_SHADER_STAGE_ALL,
       .offset = 0,
       .size = sizeof(Agnosia_T::GPUPushConstants),
   };
@@ -351,26 +353,45 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   scissor.offset = {0, 0};
   scissor.extent = DeviceControl::getSwapChainExtent();
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+  int texID = 0;
+  for (Model *model : Model::getInstances()) {
 
-  Agnosia_T::GPUMeshBuffers Model =
-      Buffers::sendMesh(Buffers::getIndices(), Buffers::getVertices());
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            pipelineLayout, 0, 1, &Buffers::getDescriptorSet(),
+                            0, nullptr);
 
-  Agnosia_T::GPUPushConstants pushConsts;
-  pushConsts.vertexBuffer = Model.vertexBufferAddress;
+    Agnosia_T::GPUPushConstants pushConsts;
+    pushConsts.vertexBuffer = model->getBuffers().vertexBufferAddress;
+    pushConsts.objPosition = model->getPos();
+    pushConsts.textureID = texID;
 
-  vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
-                     0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
-  vkCmdBindIndexBuffer(commandBuffer, Model.indexBuffer.buffer, 0,
-                       VK_INDEX_TYPE_UINT32);
+    pushConsts.model =
+        glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
-  vkCmdBindDescriptorSets(
-      commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1,
-      &Buffers::getDescriptorSets()[Render::getCurrentFrame()], 0, nullptr);
+    pushConsts.view =
+        glm::lookAt(glm::vec3(camPos[0], camPos[1], camPos[2]),
+                    glm::vec3(centerPos[0], centerPos[1], centerPos[2]),
+                    glm::vec3(upDir[0], upDir[1], upDir[2]));
 
-  vkCmdDrawIndexed(commandBuffer,
-                   static_cast<uint32_t>(Buffers::getIndices().size()), 1, 0, 0,
-                   0);
+    pushConsts.proj =
+        glm::perspective(glm::radians(depthField),
+                         DeviceControl::getSwapChainExtent().width /
+                             (float)DeviceControl::getSwapChainExtent().height,
+                         distanceField[0], distanceField[1]);
+    // GLM was created for OpenGL, where the Y coordinate was inverted. This
+    // simply flips the sign.
+    pushConsts.proj[1][1] *= -1;
 
+    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_ALL, 0,
+                       sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
+
+    vkCmdBindIndexBuffer(commandBuffer, model->getBuffers().indexBuffer.buffer,
+                         0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model->getIndices()),
+                     1, 0, 0, 0);
+    texID++;
+  }
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 
   vkCmdEndRendering(commandBuffer);
@@ -403,10 +424,16 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
       .pImageMemoryBarriers = &prePresentImageBarrier,
   };
 
-  vkCmdPipelineBarrier2(
-      Buffers ::getCommandBuffers()[Render::getCurrentFrame()], &depInfo);
+  vkCmdPipelineBarrier2(Buffers::getCommandBuffers()[Render::getCurrentFrame()],
+                        &depInfo);
 
   if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
     throw std::runtime_error("failed to record command buffer!");
   }
 }
+
+float *Graphics::getCamPos() { return camPos; }
+float *Graphics::getCenterPos() { return centerPos; }
+float *Graphics::getUpDir() { return upDir; }
+float &Graphics::getDepthField() { return depthField; }
+float *Graphics::getDistanceField() { return distanceField; }

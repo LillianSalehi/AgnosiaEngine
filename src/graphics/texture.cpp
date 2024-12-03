@@ -1,6 +1,7 @@
 #include "../devicelibrary.h"
 #include "buffers.h"
 #include "texture.h"
+#include <iostream>
 #include <stdexcept>
 #include <string>
 #define STB_IMAGE_IMPLEMENTATION
@@ -8,13 +9,9 @@
 
 uint32_t mipLevels;
 
-VkImage textureImage;
 VkDeviceMemory textureImageMemory;
 VkPipelineStageFlags sourceStage;
 VkPipelineStageFlags destinationStage;
-
-VkImageView textureImageView;
-VkSampler textureSampler;
 
 VkImage colorImage;
 VkImageView colorImageView;
@@ -23,8 +20,6 @@ VkDeviceMemory colorImageMemory;
 VkImage depthImage;
 VkImageView depthImageView;
 VkDeviceMemory depthImageMemory;
-
-std::string TEXTURE_PATH = "assets/textures/viking_room.png";
 
 void createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
                  VkSampleCountFlagBits sampleNum, VkFormat format,
@@ -290,118 +285,119 @@ void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t textureWidth,
 }
 // -------------------------------- Image Libraries
 // ------------------------------- //
-void Texture::createTextureImage() {
+void Texture::createMaterialTextures(std::vector<Model *> models) {
   // Import pixels from image with data on color channels, width and height, and
   // colorspace! Its a lot of kind of complicated memory calls to bring it from
   // a file -> to a buffer -> to a image object.
-  int textureWidth, textureHeight, textureChannels;
-  stbi_uc *pixels = stbi_load(TEXTURE_PATH.c_str(), &textureWidth,
-                              &textureHeight, &textureChannels, STBI_rgb_alpha);
-  mipLevels = static_cast<uint32_t>(std::floor(
-                  std::log2(std::max(textureWidth, textureHeight)))) +
-              1;
+  for (Model *model : models) {
 
-  VkDeviceSize imageSize = textureWidth * textureHeight * 4;
+    int textureWidth, textureHeight, textureChannels;
 
-  if (!pixels) {
-    throw std::runtime_error("Failed to load texture!");
+    stbi_uc *pixels =
+        stbi_load(model->getMaterial().getTexturePath().c_str(), &textureWidth,
+                  &textureHeight, &textureChannels, STBI_rgb_alpha);
+
+    mipLevels = static_cast<uint32_t>(std::floor(
+                    std::log2(std::max(textureWidth, textureHeight)))) +
+                1;
+
+    VkDeviceSize imageSize = textureWidth * textureHeight * 4;
+
+    if (!pixels) {
+      throw std::runtime_error("Failed to load texture!");
+    }
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    Buffers::createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                          stagingBuffer, stagingBufferMemory);
+
+    void *data;
+    vkMapMemory(DeviceControl::getDevice(), stagingBufferMemory, 0, imageSize,
+                0, &data);
+    memcpy(data, pixels, static_cast<size_t>(imageSize));
+    vkUnmapMemory(DeviceControl::getDevice(), stagingBufferMemory);
+
+    stbi_image_free(pixels);
+
+    createImage(textureWidth, textureHeight, mipLevels, VK_SAMPLE_COUNT_1_BIT,
+                VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                    VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+                    VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                model->getMaterial().getTextureImage(), textureImageMemory);
+
+    transitionImageLayout(model->getMaterial().getTextureImage(),
+                          VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
+                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+    copyBufferToImage(stagingBuffer, model->getMaterial().getTextureImage(),
+                      static_cast<uint32_t>(textureWidth),
+                      static_cast<uint32_t>(textureHeight));
+
+    vkDestroyBuffer(DeviceControl::getDevice(), stagingBuffer, nullptr);
+    vkFreeMemory(DeviceControl::getDevice(), stagingBufferMemory, nullptr);
+
+    generateMipmaps(model->getMaterial().getTextureImage(),
+                    VK_FORMAT_R8G8B8A8_SRGB, textureWidth, textureHeight,
+                    mipLevels);
+    // Create a texture image view, which is a struct of information about the
+    // image.
+    model->getMaterial().setTextureView(DeviceControl::createImageView(
+        model->getMaterial().getTextureImage(), VK_FORMAT_R8G8B8A8_SRGB,
+        VK_IMAGE_ASPECT_COLOR_BIT, mipLevels));
+
+    // Create a sampler to access and parse the texture object.
+
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    // These two options define the filtering method when sampling the texture.
+    // It also handles zooming in versus out, min vs mag!
+    samplerInfo.magFilter = VK_FILTER_LINEAR; // TODO: CUBIC
+    samplerInfo.minFilter = VK_FILTER_LINEAR; // TODO: CUBIC
+
+    // These options define UVW edge modes, ClampToEdge extends the last pixels
+    // to the edges when larger than the UVW.
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+
+    VkPhysicalDeviceProperties properties{};
+    vkGetPhysicalDeviceProperties(DeviceControl::getPhysicalDevice(),
+                                  &properties);
+    // Enable or Disable Anisotropy, and set the amount.
+    samplerInfo.anisotropyEnable = VK_TRUE;
+    samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+
+    // When sampling with Clamp to Border, the border color is defined here.
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    // Normalizing coordinates changes texCoords from [0, texWidth] to [0, 1].
+    // This is what should ALWAYS be used, because it means you can use varying
+    // texture sizes. Another TODO: Normalizing
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    // Compare texels to a value and use the output in filtering!
+    // This is mainly used in percentage-closer filtering on shadow maps, this
+    // will be revisted eventually...
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+
+    // Mipmaps are basically LoD's for textures, different resolutions to load
+    // based on distance. These settings simply describe how to apply
+    // mipmapping.
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+
+    if (vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr,
+                        &model->getMaterial().getTextureSampler()) !=
+        VK_SUCCESS) {
+      throw std::runtime_error("failed to create texture sampler!");
+    }
   }
-  VkBuffer stagingBuffer;
-  VkDeviceMemory stagingBufferMemory;
-  Buffers::createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                        stagingBuffer, stagingBufferMemory);
-
-  void *data;
-  vkMapMemory(DeviceControl::getDevice(), stagingBufferMemory, 0, imageSize, 0,
-              &data);
-  memcpy(data, pixels, static_cast<size_t>(imageSize));
-  vkUnmapMemory(DeviceControl::getDevice(), stagingBufferMemory);
-
-  stbi_image_free(pixels);
-
-  createImage(textureWidth, textureHeight, mipLevels, VK_SAMPLE_COUNT_1_BIT,
-              VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-              VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage,
-              textureImageMemory);
-
-  transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB,
-                        VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-  copyBufferToImage(stagingBuffer, textureImage,
-                    static_cast<uint32_t>(textureWidth),
-                    static_cast<uint32_t>(textureHeight));
-
-  vkDestroyBuffer(DeviceControl::getDevice(), stagingBuffer, nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), stagingBufferMemory, nullptr);
-
-  generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_SRGB, textureWidth,
-                  textureHeight, mipLevels);
 }
-void Texture::createTextureImageView() {
-  // Create a texture image view, which is a struct of information about the
-  // image.
-  textureImageView =
-      DeviceControl::createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB,
-                                     VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
-}
-void Texture::createTextureSampler() {
-  // Create a sampler to access and parse the texture object.
-  VkSamplerCreateInfo samplerInfo{};
-  samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-  // These two options define the filtering method when sampling the texture.
-  // It also handles zooming in versus out, min vs mag!
-  samplerInfo.magFilter = VK_FILTER_LINEAR; // TODO: CUBIC
-  samplerInfo.minFilter = VK_FILTER_LINEAR; // TODO: CUBIC
 
-  // These options define UVW edge modes, ClampToEdge extends the last pixels to
-  // the edges when larger than the UVW.
-  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-
-  VkPhysicalDeviceProperties properties{};
-  vkGetPhysicalDeviceProperties(DeviceControl::getPhysicalDevice(),
-                                &properties);
-  // Enable or Disable Anisotropy, and set the amount.
-  samplerInfo.anisotropyEnable = VK_TRUE;
-  samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-
-  // When sampling with Clamp to Border, the border color is defined here.
-  samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-  // Normalizing coordinates changes texCoords from [0, texWidth] to [0, 1].
-  // This is what should ALWAYS be used, because it means you can use varying
-  // texture sizes. Another TODO: Normalizing
-  samplerInfo.unnormalizedCoordinates = VK_FALSE;
-  // Compare texels to a value and use the output in filtering!
-  // This is mainly used in percentage-closer filtering on shadow maps, this
-  // will be revisted eventually...
-  samplerInfo.compareEnable = VK_FALSE;
-  samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-
-  // Mipmaps are basically LoD's for textures, different resolutions to load
-  // based on distance. These settings simply describe how to apply mipmapping.
-  samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-  samplerInfo.mipLodBias = 0.0f;
-  samplerInfo.minLod = 0.0f;
-  samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
-
-  if (vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr,
-                      &textureSampler) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create texture sampler!");
-  }
-}
-void Texture::destroyTextureSampler() {
-  vkDestroySampler(DeviceControl::getDevice(), textureSampler, nullptr);
-  vkDestroyImageView(DeviceControl::getDevice(), textureImageView, nullptr);
-}
-void Texture::destroyTextureImage() {
-  vkDestroyImage(DeviceControl::getDevice(), textureImage, nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), textureImageMemory, nullptr);
-}
 VkFormat Texture::findDepthFormat() {
   return findSupportedFormat(
       {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
@@ -438,8 +434,6 @@ void Texture::createDepthResources() {
 // ---------------------------- Getters & Setters
 // ---------------------------------//
 uint32_t Texture::getMipLevels() { return mipLevels; }
-VkImageView &Texture::getTextureImageView() { return textureImageView; }
-VkSampler &Texture::getTextureSampler() { return textureSampler; }
 
 VkImage &Texture::getColorImage() { return colorImage; }
 VkImageView &Texture::getColorImageView() { return colorImageView; }

@@ -13,4 +13,10 @@ public:
   static void createCommandBuffer();
   static void recordCommandBuffer(VkCommandBuffer cmndBuffer,
                                   uint32_t imageIndex);
+
+  static float *getCamPos();
+  static float *getCenterPos();
+  static float *getUpDir();
+  static float &getDepthField();
+  static float *getDistanceField();
 };

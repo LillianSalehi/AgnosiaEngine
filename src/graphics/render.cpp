@@ -59,16 +59,12 @@ void Render::drawFrame() {
     throw std::runtime_error("failed to acquire swap chain image!");
   }
 
-  Buffers::updateUniformBuffer(currentFrame);
-
   vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
 
   vkResetCommandBuffer(Buffers::getCommandBuffers()[currentFrame],
                        /*VkCommandBufferResetFlagBits*/ 0);
   Graphics::recordCommandBuffer(Buffers::getCommandBuffers()[currentFrame],
                                 imageIndex);
-  ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(),
-                                  Buffers::getCommandBuffers()[currentFrame]);
   VkSubmitInfo submitInfo{};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 

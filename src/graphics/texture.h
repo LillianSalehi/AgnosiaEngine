@@ -1,12 +1,14 @@
 #pragma once
+#include "model.h"
+
 #define VK_NO_PROTOTYPES
+
 #include "volk.h"
 #include <cstdint>
 class Texture {
 public:
-  static void createTextureImage();
-  static void createTextureImageView();
-  static void createTextureSampler();
+  static const uint32_t TEXTURE_COUNT = 2;
+  static void createMaterialTextures(std::vector<Model *> models);
   static void destroyTextureImage();
   static void destroyTextureSampler();
   static VkFormat findDepthFormat();
@@ -14,8 +16,6 @@ public:
   static void createColorResources();
   // ------------ Getters & Setters ------------ //
   static uint32_t getMipLevels();
-  static VkImageView &getTextureImageView();
-  static VkSampler &getTextureSampler();
 
   static VkImage &getColorImage();
   static VkImageView &getColorImageView();

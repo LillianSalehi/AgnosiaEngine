@@ -1,8 +1,39 @@
 #pragma once
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <cstdint>
+#include <vector>
+
+#define VK_NO_PROTOTYPES
+
+#include "../types.h"
+
+#include "material.h"
+#include "volk.h"
 #include <glm/glm.hpp>
+#include <string>
 class Model {
+protected:
+  std::string ID;
+  Agnosia_T::GPUMeshBuffers buffers;
+  Material material;
+  glm::vec3 objPosition;
+  uint32_t indiceCount;
+  std::string modelPath;
+  static std::vector<Model *> instances;
+
 public:
-  static void loadModel(glm::vec3 position);
+  Model(const std::string &modelID, const Material &material,
+        const std::string &modelPath, const glm::vec3 &opjPos);
+
+  static void createMemoryAllocator(VkInstance instance);
+  static const std::vector<Model *> &getInstances();
+
+  void populateData();
+
+  Agnosia_T::GPUMeshBuffers getBuffers();
+  std::string getID();
+  glm::vec3 &getPos();
+  Material &getMaterial();
+  std::string getModelPath();
+  uint32_t getIndices();
 };

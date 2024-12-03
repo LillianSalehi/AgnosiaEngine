@@ -4,7 +4,6 @@
 #include <set>
 #include <stdexcept>
 #include <string>
-#include <vulkan/vulkan_core.h>
 
 VkPhysicalDeviceProperties deviceProperties;
 VkDevice device;
@@ -303,18 +302,31 @@ void DeviceControl::createLogicalDevice() {
   VkPhysicalDeviceVulkan12Features features12{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
       .pNext = nullptr,
+      .shaderSampledImageArrayNonUniformIndexing = true,
+      .shaderStorageBufferArrayNonUniformIndexing = true,
+      .shaderStorageImageArrayNonUniformIndexing = true,
+      .descriptorBindingSampledImageUpdateAfterBind = true,
+      .descriptorBindingStorageImageUpdateAfterBind = true,
+      .descriptorBindingStorageBufferUpdateAfterBind = true,
+      .descriptorBindingUpdateUnusedWhilePending = true,
+      .descriptorBindingPartiallyBound = true,
+      .runtimeDescriptorArray = true,
+      .scalarBlockLayout = true,
       .bufferDeviceAddress = true,
+
   };
   VkPhysicalDeviceVulkan13Features features13{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
       .pNext = &features12,
       .synchronization2 = true,
       .dynamicRendering = true,
+
   };
   VkPhysicalDeviceFeatures featuresBase{
       .robustBufferAccess = true,
       .sampleRateShading = true,
       .samplerAnisotropy = true,
+
   };
 
   VkPhysicalDeviceFeatures2 deviceFeatures{

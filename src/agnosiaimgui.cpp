@@ -2,23 +2,32 @@
 #include "devicelibrary.h"
 #include "entrypoint.h"
 #include "graphics/buffers.h"
+#include "graphics/graphicspipeline.h"
 #include "graphics/texture.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
+#include <glm/gtc/type_ptr.hpp>
 #include <stdexcept>
 
 VkDescriptorPool imGuiDescriptorPool;
 
 void initImGuiWindow() {
+  if (ImGui::TreeNode("Model Transforms")) {
+    for (Model *model : Model::getInstances()) {
 
-  ImGui::DragFloat3("Object Position", Buffers::getObjPos());
-  ImGui::DragFloat3("Camera Position", Buffers::getCamPos());
-  ImGui::DragFloat3("Center Position", Buffers::getCenterPos());
-  ImGui::DragFloat3("Up Direction", Buffers::getUpDir());
-  ImGui::DragFloat("Depth of Field", &Buffers::getDepthField(), 0.1f, 1.0f,
+      ImGui::DragFloat3(model->getID().c_str(),
+                        const_cast<float *>(glm::value_ptr(model->getPos())));
+    }
+    ImGui::TreePop();
+  }
+
+  ImGui::DragFloat3("Camera Position", Graphics::getCamPos());
+  ImGui::DragFloat3("Center Position", Graphics::getCenterPos());
+  ImGui::DragFloat3("Up Direction", Graphics::getUpDir());
+  ImGui::DragFloat("Depth of Field", &Graphics::getDepthField(), 0.1f, 1.0f,
                    180.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
-  ImGui::DragFloat2("Near and Far fields", Buffers::getDistanceField());
+  ImGui::DragFloat2("Near and Far fields", Graphics::getDistanceField());
 }
 
 void drawTabs() {
@@ -37,8 +46,6 @@ void Gui::drawImGui() {
   ImGui_ImplVulkan_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
-  // 2. Show a simple window that we create ourselves. We use a Begin/End pair
-  // to create a named window.
 
   ImGui::Begin("Agnosia Debug");
 

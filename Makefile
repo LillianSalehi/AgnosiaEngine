@@ -4,7 +4,7 @@ LDFLAGS=-lglfw -Ilib -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -ltinyobjloade
 MAKEFLAGS += -j16
 SRC = $(shell find . -name "*.cpp")
 CSRC = $(shell find . -name "*.c")
-SHDRSRC = $(shell find . -name "*.frag" -o -name "*vert")
+SHDRSRC = $(shell find . -name "*.frag" -o -name "*.vert")
 SPV = $(SHDRSRC:%.vert=%.spv) $(SHDRSRC:%.frag=%.spv)
 OBJ = $(SRC:%.cpp=%.o)
 COBJ=$(CSRC:%.c=%.o)
@@ -47,6 +47,8 @@ $(BIN): $(OBJ) $(COBJ) $(SPV)
 %.spv: %.frag
 	glslc $< -o $@
 %.spv: %.vert
+	glslc $< -o $@
+%.spv: %.glsl
 	glslc $< -o $@
 
 .PHONY: clean
