@@ -122,6 +122,9 @@ void Buffers::createDescriptorPool() {
     throw std::runtime_error("failed to create descriptor pool!");
   }
 }
+void Buffers::destroyDescriptorPool() {
+  vkDestroyDescriptorPool(DeviceControl::getDevice(), descriptorPool, nullptr);
+}
 void Buffers::createDescriptorSet(std::vector<Model *> models) {
   VkDescriptorSetAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;

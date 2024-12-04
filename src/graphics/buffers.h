@@ -19,6 +19,7 @@ public:
   static void createDescriptorSetLayout();
   static void createDescriptorSet(std::vector<Model *> models);
   static void createDescriptorPool();
+  static void destroyDescriptorPool();
   static void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                            VkMemoryPropertyFlags props, VkBuffer &buffer,
                            VkDeviceMemory &bufferMemory);

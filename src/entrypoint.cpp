@@ -87,8 +87,7 @@ void createInstance() {
     throw std::runtime_error("failed to create instance!");
   }
 }
-
-void initVulkan() {
+void initAgnosia() {
   Material *vikingRoomMaterial =
       new Material("vikingRoomMaterial", "assets/textures/viking_room.png");
   Material *stanfordDragonMaterial =
@@ -104,7 +103,8 @@ void initVulkan() {
   Model *teapot =
       new Model("teapot", *teapotMaterial, "assets/models/teapot.obj",
                 glm::vec3(1.0f, -3.0f, -1.0f));
-
+}
+void initVulkan() {
   // Initialize volk and continue if successful.
   volkInitialize();
   // Initialize vulkan and set up pipeline.
@@ -122,9 +122,7 @@ void initVulkan() {
   Graphics::createCommandPool();
   // Image creation MUST be after command pool, because command
   // buffers.
-  vikingRoom->populateData();
-  stanfordDragon->populateData();
-  teapot->populateData();
+  Model::populateModels();
   Texture::createMaterialTextures(Model::getInstances());
   Texture::createColorResources();
   Texture::createDepthResources();
@@ -150,6 +148,11 @@ void mainLoop() {
 void cleanup() {
   Render::cleanupSwapChain();
   Graphics::destroyGraphicsPipeline();
+  Buffers::destroyDescriptorPool();
+  Model::destroyTextures();
+
+  vkDestroyDescriptorSetLayout(DeviceControl::getDevice(),
+                               Buffers::getDescriptorSetLayout(), nullptr);
 
   Buffers::destroyBuffers();
   Render::destroyFenceSemaphores();
@@ -179,6 +182,7 @@ GLFWwindow *EntryApp::getWindow() { return window; }
 void EntryApp::run() {
 
   initWindow();
+  initAgnosia();
   initVulkan();
   mainLoop();
   cleanup();

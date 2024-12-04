@@ -28,7 +28,8 @@ public:
   static void createMemoryAllocator(VkInstance instance);
   static const std::vector<Model *> &getInstances();
 
-  void populateData();
+  static void populateModels();
+  static void destroyTextures();
 
   Agnosia_T::GPUMeshBuffers getBuffers();
   std::string getID();

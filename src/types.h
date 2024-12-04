@@ -10,12 +10,13 @@ public:
     // This defines what a vertex is!
     // We control the position, color and texture coordinate here!
     glm::vec3 pos;
+    glm::vec3 normal;
     glm::vec3 color;
-    glm::vec2 texCoord;
+    glm::vec2 uv;
 
     bool operator==(const Vertex &other) const {
-      return pos == other.pos && color == other.color &&
-             texCoord == other.texCoord;
+      return pos == other.pos && normal == other.normal &&
+             color == other.color && uv == other.uv;
     }
   };
   struct AllocatedBuffer {
