@@ -32,6 +32,7 @@ public:
   struct GPUPushConstants {
     VkDeviceAddress vertexBuffer;
     glm::vec3 objPosition;
+    glm::vec3 lightPos;
     int textureID;
     glm::mat4 model;
     glm::mat4 view;

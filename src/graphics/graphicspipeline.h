@@ -15,6 +15,7 @@ public:
                                   uint32_t imageIndex);
 
   static float *getCamPos();
+  static float *getLightPos();
   static float *getCenterPos();
   static float *getUpDir();
   static float &getDepthField();

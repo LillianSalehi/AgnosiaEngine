@@ -15,6 +15,7 @@ layout(buffer_reference, scalar) readonly buffer VertexBuffer{
 layout( push_constant, scalar ) uniform constants {
     VertexBuffer vertBuffer;
     vec3 objPos;
+    vec3 lightPos;
     int textureID;
     mat4 model;
     mat4 view;

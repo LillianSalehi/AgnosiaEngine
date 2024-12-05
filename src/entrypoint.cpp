@@ -88,15 +88,15 @@ void createInstance() {
   }
 }
 void initAgnosia() {
-  Material *vikingRoomMaterial =
-      new Material("vikingRoomMaterial", "assets/textures/viking_room.png");
+  Material *sphereMaterial =
+      new Material("sphereMaterial", "assets/textures/checkermap.png");
   Material *stanfordDragonMaterial =
       new Material("stanfordDragonMaterial", "assets/textures/checkermap.png");
   Material *teapotMaterial =
       new Material("teapotMaterial", "assets/textures/checkermap.png");
-  Model *vikingRoom =
-      new Model("vikingRoom", *vikingRoomMaterial,
-                "assets/models/viking_room.obj", glm::vec3(0.0f, 0.0f, 0.0f));
+  Model *uvSphere =
+      new Model("uvSphere", *sphereMaterial, "assets/models/UVSphere.obj",
+                glm::vec3(0.0f, 0.0f, 0.0f));
   Model *stanfordDragon = new Model("stanfordDragon", *stanfordDragonMaterial,
                                     "assets/models/StanfordDragon800k.obj",
                                     glm::vec3(0.0f, 2.0f, 0.0f));

@@ -13,6 +13,7 @@
 #include <iostream>
 #include <vulkan/vulkan_core.h>
 
+float lightPos[4] = {5.0f, 5.0f, 5.0f, 0.44f};
 float camPos[4] = {3.0f, 3.0f, 3.0f, 0.44f};
 float centerPos[4] = {0.0f, 0.0f, 0.0f, 0.44f};
 float upDir[4] = {0.0f, 0.0f, 1.0f, 0.44f};
@@ -363,6 +364,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
     Agnosia_T::GPUPushConstants pushConsts;
     pushConsts.vertexBuffer = model->getBuffers().vertexBufferAddress;
     pushConsts.objPosition = model->getPos();
+    pushConsts.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
     pushConsts.textureID = texID;
 
     pushConsts.model =
@@ -433,6 +435,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
 }
 
 float *Graphics::getCamPos() { return camPos; }
+float *Graphics::getLightPos() { return lightPos; }
 float *Graphics::getCenterPos() { return centerPos; }
 float *Graphics::getUpDir() { return upDir; }
 float &Graphics::getDepthField() { return depthField; }
