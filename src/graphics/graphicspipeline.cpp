@@ -365,6 +365,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
     pushConsts.vertexBuffer = model->getBuffers().vertexBufferAddress;
     pushConsts.objPosition = model->getPos();
     pushConsts.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
+    pushConsts.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
     pushConsts.textureID = texID;
 
     pushConsts.model =

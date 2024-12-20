@@ -9,14 +9,29 @@ layout(location = 0) in vec3 v_norm;
 layout(location = 1) in vec3 v_pos;
 layout(location = 2) in vec2 texCoord;
 
+
 layout(location = 0) out vec4 outColor;
 
 void main() {
-  vec3 diffuseColor = texture(texSampler[PushConstants.textureID], texCoord).rgb;
-  vec3 ambientColor = vec3(0.05f,0.05f, 0.05f) * diffuseColor;
-  float lightPower = 5;
+  float ambientPower = 0.1;
+  float lightPower = 1;
+  float specularPower = 1;
   vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);
-  float cosTheta = dot(PushConstants.lightPos, v_norm);
+  
+  vec3 objectColor = texture(texSampler[PushConstants.textureID], texCoord).rgb;
+  vec3 ambient = ambientPower * lightColor;
+  
+  vec3 reflectPos = reflect(-PushConstants.lightPos, v_norm);
+  float spec = pow(max(dot(normalize(PushConstants.camPos), normalize(reflectPos)), 0.0), 32);
+  vec3 specular = specularPower * spec * lightColor;
+
+  // Lambertian reflectance model; Diffuse = (LightDirection⋅Normal)(Color)(Intensity)
+  float lightDotNorm = max(dot(normalize(PushConstants.lightPos), normalize(v_norm)), 0.0f);
+  vec3 diffuse = lightDotNorm * lightColor * lightPower;
+  // Inverse Square law; light intensity falls off proportionally to the the distance from the light source.
+  // Note; we multiply by hand here rather than use pow() because pow() is only more/equally performant than by hand multiplication after 8 iterations.
   float sqrDist = distance(v_pos, PushConstants.lightPos)*distance(v_pos, PushConstants.lightPos);
-  outColor = vec4(ambientColor + clamp(diffuseColor * lightColor * lightPower * cosTheta / sqrDist, vec3(0,0,0), vec3(1,1,1)), 1.0f);
+  
+  outColor = vec4((ambient + diffuse + specular) * objectColor, 1.0f);
+  
 }
