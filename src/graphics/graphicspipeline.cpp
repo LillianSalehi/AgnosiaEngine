@@ -367,6 +367,9 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
     pushConsts.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
     pushConsts.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
     pushConsts.textureID = texID;
+    pushConsts.ambient = model->getMaterial().getAmbient();
+    pushConsts.spec = model->getMaterial().getSpecular();
+    pushConsts.shine = model->getMaterial().getShininess();
 
     pushConsts.model =
         glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));

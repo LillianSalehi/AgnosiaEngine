@@ -88,12 +88,13 @@ void createInstance() {
   }
 }
 void initAgnosia() {
-  Material *sphereMaterial =
-      new Material("sphereMaterial", "assets/textures/checkermap.png");
+  Material *sphereMaterial = new Material(
+      "sphereMaterial", "assets/textures/checkermap.png", 0.1f, 1.0f, 32);
   Material *stanfordDragonMaterial =
-      new Material("stanfordDragonMaterial", "assets/textures/checkermap.png");
-  Material *teapotMaterial =
-      new Material("teapotMaterial", "assets/textures/checkermap.png");
+      new Material("stanfordDragonMaterial", "assets/textures/checkermap.png",
+                   0.1f, 1.0f, 256);
+  Material *teapotMaterial = new Material(
+      "teapotMaterial", "assets/textures/checkermap.png", 0.1f, 1.0f, 128);
   Model *uvSphere =
       new Model("uvSphere", *sphereMaterial, "assets/models/UVSphere.obj",
                 glm::vec3(0.0f, 0.0f, 0.0f));

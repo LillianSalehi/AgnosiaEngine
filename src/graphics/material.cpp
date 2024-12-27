@@ -1,19 +1,24 @@
 #include "material.h"
 
-Material::Material(const std::string &matID, const std::string &texPath)
-    : ID(matID), texturePath(texPath) {}
+Material::Material(const std::string &matID, const std::string &difPath,
+                   const float ambient, const float spec, const float shine)
+    : ID(matID), diffusePath(difPath), ambient(ambient), specular(spec),
+      shine(shine) {}
 
 std::string Material::getID() const { return ID; }
-std::string Material::getTexturePath() const { return texturePath; }
+std::string Material::getDiffusePath() const { return diffusePath; }
 
-VkImage &Material::getTextureImage() { return this->textureImage; }
-VkImageView &Material::getTextureView() { return this->textureImageView; }
-VkSampler &Material::getTextureSampler() { return this->textureSampler; }
+VkImage &Material::getDiffuseImage() { return this->diffuseImage; }
+VkImageView &Material::getDiffuseImgView() { return this->diffuseImageView; }
+VkSampler &Material::getDiffuseSampler() { return this->diffuseSampler; }
 
-void Material::setTextureImage(VkImage image) { this->textureImage = image; }
-void Material::setTextureView(VkImageView imageView) {
-  this->textureImageView = imageView;
+float Material::getAmbient() { return this->ambient; }
+float Material::getSpecular() { return this->specular; }
+float Material::getShininess() { return this->shine; }
+void Material::setDiffuseImage(VkImage image) { this->diffuseImage = image; }
+void Material::setDiffuseView(VkImageView imageView) {
+  this->diffuseImageView = imageView;
 }
-void Material::setTextureSampler(VkSampler sampler) {
-  this->textureSampler = sampler;
+void Material::setDiffuseSampler(VkSampler sampler) {
+  this->diffuseSampler = sampler;
 }

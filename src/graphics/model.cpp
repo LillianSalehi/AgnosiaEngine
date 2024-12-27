@@ -227,11 +227,11 @@ void Model::populateModels() {
 void Model::destroyTextures() {
   for (Model *model : Model::getInstances()) {
     vkDestroySampler(DeviceControl::getDevice(),
-                     model->getMaterial().getTextureSampler(), nullptr);
+                     model->getMaterial().getDiffuseSampler(), nullptr);
     vkDestroyImageView(DeviceControl::getDevice(),
-                       model->getMaterial().getTextureView(), nullptr);
+                       model->getMaterial().getDiffuseImgView(), nullptr);
     vkDestroyImage(DeviceControl::getDevice(),
-                   model->getMaterial().getTextureImage(), nullptr);
+                   model->getMaterial().getDiffuseImage(), nullptr);
   }
 }
 

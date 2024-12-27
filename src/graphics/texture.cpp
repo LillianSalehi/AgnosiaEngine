@@ -1,7 +1,7 @@
 #include "../devicelibrary.h"
 #include "buffers.h"
 #include "texture.h"
-#include <iostream>
+
 #include <stdexcept>
 #include <string>
 #define STB_IMAGE_IMPLEMENTATION
@@ -294,7 +294,7 @@ void Texture::createMaterialTextures(std::vector<Model *> models) {
     int textureWidth, textureHeight, textureChannels;
 
     stbi_uc *pixels =
-        stbi_load(model->getMaterial().getTexturePath().c_str(), &textureWidth,
+        stbi_load(model->getMaterial().getDiffusePath().c_str(), &textureWidth,
                   &textureHeight, &textureChannels, STBI_rgb_alpha);
 
     mipLevels = static_cast<uint32_t>(std::floor(
@@ -327,25 +327,25 @@ void Texture::createMaterialTextures(std::vector<Model *> models) {
                     VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                     VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                model->getMaterial().getTextureImage(), textureImageMemory);
+                model->getMaterial().getDiffuseImage(), textureImageMemory);
 
-    transitionImageLayout(model->getMaterial().getTextureImage(),
+    transitionImageLayout(model->getMaterial().getDiffuseImage(),
                           VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-    copyBufferToImage(stagingBuffer, model->getMaterial().getTextureImage(),
+    copyBufferToImage(stagingBuffer, model->getMaterial().getDiffuseImage(),
                       static_cast<uint32_t>(textureWidth),
                       static_cast<uint32_t>(textureHeight));
 
     vkDestroyBuffer(DeviceControl::getDevice(), stagingBuffer, nullptr);
     vkFreeMemory(DeviceControl::getDevice(), stagingBufferMemory, nullptr);
 
-    generateMipmaps(model->getMaterial().getTextureImage(),
+    generateMipmaps(model->getMaterial().getDiffuseImage(),
                     VK_FORMAT_R8G8B8A8_SRGB, textureWidth, textureHeight,
                     mipLevels);
     // Create a texture image view, which is a struct of information about the
     // image.
-    model->getMaterial().setTextureView(DeviceControl::createImageView(
-        model->getMaterial().getTextureImage(), VK_FORMAT_R8G8B8A8_SRGB,
+    model->getMaterial().setDiffuseView(DeviceControl::createImageView(
+        model->getMaterial().getDiffuseImage(), VK_FORMAT_R8G8B8A8_SRGB,
         VK_IMAGE_ASPECT_COLOR_BIT, mipLevels));
 
     // Create a sampler to access and parse the texture object.
@@ -391,7 +391,7 @@ void Texture::createMaterialTextures(std::vector<Model *> models) {
     samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
     if (vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr,
-                        &model->getMaterial().getTextureSampler()) !=
+                        &model->getMaterial().getDiffuseSampler()) !=
         VK_SUCCESS) {
       throw std::runtime_error("failed to create texture sampler!");
     }

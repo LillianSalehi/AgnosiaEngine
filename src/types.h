@@ -19,6 +19,7 @@ public:
              color == other.color && uv == other.uv;
     }
   };
+
   struct AllocatedBuffer {
     VkBuffer buffer;
     VmaAllocation allocation;
@@ -35,6 +36,9 @@ public:
     glm::vec3 lightPos;
     glm::vec3 camPos;
     int textureID;
+    float ambient;
+    float spec;
+    float shine;
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
