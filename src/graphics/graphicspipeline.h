@@ -20,4 +20,5 @@ public:
   static float *getUpDir();
   static float &getDepthField();
   static float *getDistanceField();
+  static float &getLineWidth();
 };

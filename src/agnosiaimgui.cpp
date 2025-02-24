@@ -11,8 +11,9 @@
 #include <stdexcept>
 
 VkDescriptorPool imGuiDescriptorPool;
+static bool wireframe = false;
 
-void initImGuiWindow() {
+void initTransformsWindow() {
   if (ImGui::TreeNode("Model Transforms")) {
     for (Model *model : Model::getInstances()) {
 
@@ -21,26 +22,44 @@ void initImGuiWindow() {
     }
     ImGui::TreePop();
   }
-
-  ImGui::DragFloat3("Camera Position", Graphics::getCamPos());
-  ImGui::DragFloat3("Light Position", Graphics::getLightPos());
-  ImGui::DragFloat3("Center Position", Graphics::getCenterPos());
-  ImGui::DragFloat("Depth of Field", &Graphics::getDepthField(), 0.1f, 1.0f,
+  if(ImGui::TreeNode("Camera Transforms")) {
+    ImGui::DragFloat3("Camera Position", Graphics::getCamPos());
+    ImGui::DragFloat3("Light Position", Graphics::getLightPos());
+    ImGui::DragFloat3("Center Position", Graphics::getCenterPos());
+    ImGui::DragFloat("Depth of Field", &Graphics::getDepthField(), 0.1f, 1.0f,
                    180.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
-  ImGui::DragFloat2("Near and Far fields", Graphics::getDistanceField());
-  if(ImGui::Button("Kill Teapot")) {
-    Model::destroyModel("teapot");
-  } else if(ImGui::Button("Kill Dragon")) {
-    Model::destroyModel("stanfordDragon");
-  } else if(ImGui::Button("Kill UV Sphere")) {
-    Model::destroyModel("uvSphere");
+    ImGui::DragFloat2("Near and Far fields", Graphics::getDistanceField());
+    ImGui::TreePop();
   }
+  
+}
+void initRenderWindow() {
+  if(ImGui::Checkbox("Wireframe?", &wireframe)) {
+    // Rebuild graphics pipeline if setting is changed.
+    Graphics::destroyGraphicsPipeline();
+    Graphics::createGraphicsPipeline();
+  }
+  if(ImGui::DragFloat("Line Width", &Graphics::getLineWidth())) {
+    Graphics::destroyGraphicsPipeline();
+    Graphics::createGraphicsPipeline();
+  }
+  for(Model *model : Model::getInstances()) {
+    
+    if(ImGui::Button(("Kill " + model->getID()).c_str())) {
+      Model::destroyModel(model->getID());
+    }
+  }
+  
 }
 
 void drawTabs() {
   if (ImGui::BeginTabBar("MainTabBar", ImGuiTabBarFlags_Reorderable)) {
     if (ImGui::BeginTabItem("Transforms Control")) {
-      initImGuiWindow();
+      initTransformsWindow();
+      ImGui::EndTabItem();
+    }
+    if(ImGui::BeginTabItem("Render Control")) {
+      initRenderWindow();
       ImGui::EndTabItem();
     }
 
@@ -128,4 +147,7 @@ void Gui::initImgui(VkInstance instance) {
   };
 
   ImGui_ImplVulkan_Init(&initInfo);
+}
+bool Gui::getWireframe() {
+  return wireframe;
 }

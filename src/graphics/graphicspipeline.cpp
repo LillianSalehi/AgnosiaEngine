@@ -9,7 +9,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
-
+#include "../agnosiaimgui.h"
 #include <iostream>
 #include <vulkan/vulkan_core.h>
 
@@ -19,6 +19,7 @@ float centerPos[4] = {0.0f, 0.0f, 0.0f, 0.44f};
 float upDir[4] = {0.0f, 0.0f, 1.0f, 0.44f};
 float depthField = 45.0f;
 float distanceField[2] = {0.1f, 100.0f};
+float lineWidth = 1.0;
 
 std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
                                              VK_DYNAMIC_STATE_SCISSOR};
@@ -108,8 +109,12 @@ void Graphics::createGraphicsPipeline() {
   rasterizer.rasterizerDiscardEnable = VK_FALSE;
   // MODE_FILL, fill polygons, MODE_LINE, draw wireframe, MODE_POINT, draw
   // vertices. Anything other than fill requires GPU feature *fillModeNonSolid*
-  rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-  rasterizer.lineWidth = 1.0f;
+  if(Gui::getWireframe()) {
+      rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+  } else {
+      rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+  }
+  rasterizer.lineWidth = lineWidth;
   // How to cull the faces, right here we cull the back faces and tell the
   // rasterizer front facing vertices are ordered clockwise.
   rasterizer.cullMode = VK_CULL_MODE_NONE;
@@ -444,3 +449,4 @@ float *Graphics::getCenterPos() { return centerPos; }
 float *Graphics::getUpDir() { return upDir; }
 float &Graphics::getDepthField() { return depthField; }
 float *Graphics::getDistanceField() { return distanceField; }
+float &Graphics::getLineWidth() { return lineWidth; }
