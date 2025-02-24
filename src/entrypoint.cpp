@@ -134,6 +134,7 @@ void initVulkan() {
   Render::createSyncObject();
 
   Gui::initImgui(vulkaninstance);
+  
 }
 
 void mainLoop() {

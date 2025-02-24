@@ -18,6 +18,7 @@
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 
+// This is a container for ALL model instances alive
 std::vector<Model *> Model::instances;
 VmaAllocator _allocator;
 // chatgpt did this and the haters can WEEP fuck hash functions.
@@ -234,7 +235,15 @@ void Model::destroyTextures() {
                    model->getMaterial().getDiffuseImage(), nullptr);
   }
 }
-
+void Model::destroyModel(const std::string &modelID) {
+  auto iterator = std::find_if(instances.begin(), instances.end(),
+                               [&modelID](Model* model) { return model->ID == modelID; }
+                              );
+  if(iterator != instances.end()) {
+    // Remove model from the instances array!
+    instances.erase(iterator);
+  }
+}
 std::string Model::getID() { return this->ID; }
 glm::vec3 &Model::getPos() { return this->objPosition; }
 Material &Model::getMaterial() { return this->material; }

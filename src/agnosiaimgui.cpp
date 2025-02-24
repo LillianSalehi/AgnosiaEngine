@@ -28,6 +28,13 @@ void initImGuiWindow() {
   ImGui::DragFloat("Depth of Field", &Graphics::getDepthField(), 0.1f, 1.0f,
                    180.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
   ImGui::DragFloat2("Near and Far fields", Graphics::getDistanceField());
+  if(ImGui::Button("Kill Teapot")) {
+    Model::destroyModel("teapot");
+  } else if(ImGui::Button("Kill Dragon")) {
+    Model::destroyModel("stanfordDragon");
+  } else if(ImGui::Button("Kill UV Sphere")) {
+    Model::destroyModel("uvSphere");
+  }
 }
 
 void drawTabs() {

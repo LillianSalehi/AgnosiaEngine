@@ -30,6 +30,7 @@ public:
 
   static void populateModels();
   static void destroyTextures();
+  static void destroyModel(const std::string &modelID);
 
   Agnosia_T::GPUMeshBuffers getBuffers();
   std::string getID();
