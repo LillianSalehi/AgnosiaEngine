@@ -36,12 +36,14 @@ void initTransformsWindow() {
 void initRenderWindow() {
   if(ImGui::Checkbox("Wireframe?", &wireframe)) {
     // Rebuild graphics pipeline if setting is changed.
-    Graphics::destroyGraphicsPipeline();
+    Graphics::destroyPipelines();
     Graphics::createGraphicsPipeline();
+    Graphics::createFullscreenPipeline();
   }
   if(ImGui::DragFloat("Line Width", &Graphics::getLineWidth())) {
-    Graphics::destroyGraphicsPipeline();
+    Graphics::destroyPipelines();
     Graphics::createGraphicsPipeline();
+    Graphics::createFullscreenPipeline();
   }
   for(Model *model : Model::getInstances()) {
     

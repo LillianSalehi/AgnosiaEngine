@@ -1,9 +1,6 @@
 
 #include <stdexcept>
 
-#include "imgui.h"
-#include "imgui_impl_vulkan.h"
-
 #include "../devicelibrary.h"
 #include "../entrypoint.h"
 #include "buffers.h"
@@ -56,7 +53,7 @@ void Render::drawFrame() {
     recreateSwapChain();
     return;
   } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-    throw std::runtime_error("failed to acquire swap chain image!");
+    throw std::runtime_error("failed to acquire swap chain image! (Render.cpp:59)");
   }
 
   vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
@@ -83,7 +80,7 @@ void Render::drawFrame() {
 
   if (vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo,
                     inFlightFences[currentFrame]) != VK_SUCCESS) {
-    throw std::runtime_error("failed to submit draw command buffer!");
+    throw std::runtime_error("failed to submit draw command buffer! (Render.cpp:86)");
   }
 
   VkPresentInfoKHR presentInfo{};
@@ -104,7 +101,7 @@ void Render::drawFrame() {
     EntryApp::getInstance().setFramebufferResized(false);
     recreateSwapChain();
   } else if (result != VK_SUCCESS) {
-    throw std::runtime_error("failed to present swap chain image!");
+    throw std::runtime_error("failed to present swap chain image! (Render.cpp:107)");
   }
   currentFrame = (currentFrame + 1) % Buffers::getMaxFramesInFlight();
 }
@@ -152,7 +149,7 @@ void Render::createSyncObject() {
                           &renderFinishedSemaphores[i]) != VK_SUCCESS ||
         vkCreateFence(DeviceControl::getDevice(), &fenceInfo, nullptr,
                       &inFlightFences[i]) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create semaphores!");
+      throw std::runtime_error("Failed to create semaphores! (Render.cpp:155)");
     }
   }
 }

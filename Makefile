@@ -5,7 +5,7 @@ MAKEFLAGS += -j16
 SRC = $(shell find . -name "*.cpp")
 CSRC = $(shell find . -name "*.c")
 SHDRSRC = $(shell find . -name "*.frag" -o -name "*.vert")
-SPV = $(SHDRSRC:%.vert=%.spv) $(SHDRSRC:%.frag=%.spv)
+SPV = $(SHDRSRC:%.vert=%.vert.spv) $(SHDRSRC:%.frag=%.frag.spv)
 OBJ = $(SRC:%.cpp=%.o)
 COBJ=$(CSRC:%.c=%.o)
 BIN=build/agnosiaengine
@@ -44,9 +44,9 @@ $(BIN): $(OBJ) $(COBJ) $(SPV)
 	g++ -c $(CPPFLAGS) $< -o $@ $(LDFLAGS)
 %.o : %.c
 	gcc -c $(CFLAGS) $< -o $@ $(LDFLAGS)
-%.spv: %.frag
+%.frag.spv: %.frag
 	glslc $< -o $@
-%.spv: %.vert
+%.vert.spv: %.vert
 	glslc $< -o $@
 %.spv: %.glsl
 	glslc $< -o $@

@@ -5,7 +5,8 @@
 class Graphics {
 public:
   static void createGraphicsPipeline();
-  static void destroyGraphicsPipeline();
+  static void createFullscreenPipeline();
+  static void destroyPipelines();
   static void createFramebuffers();
   static void destroyFramebuffers();
   static void createCommandPool();

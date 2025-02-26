@@ -27,7 +27,7 @@ constexpr int SAMPLER_BINDING = 1;
 constexpr int IMAGE_BINDING = 2;
 // Max count of each descriptor type
 // You can query the max values for these with
-// physicalDevice.getProperties().limits.maxDescriptrorSet*******
+// physicalDevice.getProperties().limits.maxDescriptorSet*******
 constexpr int STORAGE_COUNT = 65536;
 constexpr int SAMPLER_COUNT = 65536;
 constexpr int IMAGE_COUNT = 65536;
@@ -100,7 +100,7 @@ void Buffers::createDescriptorSetLayout() {
   if (vkCreateDescriptorSetLayout(DeviceControl::getDevice(), &layoutInfo,
                                   nullptr,
                                   &descriptorSetLayout) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create descriptor set layout!");
+    throw std::runtime_error("Failed to create descriptor set layout! (Buffers.cpp:103)");
   }
 }
 void Buffers::createDescriptorPool() {
@@ -119,7 +119,7 @@ void Buffers::createDescriptorPool() {
 
   if (vkCreateDescriptorPool(DeviceControl::getDevice(), &poolInfo, nullptr,
                              &descriptorPool) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create descriptor pool!");
+    throw std::runtime_error("failed to create descriptor pool! (Buffers.cpp:122)");
   }
 }
 void Buffers::destroyDescriptorPool() {
@@ -134,7 +134,7 @@ void Buffers::createDescriptorSet(std::vector<Model *> models) {
 
   if (vkAllocateDescriptorSets(DeviceControl::getDevice(), &allocInfo,
                                &descriptorSet) != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate descriptor sets!");
+    throw std::runtime_error("failed to allocate descriptor sets! (Buffers.cpp:137)");
   }
   std::vector<VkDescriptorImageInfo> imageInfoSet;
   imageInfoSet.resize(models.size());
@@ -180,7 +180,7 @@ uint32_t Buffers::findMemoryType(uint32_t typeFilter,
       return i;
     }
   }
-  throw std::runtime_error("failed to find suitable memory type!");
+  throw std::runtime_error("failed to find suitable memory type! (Buffers.cpp:183)");
 }
 
 void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
@@ -230,7 +230,7 @@ void Buffers::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
 
   if (vkCreateBuffer(DeviceControl::getDevice(), &bufferInfo, nullptr,
                      &buffer) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create buffer!");
+    throw std::runtime_error("failed to create buffer! (Buffers.cpp:233)");
   }
 
   VkMemoryRequirements memRequirements;
@@ -245,7 +245,7 @@ void Buffers::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
 
   if (vkAllocateMemory(DeviceControl::getDevice(), &allocInfo, nullptr,
                        &bufferMemory) != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate buffer memory!");
+    throw std::runtime_error("failed to allocate buffer memory! (Buffers.cpp:248)");
   }
 
   vkBindBufferMemory(DeviceControl::getDevice(), buffer, bufferMemory, 0);

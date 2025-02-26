@@ -53,10 +53,9 @@ void createInstance() {
   appInfo.sType =
       VK_STRUCTURE_TYPE_APPLICATION_INFO;     // Tell vulkan that appInfo is a
                                               // Application Info structure
-  appInfo.pApplicationName = "Triangle Test"; // Give the struct a name to use
+  appInfo.pApplicationName = "Agnosia";       // Give the struct a name to use
   appInfo.applicationVersion = VK_MAKE_VERSION(
-      1, 0,
-      0); // Create a Major Minor Patch version number for the application!
+      1, 0, 0); // Create a Major Minor Patch version number for the application!
   appInfo.pEngineName =
       "Agnosia Engine"; // Give an internal name for the engine running
   appInfo.engineVersion = VK_MAKE_VERSION(
@@ -84,7 +83,7 @@ void createInstance() {
   createInfo.ppEnabledExtensionNames = extensions.data();
 
   if (vkCreateInstance(&createInfo, nullptr, &vulkaninstance) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create instance!");
+    throw std::runtime_error("failed to create instance! (Entrypoint.cpp:87)");
   }
 }
 void initAgnosia() {
@@ -120,6 +119,7 @@ void initVulkan() {
   DeviceControl::createImageViews();
   Buffers::createDescriptorSetLayout();
   Graphics::createGraphicsPipeline();
+  Graphics::createFullscreenPipeline();
   Graphics::createCommandPool();
   // Image creation MUST be after command pool, because command
   // buffers.
@@ -149,7 +149,7 @@ void mainLoop() {
 
 void cleanup() {
   Render::cleanupSwapChain();
-  Graphics::destroyGraphicsPipeline();
+  Graphics::destroyPipelines();
   Buffers::destroyDescriptorPool();
   Model::destroyTextures();
 

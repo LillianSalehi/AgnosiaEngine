@@ -250,7 +250,7 @@ void DeviceControl::pickPhysicalDevice(VkInstance &instance) {
   vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
   if (deviceCount == 0) {
-    throw std::runtime_error("Failed to find GPU's with Vulkan Support!!");
+    throw std::runtime_error("Failed to find GPU's with Vulkan Support! (DeviceLibrary:253)");
   }
   std::vector<VkPhysicalDevice> devices(
       deviceCount); // Direct Initialization is weird af, yo
@@ -266,7 +266,7 @@ void DeviceControl::pickPhysicalDevice(VkInstance &instance) {
     }
   }
   if (physicalDevice == VK_NULL_HANDLE) {
-    throw std::runtime_error("Failed to find a suitable GPU!");
+    throw std::runtime_error("Failed to find a suitable GPU! (DeviceLibrary.cpp:269)");
   }
 }
 void DeviceControl::destroySurface(VkInstance &instance) {
@@ -275,7 +275,7 @@ void DeviceControl::destroySurface(VkInstance &instance) {
 void DeviceControl::createSurface(VkInstance &instance, GLFWwindow *window) {
   if (glfwCreateWindowSurface(instance, window, nullptr, &surface) !=
       VK_SUCCESS) {
-    throw std::runtime_error("Failed to create window surface!!");
+    throw std::runtime_error("Failed to create window surface! (DeviceLibrary.cpp:278)");
   }
 }
 void DeviceControl::createLogicalDevice() {
@@ -325,8 +325,10 @@ void DeviceControl::createLogicalDevice() {
   VkPhysicalDeviceFeatures featuresBase{
       .robustBufferAccess = true,
       .sampleRateShading = true,
+      .fillModeNonSolid = true,
+      .wideLines = true,
+      .largePoints = true,
       .samplerAnisotropy = true,
-
   };
 
   VkPhysicalDeviceFeatures2 deviceFeatures{
@@ -347,7 +349,7 @@ void DeviceControl::createLogicalDevice() {
 
   if (vkCreateDevice(physicalDevice, &createDeviceInfo, nullptr, &device) !=
       VK_SUCCESS) {
-    throw std::runtime_error("Failed to create logical device");
+    throw std::runtime_error("Failed to create logical device! (DeviceLibrary.cpp:350)");
   }
   vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
   vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
@@ -423,7 +425,7 @@ void DeviceControl::createSwapChain(GLFWwindow *window) {
 
   if (vkCreateSwapchainKHR(device, &createSwapChainInfo, nullptr, &swapChain) !=
       VK_SUCCESS) {
-    throw std::runtime_error("Failed to create the swap chain!!");
+    throw std::runtime_error("Failed to create the swap chain! (DeviceLibrary.cpp:426)");
   }
 
   vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
@@ -455,7 +457,7 @@ VkImageView DeviceControl::createImageView(VkImage image, VkFormat format,
 
   VkImageView imageView;
   if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create image view!");
+    throw std::runtime_error("failed to create image view! (DeviceLibrary.cpp:458)");
   }
 
   return imageView;
