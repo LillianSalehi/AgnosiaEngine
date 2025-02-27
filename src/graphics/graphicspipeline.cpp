@@ -4,15 +4,17 @@
 #include "graphicspipeline.h"
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
-#include "pipelinebuilder.h"
+#include "../agnosiaimgui.h"
 #include "render.h"
 #include "texture.h"
-#include <fstream>
+#include <deque>
+#include <stdexcept>
+ 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
-#include "../agnosiaimgui.h"
-#include <iostream>
+
+
 #include <vulkan/vulkan_core.h>
 
 float lightPos[4] = {5.0f, 5.0f, 5.0f, 0.44f};
@@ -21,50 +23,20 @@ float centerPos[4] = {0.0f, 0.0f, 0.0f, 0.44f};
 float upDir[4] = {0.0f, 0.0f, 1.0f, 0.44f};
 float depthField = 45.0f;
 float distanceField[2] = {0.1f, 100.0f};
-float lineWidth = 1.0;
 
-std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
-                                             VK_DYNAMIC_STATE_SCISSOR};
-                                         
 
-Agnosia_T::Pipeline graphics;
-Agnosia_T::Pipeline fullscreen;
-
+std::deque<Agnosia_T::Pipeline> graphicsHistory;
+std::deque<Agnosia_T::Pipeline> fullscreenHistory;
                                          
 void Graphics::destroyPipelines() {
-  vkDestroyPipeline(DeviceControl::getDevice(), graphics.pipeline, nullptr);
-  vkDestroyPipelineLayout(DeviceControl::getDevice(), graphics.layout, nullptr);
-
-  vkDestroyPipeline(DeviceControl::getDevice(), fullscreen.pipeline, nullptr);
-  vkDestroyPipelineLayout(DeviceControl::getDevice(), fullscreen.layout, nullptr);
-}
-void Graphics::createFullscreenPipeline() {
-    PipelineBuilder builder;
-    if(Gui::getWireframe()) {
-        fullscreen = builder.setCullMode(VK_CULL_MODE_NONE)
-                                            .setVertexShader("src/shaders/fullscreen.vert.spv")
-                                            .setFragmentShader("src/shaders/fullscreen.frag.spv")
-                                            .setLineWidth(lineWidth)
-                                            .setPolygonMode(VK_POLYGON_MODE_LINE).Build();
-    } else {
-        fullscreen = builder.setCullMode(VK_CULL_MODE_NONE)
-                                            .setVertexShader("src/shaders/fullscreen.vert.spv")
-                                            .setFragmentShader("src/shaders/fullscreen.frag.spv")
-                                            .Build();
-    }
-}
-void Graphics::createGraphicsPipeline() {    
-    PipelineBuilder builder;
-    if(Gui::getWireframe()) {
-        graphics = builder.setCullMode(VK_CULL_MODE_NONE)
-                                      .setLineWidth(lineWidth)
-                                      .setPolygonMode(VK_POLYGON_MODE_LINE)
-                                      .Build();
-    } else {
-        graphics = builder.setCullMode(VK_CULL_MODE_NONE)
-                                      .setLineWidth(lineWidth)
-                                      .Build();
-    }
+  for(const Agnosia_T::Pipeline& graphics : graphicsHistory) {
+      vkDestroyPipeline(DeviceControl::getDevice(), graphics.pipeline, nullptr);
+      vkDestroyPipelineLayout(DeviceControl::getDevice(), graphics.layout, nullptr);
+  }
+  for(const Agnosia_T::Pipeline& fullscreen : fullscreenHistory) {
+      vkDestroyPipeline(DeviceControl::getDevice(), fullscreen.pipeline, nullptr);
+      vkDestroyPipelineLayout(DeviceControl::getDevice(), fullscreen.layout, nullptr);
+  }
 }
 
 void Graphics::createCommandPool() {
@@ -175,7 +147,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   vkCmdBeginRendering(commandBuffer, &renderInfo);
 
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    graphics.pipeline);
+                    graphicsHistory.front().pipeline);
   VkViewport viewport{};
   viewport.x = 0.0f;
   viewport.y = 0.0f;
@@ -189,11 +161,14 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   scissor.offset = {0, 0};
   scissor.extent = DeviceControl::getSwapChainExtent();
   vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+  vkCmdSetLineWidth(commandBuffer, Gui::getLineWidth());
+
   int texID = 0;
   for (Model *model : Model::getInstances()) {
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            graphics.layout, 0, 1, &Buffers::getDescriptorSet(),
+                            graphicsHistory.front().layout, 0, 1, &Buffers::getDescriptorSet(),
                             0, nullptr);
 
     Agnosia_T::GPUPushConstants pushConsts;
@@ -223,7 +198,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
     // simply flips the sign.
     pushConsts.proj[1][1] *= -1;
 
-    vkCmdPushConstants(commandBuffer, graphics.layout, VK_SHADER_STAGE_ALL, 0,
+    vkCmdPushConstants(commandBuffer, graphicsHistory.front().layout, VK_SHADER_STAGE_ALL, 0,
                        sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
 
     vkCmdBindIndexBuffer(commandBuffer, model->getBuffers().indexBuffer.buffer,
@@ -236,7 +211,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   
 
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    fullscreen.pipeline);
+                    fullscreenHistory.front().pipeline);
   vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
@@ -277,6 +252,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
     throw std::runtime_error("failed to record command buffer!");
   }
+  
 }
 
 float *Graphics::getCamPos() { return camPos; }
@@ -285,4 +261,11 @@ float *Graphics::getCenterPos() { return centerPos; }
 float *Graphics::getUpDir() { return upDir; }
 float &Graphics::getDepthField() { return depthField; }
 float *Graphics::getDistanceField() { return distanceField; }
-float &Graphics::getLineWidth() { return lineWidth; }
+
+
+void Graphics::addGraphicsPipeline(Agnosia_T::Pipeline pipeline) {
+    graphicsHistory.push_front(pipeline);
+}
+void Graphics::addFullscreenPipeline(Agnosia_T::Pipeline pipeline) {
+    fullscreenHistory.push_front(pipeline);
+}

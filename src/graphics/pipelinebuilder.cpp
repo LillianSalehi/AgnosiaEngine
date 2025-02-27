@@ -1,4 +1,5 @@
 #include "pipelinebuilder.h"
+#include <vulkan/vulkan_core.h>
 
 static std::vector<char> readFile(const std::string &filename) {
   std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -37,10 +38,10 @@ PipelineBuilder::PipelineBuilder() : vertexShader("src/shaders/base.vert.spv"),
                                      fragmentShader("src/shaders/base.frag.spv"),
                                      iaTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
                                      iaPrimitiveRestartEnable(VK_FALSE),
+                                     rDepthBiasClamp(0.0f),
                                      rDepthClampEnable(VK_FALSE),
                                      rRasterizerDiscardEnable(VK_FALSE),
                                      rPolygonMode(VK_POLYGON_MODE_FILL),
-                                     rLineWidth(1.0f),
                                      rCullMode(VK_CULL_MODE_FRONT_BIT),
                                      rFrontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE),
                                      rDepthBiasEnable(VK_FALSE),
@@ -52,7 +53,8 @@ PipelineBuilder::PipelineBuilder() : vertexShader("src/shaders/base.vert.spv"),
                                      dsDepthWriteEnable(VK_TRUE),
                                      dsDepthCompareOp(VK_COMPARE_OP_LESS),
                                      dsDepthBoundsTestEnable(VK_FALSE),
-                                     dsStencilTestEnable(VK_FALSE) {}
+                                     dsStencilTestEnable(VK_FALSE)
+                                     {}
                         
     PipelineBuilder& PipelineBuilder::setVertexShader(const std::string& vertexShader) {
       this->vertexShader = vertexShader;
@@ -109,11 +111,7 @@ PipelineBuilder::PipelineBuilder() : vertexShader("src/shaders/base.vert.spv"),
       this->rDepthBiasSlopeFactor = slopeFactor;
       return *this;
     }
-    PipelineBuilder& PipelineBuilder::setLineWidth(float lineWidth) {
-      this->rLineWidth = lineWidth;
-      return *this;
-    }
-    PipelineBuilder& PipelineBuilder::setBlend(VkBool32 enableBlending) {
+     PipelineBuilder& PipelineBuilder::setBlend(VkBool32 enableBlending) {
       this->cbBlendEnable = enableBlending;
       return *this;
     }
@@ -171,7 +169,7 @@ PipelineBuilder::PipelineBuilder() : vertexShader("src/shaders/base.vert.spv"),
       VkPipelineLayout pipelineLayout;
       VkPipeline pipeline;
       
-      const std::vector<VkDynamicState> DYNAMICSTATES = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+      const std::vector<VkDynamicState> DYNAMICSTATES = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_LINE_WIDTH};
                                            
       auto vertShader = readFile(this->vertexShader);
       auto fragShader = readFile(this->fragmentShader);
@@ -192,7 +190,7 @@ PipelineBuilder::PipelineBuilder() : vertexShader("src/shaders/base.vert.spv"),
         .pName = "main"
       };
       VkPipelineVertexInputStateCreateInfo vertexInfo {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_DIVISOR_STATE_CREATE_INFO,
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
       };
       VkPipelineRasterizationStateCreateInfo rasterizer {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -206,7 +204,6 @@ PipelineBuilder::PipelineBuilder() : vertexShader("src/shaders/base.vert.spv"),
         .depthBiasConstantFactor = this->rDepthBiasConstantFactor,
         .depthBiasClamp = this->rDepthBiasClamp,
         .depthBiasSlopeFactor = this->rDepthBiasSlopeFactor,
-        .lineWidth = this->rLineWidth
         
       };       
       VkPipelineShaderStageCreateInfo fragShaderInfo{

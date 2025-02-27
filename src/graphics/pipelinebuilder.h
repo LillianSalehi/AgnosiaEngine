@@ -29,7 +29,6 @@ class PipelineBuilder {
     float rDepthBiasConstantFactor;
     float rDepthBiasClamp;
     float rDepthBiasSlopeFactor;
-    float rLineWidth;
     // Color Blending //
     VkBool32 cbBlendEnable;
     VkColorComponentFlags cbColorWriteMask;
@@ -61,7 +60,6 @@ class PipelineBuilder {
     PipelineBuilder& setDepthBiasConstantFactor(float constFactor);
     PipelineBuilder& setDepthBiasClamp(float depthBiasClamp);
     PipelineBuilder& setDepthBiasSlopeFactor(float slopeFactor);
-    PipelineBuilder& setLineWidth(float lineWidth);
     PipelineBuilder& setBlend(VkBool32 enableBlending);
     PipelineBuilder& setColorWriteMask(VkColorComponentFlags colorWriteMask);
     PipelineBuilder& setLogicOp(VkBool32 logicOpEnable);

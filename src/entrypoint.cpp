@@ -5,8 +5,11 @@
 #include "graphics/graphicspipeline.h"
 
 #include "graphics/model.h"
+#include "graphics/pipelinebuilder.h"
 #include "graphics/render.h"
 #include "graphics/texture.h"
+#include "types.h"
+#include <vulkan/vulkan_core.h>
 
 #define VK_NO_PROTOTYPES
 #include "volk.h"
@@ -22,6 +25,7 @@ VkInstance vulkaninstance;
 GLFWwindow *window;
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
+
 
 // Getters and Setters!
 void EntryApp::setFramebufferResized(bool setter) {
@@ -105,6 +109,7 @@ void initAgnosia() {
                 glm::vec3(1.0f, -3.0f, -1.0f));
 }
 void initVulkan() {
+  
   // Initialize volk and continue if successful.
   volkInitialize();
   // Initialize vulkan and set up pipeline.
@@ -118,8 +123,20 @@ void initVulkan() {
   Model::createMemoryAllocator(vulkaninstance);
   DeviceControl::createImageViews();
   Buffers::createDescriptorSetLayout();
-  Graphics::createGraphicsPipeline();
-  Graphics::createFullscreenPipeline();
+  
+  PipelineBuilder builder;
+    
+  Agnosia_T::Pipeline graphics = builder.setCullMode(VK_CULL_MODE_NONE)
+                                        .Build();
+
+  Agnosia_T::Pipeline  fullscreen = builder.setCullMode(VK_CULL_MODE_NONE)
+                                    .setVertexShader("src/shaders/fullscreen.vert.spv")
+                                    .setFragmentShader("src/shaders/fullscreen.frag.spv")
+                                    .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
+                                    .Build();
+                                      
+  Graphics::addGraphicsPipeline(graphics);
+  Graphics::addFullscreenPipeline(fullscreen);
   Graphics::createCommandPool();
   // Image creation MUST be after command pool, because command
   // buffers.

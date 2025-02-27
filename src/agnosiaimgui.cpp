@@ -3,15 +3,26 @@
 #include "entrypoint.h"
 #include "graphics/buffers.h"
 #include "graphics/graphicspipeline.h"
+#include "graphics/pipelinebuilder.h"
 #include "graphics/texture.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
+#include "types.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <stdexcept>
+#include <vulkan/vulkan_core.h>
+
+
+PipelineBuilder builder;
+Agnosia_T::Pipeline graphicsSolid;
+Agnosia_T::Pipeline graphicsWireframe;
+Agnosia_T::Pipeline fullscreenSolid;
+Agnosia_T::Pipeline fullscreenWireframe;
 
 VkDescriptorPool imGuiDescriptorPool;
 static bool wireframe = false;
+float lineWidth = 1.0f;
 
 void initTransformsWindow() {
   if (ImGui::TreeNode("Model Transforms")) {
@@ -36,15 +47,18 @@ void initTransformsWindow() {
 void initRenderWindow() {
   if(ImGui::Checkbox("Wireframe?", &wireframe)) {
     // Rebuild graphics pipeline if setting is changed.
-    Graphics::destroyPipelines();
-    Graphics::createGraphicsPipeline();
-    Graphics::createFullscreenPipeline();
+
+    if(wireframe) {
+      Graphics::addGraphicsPipeline(graphicsWireframe);
+      Graphics::addFullscreenPipeline(fullscreenWireframe);
+      
+    } else {                                  
+      Graphics::addGraphicsPipeline(graphicsSolid);
+      Graphics::addFullscreenPipeline(fullscreenSolid);
+    }    
   }
-  if(ImGui::DragFloat("Line Width", &Graphics::getLineWidth())) {
-    Graphics::destroyPipelines();
-    Graphics::createGraphicsPipeline();
-    Graphics::createFullscreenPipeline();
-  }
+  ImGui::DragFloat("Line Width", &lineWidth, 1.0f, 1.0f, 64.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
+  
   for(Model *model : Model::getInstances()) {
     
     if(ImGui::Button(("Kill " + model->getID()).c_str())) {
@@ -149,7 +163,32 @@ void Gui::initImgui(VkInstance instance) {
   };
 
   ImGui_ImplVulkan_Init(&initInfo);
+
+  
+  graphicsSolid = builder.setCullMode(VK_CULL_MODE_NONE)
+                                     .setPolygonMode(VK_POLYGON_MODE_FILL)
+                                     .Build();
+  graphicsWireframe = builder.setCullMode(VK_CULL_MODE_NONE)
+                                     .setPolygonMode(VK_POLYGON_MODE_LINE)
+                                     .Build();
+
+  fullscreenSolid = builder.setCullMode(VK_CULL_MODE_NONE)
+                                  .setVertexShader("src/shaders/fullscreen.vert.spv")
+                                  .setFragmentShader("src/shaders/fullscreen.frag.spv")
+                                  .setPolygonMode(VK_POLYGON_MODE_FILL)
+                                  .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
+                                  .Build();
+  
+  fullscreenWireframe = builder.setCullMode(VK_CULL_MODE_NONE)
+                                  .setVertexShader("src/shaders/fullscreen.vert.spv")
+                                  .setFragmentShader("src/shaders/fullscreen.frag.spv")
+                                  .setPolygonMode(VK_POLYGON_MODE_LINE)
+                                  .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
+                                  .Build();
 }
 bool Gui::getWireframe() {
   return wireframe;
+}
+float Gui::getLineWidth() {
+  return lineWidth;
 }
