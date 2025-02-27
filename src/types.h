@@ -19,7 +19,10 @@ public:
              color == other.color && uv == other.uv;
     }
   };
-
+  struct Pipeline {
+    VkPipeline pipeline;
+    VkPipelineLayout layout;
+  };
   struct AllocatedBuffer {
     VkBuffer buffer;
     VmaAllocation allocation;
