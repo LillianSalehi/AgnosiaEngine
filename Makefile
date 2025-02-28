@@ -23,14 +23,10 @@ gdb: $(BIN)
 .PHONY: debug
 debug: $(BIN)
 	./$(BIN)
-
-.PHONY: dep
-dep: 
-	sudo pacman -S gcc glfw glm shaderc libxi libxxf86vm gdb shaderc stb
+	
 .PHONY: info
 info: 
 	@echo "make:		Build executable"
-	@echo "make dep: 	Make all required dependencies"
 	@echo "make debug: 	Make with Debug hooked in"
 	@echo "make gdb:	Make with GDB hooked in"
 	@echo "make clean:	Clean all files"
