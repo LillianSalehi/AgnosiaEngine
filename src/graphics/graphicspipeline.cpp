@@ -165,38 +165,41 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   vkCmdSetLineWidth(commandBuffer, Gui::getLineWidth());
 
   int texID = 0;
+  Agnosia_T::GPUPushConstants pushConsts;
+  
+  pushConsts.model =
+    glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+
+  pushConsts.view =
+    glm::lookAt(glm::vec3(camPos[0], camPos[1], camPos[2]),
+                glm::vec3(centerPos[0], centerPos[1], centerPos[2]),
+                glm::vec3(upDir[0], upDir[1], upDir[2]));
+
+  pushConsts.proj =
+    glm::perspective(glm::radians(depthField),
+                     DeviceControl::getSwapChainExtent().width /
+                     (float)DeviceControl::getSwapChainExtent().height,
+                     distanceField[0], distanceField[1]);
+    
+  // GLM was created for OpenGL, where the Y coordinate was inverted. This
+  // simply flips the sign.
+  pushConsts.proj[1][1] *= -1;
+  pushConsts.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
+  pushConsts.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
+  // TODO: write defaults and check in shade rmaybe to prevent weird behavior?
   for (Model *model : Model::getInstances()) {
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             graphicsHistory.front().layout, 0, 1, &Buffers::getDescriptorSet(),
                             0, nullptr);
 
-    Agnosia_T::GPUPushConstants pushConsts;
+    
     pushConsts.vertexBuffer = model->getBuffers().vertexBufferAddress;
     pushConsts.objPosition = model->getPos();
-    pushConsts.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
-    pushConsts.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
     pushConsts.textureID = texID;
     pushConsts.ambient = model->getMaterial().getAmbient();
     pushConsts.spec = model->getMaterial().getSpecular();
     pushConsts.shine = model->getMaterial().getShininess();
-
-    pushConsts.model =
-        glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
-
-    pushConsts.view =
-        glm::lookAt(glm::vec3(camPos[0], camPos[1], camPos[2]),
-                    glm::vec3(centerPos[0], centerPos[1], centerPos[2]),
-                    glm::vec3(upDir[0], upDir[1], upDir[2]));
-
-    pushConsts.proj =
-        glm::perspective(glm::radians(depthField),
-                         DeviceControl::getSwapChainExtent().width /
-                             (float)DeviceControl::getSwapChainExtent().height,
-                         distanceField[0], distanceField[1]);
-    // GLM was created for OpenGL, where the Y coordinate was inverted. This
-    // simply flips the sign.
-    pushConsts.proj[1][1] *= -1;
 
     vkCmdPushConstants(commandBuffer, graphicsHistory.front().layout, VK_SHADER_STAGE_ALL, 0,
                        sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
@@ -212,6 +215,11 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     fullscreenHistory.front().pipeline);
+  
+  if(Model::getInstances().empty()) {
+      vkCmdPushConstants(commandBuffer, fullscreenHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
+  }
+
   vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
   ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);

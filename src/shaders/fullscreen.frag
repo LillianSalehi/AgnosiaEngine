@@ -12,6 +12,5 @@ void main() {
   // The reason we need to apply an inverse matrix even though technically we never applied it already is because of how we
   // import the vertices, without buffers they come in as clip space vertices, position set using NDC.
   vec4 worldSpaceUV = inverse(PushConstants.proj * PushConstants.view * PushConstants.model) * vec4(texCoord, 1.0f, 1.0f);
-  outColor = vec4(worldSpaceUV.x, worldSpaceUV.y, worldSpaceUV.z, 1.0f);
-  
+  outColor = vec4(worldSpaceUV.x, worldSpaceUV.y, worldSpaceUV.z, 1.0f);  
 }
