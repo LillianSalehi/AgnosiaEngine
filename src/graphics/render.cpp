@@ -97,8 +97,8 @@ void Render::drawFrame() {
   result = vkQueuePresentKHR(DeviceControl::getPresentQueue(), &presentInfo);
 
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
-      EntryApp::getInstance().getFramebufferResized()) {
-    EntryApp::getInstance().setFramebufferResized(false);
+      EntryApp::getInstance()->getFramebufferResized()) {
+    EntryApp::getInstance()->setFramebufferResized(false);
     recreateSwapChain();
   } else if (result != VK_SUCCESS) {
     throw std::runtime_error("failed to present swap chain image! (Render.cpp:107)");

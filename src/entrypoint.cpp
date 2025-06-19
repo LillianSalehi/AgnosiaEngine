@@ -26,6 +26,8 @@ GLFWwindow *window;
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
+EntryApp* EntryApp::instance_{nullptr};
+std::mutex EntryApp::mutex_;
 
 // Getters and Setters!
 void EntryApp::setFramebufferResized(bool setter) {
@@ -45,28 +47,21 @@ void initWindow() {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   // Settings for the window are set, create window reference.
   window = glfwCreateWindow(WIDTH, HEIGHT, "Trimgles :o", nullptr, nullptr);
-  glfwSetWindowUserPointer(window, &EntryApp::getInstance());
+  glfwSetWindowUserPointer(window, EntryApp::getInstance());
   glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
 void createInstance() {
 
   // Set application info for the vulkan instance!
-  VkApplicationInfo appInfo{};
-
-  appInfo.sType =
-      VK_STRUCTURE_TYPE_APPLICATION_INFO;     // Tell vulkan that appInfo is a
-                                              // Application Info structure
-  appInfo.pApplicationName = "Agnosia";       // Give the struct a name to use
-  appInfo.applicationVersion = VK_MAKE_VERSION(
-      1, 0, 0); // Create a Major Minor Patch version number for the application!
-  appInfo.pEngineName =
-      "Agnosia Engine"; // Give an internal name for the engine running
-  appInfo.engineVersion = VK_MAKE_VERSION(
-      1, 0, 0); // Similar to the App version, give vulkan an *engine* version
-  appInfo.apiVersion =
-      VK_API_VERSION_1_3; // Tell vulkan what the highest API version we will
-                          // allow this program to run on
+  VkApplicationInfo appInfo = {
+    .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+    .pApplicationName = "Agnosia",
+    .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+    .pEngineName = "Agnosia Engine",
+    .engineVersion = VK_MAKE_VERSION(1, 0, 0),
+    .apiVersion = VK_API_VERSION_1_4,
+  };
 
   // This gets a little weird, Vulkan is platform agnostic, so you need to
   // figure out what extensions to interface with the current system are needed
@@ -79,34 +74,25 @@ void createInstance() {
   glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
   std::vector<const char *> extensions(glfwExtensions,
                                        glfwExtensions + glfwExtensionCount);
-
-  VkInstanceCreateInfo createInfo{}; // Define parameters of new vulkan instance
-  createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-  createInfo.pApplicationInfo = &appInfo;
-  createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-  createInfo.ppEnabledExtensionNames = extensions.data();
+  VkInstanceCreateInfo createInfo = {
+    .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+    .pApplicationInfo = &appInfo,
+    .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
+    .ppEnabledExtensionNames = extensions.data(),
+  };
 
   if (vkCreateInstance(&createInfo, nullptr, &vulkaninstance) != VK_SUCCESS) {
     throw std::runtime_error("failed to create instance! (Entrypoint.cpp:87)");
   }
 }
 void initAgnosia() {
-  Material *sphereMaterial = new Material(
-      "sphereMaterial", "assets/textures/checkermap.png", 0.1f, 1.0f, 32);
-  Material *stanfordDragonMaterial =
-      new Material("stanfordDragonMaterial", "assets/textures/checkermap.png",
-                   0.1f, 1.0f, 256);
-  Material *teapotMaterial = new Material(
-      "teapotMaterial", "assets/textures/checkermap.png", 0.1f, 1.0f, 128);
-  Model *uvSphere =
-      new Model("uvSphere", *sphereMaterial, "assets/models/UVSphere.obj",
-                glm::vec3(0.0f, 0.0f, 0.0f));
-  Model *stanfordDragon = new Model("stanfordDragon", *stanfordDragonMaterial,
-                                    "assets/models/StanfordDragon800k.obj",
-                                    glm::vec3(0.0f, 2.0f, 0.0f));
-  Model *teapot =
-      new Model("teapot", *teapotMaterial, "assets/models/teapot.obj",
-                glm::vec3(1.0f, -3.0f, -1.0f));
+  Material *sphereMaterial = new Material("sphereMaterial", "assets/textures/checkermap.png", 0.1f, 1.0f, 32);
+  Material *stanfordDragonMaterial = new Material("stanfordDragonMaterial", "assets/textures/checkermap.png", 0.1f, 1.0f, 256);
+  Material *teapotMaterial = new Material("teapotMaterial", "assets/textures/checkermap.png", 0.1f, 1.0f, 128);
+
+  Model *uvSphere = new Model("uvSphere", *sphereMaterial, "assets/models/UVSphere.obj", glm::vec3(0.0f, 0.0f, 0.0f));
+  Model *stanfordDragon = new Model("stanfordDragon", *stanfordDragonMaterial, "assets/models/StanfordDragon800k.obj", glm::vec3(0.0f, 2.0f, 0.0f));
+  Model *teapot = new Model("teapot", *teapotMaterial, "assets/models/teapot.obj", glm::vec3(1.0f, -3.0f, -1.0f));
 }
 void initVulkan() {
   
@@ -129,7 +115,7 @@ void initVulkan() {
   Agnosia_T::Pipeline graphics = builder.setCullMode(VK_CULL_MODE_NONE)
                                         .Build();
 
-  Agnosia_T::Pipeline  fullscreen = builder.setCullMode(VK_CULL_MODE_NONE)
+  Agnosia_T::Pipeline fullscreen = builder.setCullMode(VK_CULL_MODE_NONE)
                                     .setVertexShader("src/shaders/fullscreen.vert.spv")
                                     .setFragmentShader("src/shaders/fullscreen.frag.spv")
                                     .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
@@ -139,7 +125,7 @@ void initVulkan() {
   Graphics::addFullscreenPipeline(fullscreen);
   Graphics::createCommandPool();
   // Image creation MUST be after command pool, because command
-  // buffers.
+  // buffers are utilized.
   Model::populateModels();
   Texture::createMaterialTextures(Model::getInstances());
   Texture::createColorResources();
@@ -188,18 +174,23 @@ void cleanup() {
   glfwTerminate();
 }
 
-// External Functions
-EntryApp &EntryApp::getInstance() {
-  static EntryApp instance;
-  return instance;
+// Thread safe singleton fetching with mutex
+EntryApp* EntryApp::getInstance() {
+
+  std::lock_guard<std::mutex> lock(mutex_);
+  if(instance_ == nullptr) {
+    instance_ = new EntryApp();
+  }
+  return instance_;
 }
+
 EntryApp::EntryApp() : initialized(false), framebufferResized(false) {}
 
 void EntryApp::initialize() { initialized = true; }
 bool EntryApp::isInitialized() const { return initialized; }
 GLFWwindow *EntryApp::getWindow() { return window; }
-void EntryApp::run() {
 
+void EntryApp::run() {
   initWindow();
   initAgnosia();
   initVulkan();

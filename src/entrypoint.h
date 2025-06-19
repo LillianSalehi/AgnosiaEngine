@@ -1,10 +1,10 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+#include <mutex>
 
 class EntryApp {
 public:
-  static EntryApp &getInstance();
   void initialize();
   bool isInitialized() const;
   void run();
@@ -12,11 +12,19 @@ public:
   bool getFramebufferResized() const;
   static GLFWwindow *getWindow();
 
-private:
-  EntryApp();
-
-  EntryApp(const EntryApp &) = delete;
+  // Prevent singleton from being cloned and assigned.
+  EntryApp(EntryApp &) = delete;
   void operator=(const EntryApp &) = delete;
+  
+  static EntryApp* getInstance();
+
+protected:
+  EntryApp();
+  ~EntryApp();
+  
+private:
+  static EntryApp* instance_;
+  static std::mutex mutex_;
 
   bool framebufferResized;
   bool initialized;
