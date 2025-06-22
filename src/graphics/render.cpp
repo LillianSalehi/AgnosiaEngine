@@ -1,14 +1,15 @@
 
+#include <cstddef>
 #include <stdexcept>
-
 #include "../devicelibrary.h"
 #include "../entrypoint.h"
 #include "buffers.h"
 #include "graphicspipeline.h"
 #include "render.h"
 #include "texture.h"
+#include "../utils.h"
 
-uint32_t currentFrame;
+uint32_t currentFrame = 0;
 std::vector<VkSemaphore> imageAvailableSemaphores;
 std::vector<VkSemaphore> renderFinishedSemaphores;
 std::vector<VkFence> inFlightFences;
@@ -42,67 +43,55 @@ void recreateSwapChain() {
 void Render::drawFrame() {
   vkWaitForFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame],
                   VK_TRUE, UINT64_MAX);
-
   vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
 
   uint32_t imageIndex;
-  VkResult result = vkAcquireNextImageKHR(
-      DeviceControl::getDevice(), DeviceControl::getSwapChain(), UINT64_MAX,
-      imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+  VkSemaphore acquireSemaphore = imageAvailableSemaphores[currentFrame];
+  VkResult result = vkAcquireNextImageKHR(DeviceControl::getDevice(), DeviceControl::getSwapChain(), UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex);
   if (result == VK_ERROR_OUT_OF_DATE_KHR) {
     recreateSwapChain();
     return;
-  } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-    throw std::runtime_error("failed to acquire swap chain image! (Render.cpp:59)");
   }
+  VK_CHECK(result);
 
+  VkSemaphore submitSemaphore = renderFinishedSemaphores[imageIndex];
+    
   vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
-
-  vkResetCommandBuffer(Buffers::getCommandBuffers()[currentFrame],
-                       /*VkCommandBufferResetFlagBits*/ 0);
-  Graphics::recordCommandBuffer(Buffers::getCommandBuffers()[currentFrame],
-                                imageIndex);
-  VkSubmitInfo submitInfo{};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-  VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
+  vkResetCommandBuffer(Buffers::getCommandBuffers()[currentFrame], 0);
+  Graphics::recordCommandBuffer(Buffers::getCommandBuffers()[currentFrame], imageIndex);
+  
   VkPipelineStageFlags waitStages[] = {
       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-  submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores = waitSemaphores;
-  submitInfo.pWaitDstStageMask = waitStages;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &Buffers::getCommandBuffers()[currentFrame];
+    
+  VkSubmitInfo submitInfo = {
+    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores = &acquireSemaphore,
+    .pWaitDstStageMask = waitStages,
+    .commandBufferCount = 1,
+    .pCommandBuffers = &Buffers::getCommandBuffers()[currentFrame],
+    .signalSemaphoreCount = 1,
+    .pSignalSemaphores = &submitSemaphore,
+  };
 
-  VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
-  submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores = signalSemaphores;
-
-  if (vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo,
-                    inFlightFences[currentFrame]) != VK_SUCCESS) {
-    throw std::runtime_error("failed to submit draw command buffer! (Render.cpp:86)");
-  }
-
-  VkPresentInfoKHR presentInfo{};
-  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-  presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores = signalSemaphores;
-
-  VkSwapchainKHR swapChains[] = {DeviceControl::getSwapChain()};
-  presentInfo.swapchainCount = 1;
-  presentInfo.pSwapchains = swapChains;
-  presentInfo.pImageIndices = &imageIndex;
+  VK_CHECK(vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]));
+  
+  VkPresentInfoKHR presentInfo = {
+    .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+    .waitSemaphoreCount = 1,
+    .pWaitSemaphores = &renderFinishedSemaphores[imageIndex],
+    .swapchainCount = 1,
+    .pSwapchains = &DeviceControl::getSwapChain(),
+    .pImageIndices = &imageIndex,
+  };
 
   result = vkQueuePresentKHR(DeviceControl::getPresentQueue(), &presentInfo);
-
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
       EntryApp::getInstance()->getFramebufferResized()) {
     EntryApp::getInstance()->setFramebufferResized(false);
     recreateSwapChain();
-  } else if (result != VK_SUCCESS) {
-    throw std::runtime_error("failed to present swap chain image! (Render.cpp:107)");
   }
+  VK_CHECK(result);
   currentFrame = (currentFrame + 1) % Buffers::getMaxFramesInFlight();
 }
 
@@ -132,7 +121,7 @@ void Render::drawFrame() {
 
 void Render::createSyncObject() {
   imageAvailableSemaphores.resize(Buffers::getMaxFramesInFlight());
-  renderFinishedSemaphores.resize(Buffers::getMaxFramesInFlight());
+  renderFinishedSemaphores.resize(DeviceControl::getSwapChainImages().size());
   inFlightFences.resize(Buffers::getMaxFramesInFlight());
 
   VkSemaphoreCreateInfo semaphoreInfo{};
@@ -143,14 +132,16 @@ void Render::createSyncObject() {
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
   for (size_t i = 0; i < Buffers::getMaxFramesInFlight(); i++) {
-    if (vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr,
-                          &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-        vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr,
-                          &renderFinishedSemaphores[i]) != VK_SUCCESS ||
-        vkCreateFence(DeviceControl::getDevice(), &fenceInfo, nullptr,
-                      &inFlightFences[i]) != VK_SUCCESS) {
+    if (vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
+        vkCreateFence(DeviceControl::getDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create semaphores! (Render.cpp:155)");
     }
+  }
+  for(size_t i = 0; i < DeviceControl::getSwapChainImages().size(); i++) {
+    if(vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+      throw std::runtime_error("Failed to fuck your mom (Render.cpp:152)");
+    }
+    
   }
 }
 void Render::destroyFenceSemaphores() {

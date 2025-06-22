@@ -33,7 +33,9 @@ std::mutex EntryApp::mutex_;
 void EntryApp::setFramebufferResized(bool setter) {
   framebufferResized = setter;
 }
+
 bool EntryApp::getFramebufferResized() const { return framebufferResized; }
+
 static void framebufferResizeCallback(GLFWwindow *window, int width,
                                       int height) {
   auto app = reinterpret_cast<EntryApp *>(glfwGetWindowUserPointer(window));
@@ -52,7 +54,6 @@ void initWindow() {
 }
 
 void createInstance() {
-
   // Set application info for the vulkan instance!
   VkApplicationInfo appInfo = {
     .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,

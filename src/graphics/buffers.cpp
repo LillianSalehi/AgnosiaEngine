@@ -4,13 +4,11 @@
 #include "model.h"
 
 #include <cstdint>
-#include <cstring>
 
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
 
 std::vector<VkDescriptorSetLayout> modelSetLayouts;
 
@@ -141,8 +139,8 @@ void Buffers::createDescriptorSet(std::vector<Model *> models) {
 
   for (int i = 0; i < models.size(); i++) {
     imageInfoSet[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfoSet[i].imageView = models[i]->getMaterial().getDiffuseImgView();
-    imageInfoSet[i].sampler = models[i]->getMaterial().getDiffuseSampler();
+    imageInfoSet[i].imageView = models[i]->getMaterial().getDiffuseTexture().imageView;
+    imageInfoSet[i].sampler = models[i]->getMaterial().getDiffuseTexture().sampler;
   }
 
   std::vector<VkWriteDescriptorSet> descriptorWrites{};

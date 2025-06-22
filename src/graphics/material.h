@@ -2,12 +2,15 @@
 #include <glm/fwd.hpp>
 #define VK_NO_PROTOTYPES
 #include "volk.h"
+#include "../types.h"
 #include <string>
 
 class Material {
 protected:
   std::string ID;
   std::string diffusePath;
+
+  Agnosia_T::Texture diffuseTexture;
 
   VkImage diffuseImage;
   VkImageView diffuseImageView;
@@ -24,9 +27,7 @@ public:
 
   std::string getDiffusePath() const;
 
-  VkImage &getDiffuseImage();
-  VkImageView &getDiffuseImgView();
-  VkSampler &getDiffuseSampler();
+  Agnosia_T::Texture &getDiffuseTexture();
 
   float getAmbient();
   float getSpecular();

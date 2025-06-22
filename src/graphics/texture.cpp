@@ -327,25 +327,25 @@ void Texture::createMaterialTextures(std::vector<Model *> models) {
                     VK_IMAGE_USAGE_TRANSFER_DST_BIT |
                     VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                model->getMaterial().getDiffuseImage(), textureImageMemory);
+                model->getMaterial().getDiffuseTexture().image, textureImageMemory);
 
-    transitionImageLayout(model->getMaterial().getDiffuseImage(),
+    transitionImageLayout(model->getMaterial().getDiffuseTexture().image,
                           VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-    copyBufferToImage(stagingBuffer, model->getMaterial().getDiffuseImage(),
+    copyBufferToImage(stagingBuffer, model->getMaterial().getDiffuseTexture().image,
                       static_cast<uint32_t>(textureWidth),
                       static_cast<uint32_t>(textureHeight));
 
     vkDestroyBuffer(DeviceControl::getDevice(), stagingBuffer, nullptr);
     vkFreeMemory(DeviceControl::getDevice(), stagingBufferMemory, nullptr);
 
-    generateMipmaps(model->getMaterial().getDiffuseImage(),
+    generateMipmaps(model->getMaterial().getDiffuseTexture().image,
                     VK_FORMAT_R8G8B8A8_SRGB, textureWidth, textureHeight,
                     mipLevels);
     // Create a texture image view, which is a struct of information about the
     // image.
     model->getMaterial().setDiffuseView(DeviceControl::createImageView(
-        model->getMaterial().getDiffuseImage(), VK_FORMAT_R8G8B8A8_SRGB,
+        model->getMaterial().getDiffuseTexture().image, VK_FORMAT_R8G8B8A8_SRGB,
         VK_IMAGE_ASPECT_COLOR_BIT, mipLevels));
 
     // Create a sampler to access and parse the texture object.
@@ -391,7 +391,7 @@ void Texture::createMaterialTextures(std::vector<Model *> models) {
     samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
     if (vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr,
-                        &model->getMaterial().getDiffuseSampler()) !=
+                        &model->getMaterial().getDiffuseTexture().sampler) !=
         VK_SUCCESS) {
       throw std::runtime_error("failed to create texture sampler!");
     }

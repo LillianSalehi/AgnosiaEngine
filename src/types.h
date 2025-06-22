@@ -6,6 +6,11 @@
 
 class Agnosia_T {
 public:
+  struct Texture {
+    VkImage image;
+    VkImageView imageView;
+    VkSampler sampler;
+  };
   struct Vertex {
     // This defines what a vertex is!
     // We control the position, color and texture coordinate here!
@@ -33,6 +38,7 @@ public:
     AllocatedBuffer vertexBuffer;
     VkDeviceAddress vertexBufferAddress;
   };
+
   struct GPUPushConstants {
     VkDeviceAddress vertexBuffer;
     glm::vec3 objPosition;

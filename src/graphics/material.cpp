@@ -8,17 +8,18 @@ Material::Material(const std::string &matID, const std::string &difPath,
 std::string Material::getID() const { return ID; }
 std::string Material::getDiffusePath() const { return diffusePath; }
 
-VkImage &Material::getDiffuseImage() { return this->diffuseImage; }
-VkImageView &Material::getDiffuseImgView() { return this->diffuseImageView; }
-VkSampler &Material::getDiffuseSampler() { return this->diffuseSampler; }
+Agnosia_T::Texture &Material::getDiffuseTexture() {
+  return this->diffuseTexture;
+}
 
 float Material::getAmbient() { return this->ambient; }
 float Material::getSpecular() { return this->specular; }
 float Material::getShininess() { return this->shine; }
-void Material::setDiffuseImage(VkImage image) { this->diffuseImage = image; }
+
+void Material::setDiffuseImage(VkImage image) { this->diffuseTexture.image = image; }
 void Material::setDiffuseView(VkImageView imageView) {
-  this->diffuseImageView = imageView;
+  this->diffuseTexture.imageView = imageView;
 }
 void Material::setDiffuseSampler(VkSampler sampler) {
-  this->diffuseSampler = sampler;
+  this->diffuseTexture.sampler = sampler;
 }

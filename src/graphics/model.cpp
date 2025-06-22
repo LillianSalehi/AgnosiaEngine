@@ -225,14 +225,16 @@ void Model::populateModels() {
     model->indiceCount = indices.size();
   }
 }
+
+// TODO: Modify this and the material definition to allow for a fetch into all active textures
 void Model::destroyTextures() {
   for (Model *model : Model::getInstances()) {
     vkDestroySampler(DeviceControl::getDevice(),
-                     model->getMaterial().getDiffuseSampler(), nullptr);
+                     model->getMaterial().getDiffuseTexture().sampler, nullptr);
     vkDestroyImageView(DeviceControl::getDevice(),
-                       model->getMaterial().getDiffuseImgView(), nullptr);
+                       model->getMaterial().getDiffuseTexture().imageView, nullptr);
     vkDestroyImage(DeviceControl::getDevice(),
-                   model->getMaterial().getDiffuseImage(), nullptr);
+                   model->getMaterial().getDiffuseTexture().image, nullptr);
   }
 }
 void Model::destroyModel(const std::string &modelID) {

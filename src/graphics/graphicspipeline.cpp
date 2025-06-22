@@ -14,9 +14,6 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 
-
-#include <vulkan/vulkan_core.h>
-
 float lightPos[4] = {5.0f, 5.0f, 5.0f, 0.44f};
 float camPos[4] = {3.0f, 3.0f, 3.0f, 0.44f};
 float centerPos[4] = {0.0f, 0.0f, 0.0f, 0.44f};

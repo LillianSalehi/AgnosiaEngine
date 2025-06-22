@@ -11,8 +11,6 @@
 #include "types.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
-
 
 PipelineBuilder builder;
 Agnosia_T::Pipeline graphicsSolid;
