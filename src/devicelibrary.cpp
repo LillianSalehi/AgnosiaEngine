@@ -1,4 +1,5 @@
 #include "devicelibrary.h"
+#include "utils.h"
 #include <algorithm>
 #include <limits>
 #include <set>
@@ -70,31 +71,17 @@ DeviceControl::findQueueFamilies(VkPhysicalDevice device) {
   return indices;
 }
 SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
-
-  /* Swap chains are weird ngl, it's another one of those Vulkan platform
-  agnosticity. The swapchain is basically a wrapper for GDI+, DXGI, X11,
-  Wayland, etc. It lets us use the swap chain rather than create a different
-  framebuffer handler for every targeted platform.  Swap chains handle the
-  ownership of buffers before sending them to the presentation engine.  (still
-  no fucking clue how it works though) */
   SwapChainSupportDetails details;
-
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface,
-                                            &details.capabilities);
-
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
   uint32_t formatCount;
   vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-
   if (formatCount != 0) {
     details.formats.resize(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount,
-                                         details.formats.data());
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
   }
 
   uint32_t presentModeCount;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount,
-                                            details.presentModes.data());
-
+  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
   if (presentModeCount != 0) {
     details.presentModes.resize(presentModeCount);
     vkGetPhysicalDeviceSurfacePresentModesKHR(
@@ -106,15 +93,12 @@ SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
 
 bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
   uint32_t extensionCount;
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
-                                       nullptr);
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
   std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount,
-                                       availableExtensions.data());
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 
-  std::set<std::string> requiredExtensions(deviceExtensions.begin(),
-                                           deviceExtensions.end());
+  std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
 
   for (const auto &extension : availableExtensions) {
     requiredExtensions.erase(extension.extensionName);
@@ -152,8 +136,7 @@ bool isDeviceSuitable(VkPhysicalDevice device) {
          supportedFeatures.samplerAnisotropy && indices.isComplete() &&
          extensionSupported && swapChainAdequate;
 }
-// -------------------------------------- Swap Chain Settings
-// ----------------------------------------- //
+// -------------------------------------- Swap Chain Settings ----------------------------------------- //
 VkSurfaceFormatKHR chooseSwapSurfaceFormat(
     const std::vector<VkSurfaceFormatKHR> &availableFormats) {
   // One of three settings we can set, Surface Format controls the color space
@@ -243,8 +226,7 @@ VkSampleCountFlagBits getMaxUsableSampleCount() {
 
   return VK_SAMPLE_COUNT_1_BIT;
 }
-// --------------------------------------- External Functions
-// ----------------------------------------- //
+// --------------------------------------- External Functions ----------------------------------------- //
 void DeviceControl::pickPhysicalDevice(VkInstance &instance) {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -273,10 +255,7 @@ void DeviceControl::destroySurface(VkInstance &instance) {
   vkDestroySurfaceKHR(instance, surface, nullptr);
 }
 void DeviceControl::createSurface(VkInstance &instance, GLFWwindow *window) {
-  if (glfwCreateWindowSurface(instance, window, nullptr, &surface) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("Failed to create window surface! (DeviceLibrary.cpp:278)");
-  }
+  VK_CHECK(glfwCreateWindowSurface(instance, window, nullptr, &surface));
 }
 void DeviceControl::createLogicalDevice() {
   // Describe how many queues we want for a single family (1) here, right now we
@@ -347,10 +326,8 @@ void DeviceControl::createLogicalDevice() {
       static_cast<uint32_t>(deviceExtensions.size());
   createDeviceInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-  if (vkCreateDevice(physicalDevice, &createDeviceInfo, nullptr, &device) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("Failed to create logical device! (DeviceLibrary.cpp:350)");
-  }
+  VK_CHECK(vkCreateDevice(physicalDevice, &createDeviceInfo, nullptr, &device));
+  
   vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
   vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }
@@ -423,10 +400,7 @@ void DeviceControl::createSwapChain(GLFWwindow *window) {
   // it and reference the old one specified here, will revisit in a few days.
   // createSwapChainInfo.oldSwapchain = VK_NULL_HANDLE;
 
-  if (vkCreateSwapchainKHR(device, &createSwapChainInfo, nullptr, &swapChain) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("Failed to create the swap chain! (DeviceLibrary.cpp:426)");
-  }
+  VK_CHECK(vkCreateSwapchainKHR(device, &createSwapChainInfo, nullptr, &swapChain));
 
   vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
   swapChainImages.resize(imageCount);
@@ -456,9 +430,7 @@ VkImageView DeviceControl::createImageView(VkImage image, VkFormat format,
   viewInfo.subresourceRange.levelCount = mipLevels;
 
   VkImageView imageView;
-  if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create image view! (DeviceLibrary.cpp:458)");
-  }
+  VK_CHECK(vkCreateImageView(device, &viewInfo, nullptr, &imageView));
 
   return imageView;
 }
@@ -476,8 +448,7 @@ void DeviceControl::destroyImageViews() {
   }
 }
 
-// --------------------------------------- Getters & Setters
-// ------------------------------------------ //
+// --------------------------------------- Getters & Setters ------------------------------------------ //
 VkFormat &DeviceControl::getImageFormat() { return swapChainImageFormat; }
 VkSwapchainKHR &DeviceControl::getSwapChain() { return swapChain; }
 VkExtent2D &DeviceControl::getSwapChainExtent() { return swapChainExtent; }

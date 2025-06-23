@@ -1,9 +1,10 @@
 
-#include <glm/fwd.hpp>
+
 #define VK_NO_PROTOTYPES
 #include "volk.h"
 #include "../types.h"
 #include <string>
+#include <glm/fwd.hpp>
 
 class Material {
 protected:
@@ -11,10 +12,6 @@ protected:
   std::string diffusePath;
 
   Agnosia_T::Texture diffuseTexture;
-
-  VkImage diffuseImage;
-  VkImageView diffuseImageView;
-  VkSampler diffuseSampler;
 
   float ambient;
   float specular;

@@ -9,7 +9,6 @@
 #include "graphics/render.h"
 #include "graphics/texture.h"
 #include "types.h"
-#include <vulkan/vulkan_core.h>
 
 #define VK_NO_PROTOTYPES
 #include "volk.h"

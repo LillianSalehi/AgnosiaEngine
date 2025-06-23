@@ -1,12 +1,11 @@
 #pragma once
 
-#include <cstdint>
-
 #define VK_NO_PROTOTYPES
+#include "volk.h"
 #include "../types.h"
 #include "model.h"
-#include "volk.h"
 #include <vector>
+#include <cstdint>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 

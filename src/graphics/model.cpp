@@ -3,13 +3,14 @@
 #include <cstdint>
 #include <cstring>
 #include <unordered_map>
+#include <stdexcept>
+#include "../devicelibrary.h"
+#include "../utils.h"
 
 #define TINY_OBJ_IMPLEMENTATION
-#include <stdexcept>
 #include <tiny_obj_loader.h>
 #define GLM_ENABLE_EXPERIMENTAL
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include "../devicelibrary.h"
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
 
@@ -65,10 +66,7 @@ Agnosia_T::AllocatedBuffer createBuffer(size_t allocSize,
       .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT, .usage = memUsage};
 
   Agnosia_T::AllocatedBuffer newBuffer;
-  if (vmaCreateBuffer(_allocator, &bufferInfo, &vmaAllocInfo, &newBuffer.buffer,
-                      &newBuffer.allocation, &newBuffer.info) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate a buffer using VMA!");
-  }
+  VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaAllocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info));
   return newBuffer;
 }
 void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) {

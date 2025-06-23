@@ -1,15 +1,8 @@
 #pragma once
 #define VK_NO_PROTOTYPES
 #include "volk.h"
-#include <cstdint>
-#include <fstream>
-#include <iostream>
-#include <stdexcept>
 #include <string>
-#include <vector>
-#include "../devicelibrary.h"
 #include "../types.h"
-#include "buffers.h"
 #include "texture.h"
 
 class PipelineBuilder {

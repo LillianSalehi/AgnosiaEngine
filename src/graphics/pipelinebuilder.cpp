@@ -1,5 +1,13 @@
 #include "pipelinebuilder.h"
 
+#include <vector>
+#include <cstdint>
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+#include "buffers.h"
+#include "../devicelibrary.h"
+#include "../utils.h"
 
 static std::vector<char> readFile(const std::string &filename) {
   std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -26,10 +34,7 @@ VkShaderModule createShaderModule(const std::vector<char> &code,
   createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
 
   VkShaderModule shaderModule;
-  if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create shader module! (Graphics.cpp:31)");
-  }
+  VK_CHECK(vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule));
   return shaderModule;
 }
 
@@ -273,10 +278,8 @@ PipelineBuilder::PipelineBuilder() : vertexShader("src/shaders/base.vert.spv"),
         .pushConstantRangeCount = 1,
         .pPushConstantRanges = &pushConstant
       };
-      if(vkCreatePipelineLayout(DeviceControl::getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create pipeline layout! (PipelineBuilder.cpp:277)");
-      }
-
+      VK_CHECK(vkCreatePipelineLayout(DeviceControl::getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout));
+      
       VkPipelineRenderingCreateInfo pipelineRenderingInfo {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = 1,
@@ -300,13 +303,9 @@ PipelineBuilder::PipelineBuilder() : vertexShader("src/shaders/base.vert.spv"),
         .renderPass = nullptr,
         .subpass = 0,
       };
-      
 
-      if (vkCreateGraphicsPipelines(DeviceControl::getDevice(), VK_NULL_HANDLE, 1,
-                                &pipelineInfo, nullptr,
-                                &pipeline) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create graphics pipeline!");
-      }
+      VK_CHECK(vkCreateGraphicsPipelines(DeviceControl::getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline));
+      
       vkDestroyShaderModule(DeviceControl::getDevice(), fragShaderModule, nullptr);
       vkDestroyShaderModule(DeviceControl::getDevice(), vertShaderModule, nullptr);
 

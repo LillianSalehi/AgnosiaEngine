@@ -1,14 +1,14 @@
 #include "../devicelibrary.h"
 #include "../types.h"
+#include "../utils.h"
 #include "buffers.h"
 #include "graphicspipeline.h"
+#include "../agnosiaimgui.h"
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
-#include "../agnosiaimgui.h"
 #include "render.h"
 #include "texture.h"
 #include <deque>
-#include <stdexcept>
  
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/ext/matrix_clip_space.hpp>
@@ -48,10 +48,7 @@ void Graphics::createCommandPool() {
   poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-  if (vkCreateCommandPool(DeviceControl::getDevice(), &poolInfo, nullptr,
-                          &Buffers::getCommandPool()) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create command pool!");
-  }
+  VK_CHECK(vkCreateCommandPool(DeviceControl::getDevice(), &poolInfo, nullptr, &Buffers::getCommandPool()));
 }
 void Graphics::destroyCommandPool() {
   vkDestroyCommandPool(DeviceControl::getDevice(), Buffers::getCommandPool(),
@@ -66,20 +63,15 @@ void Graphics::createCommandBuffer() {
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   allocInfo.commandBufferCount = (uint32_t)Buffers::getCommandBuffers().size();
 
-  if (vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo,
-                               Buffers::getCommandBuffers().data()) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate command buffers");
-  }
+  VK_CHECK(vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo, Buffers::getCommandBuffers().data()));
 }
 void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
                                    uint32_t imageIndex) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-  if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-    throw std::runtime_error("failed to begin recording command buffer!");
-  }
+  VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+  
   const VkImageMemoryBarrier2 imageMemoryBarrier{
       .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
       .pNext = nullptr,
@@ -254,10 +246,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   vkCmdPipelineBarrier2(Buffers::getCommandBuffers()[Render::getCurrentFrame()],
                         &depInfo);
 
-  if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-    throw std::runtime_error("failed to record command buffer!");
-  }
-  
+  VK_CHECK(vkEndCommandBuffer(commandBuffer));  
 }
 
 float *Graphics::getCamPos() { return camPos; }

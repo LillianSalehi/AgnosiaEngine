@@ -1,6 +1,7 @@
 #include "../devicelibrary.h"
 #include "buffers.h"
 #include "texture.h"
+#include "../utils.h"
 
 #include <stdexcept>
 #include <string>
@@ -44,46 +45,37 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
   imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.mipLevels = mipLevels;
 
-  if (vkCreateImage(DeviceControl::getDevice(), &imageInfo, nullptr, &image) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create image!");
-  }
-
+  VK_CHECK(vkCreateImage(DeviceControl::getDevice(), &imageInfo, nullptr, &image));
+  
   VkMemoryRequirements memRequirements;
-  vkGetImageMemoryRequirements(DeviceControl::getDevice(), image,
-                               &memRequirements);
+  vkGetImageMemoryRequirements(DeviceControl::getDevice(), image, &memRequirements);
 
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex =
-      Buffers::findMemoryType(memRequirements.memoryTypeBits, properties);
-
-  if (vkAllocateMemory(DeviceControl::getDevice(), &allocInfo, nullptr,
-                       &imageMemory) != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate image memory!");
-  }
-
+  VkMemoryAllocateInfo allocInfo = {
+    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .allocationSize = memRequirements.size,
+    .memoryTypeIndex = Buffers::findMemoryType(memRequirements.memoryTypeBits, properties),
+  };
+  VK_CHECK(vkAllocateMemory(DeviceControl::getDevice(), &allocInfo, nullptr, &imageMemory));
   vkBindImageMemory(DeviceControl::getDevice(), image, imageMemory, 0);
 }
 
 VkCommandBuffer beginSingleTimeCommands() {
   // This is a neat function! This sets up a command buffer using our previously
   // set command pool to return a command buffer to execute commands!
-  VkCommandBufferAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandPool = Buffers::getCommandPool();
-  allocInfo.commandBufferCount = 1;
-
+  VkCommandBufferAllocateInfo allocInfo = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+    .commandPool = Buffers::getCommandPool(),
+    .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+    .commandBufferCount = 1,
+  };
+  
   VkCommandBuffer commandBuffer;
-  vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo,
-                           &commandBuffer);
+  vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo, &commandBuffer);
 
-  VkCommandBufferBeginInfo beginInfo{};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
+  VkCommandBufferBeginInfo beginInfo = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+    .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+  };
   vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
   return commandBuffer;
@@ -93,11 +85,11 @@ void endSingleTimeCommands(VkCommandBuffer commandBuffer) {
   // submits it to the graphics queue. Afterwards, it purges the command buffer.
   vkEndCommandBuffer(commandBuffer);
 
-  VkSubmitInfo submitInfo{};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &commandBuffer;
-
+  VkSubmitInfo submitInfo = {
+  .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+  .commandBufferCount = 1,
+  .pCommandBuffers = &commandBuffer,
+  };
   vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo,
                 VK_NULL_HANDLE);
   vkQueueWaitIdle(DeviceControl::getGraphicsQueue());
@@ -390,11 +382,7 @@ void Texture::createMaterialTextures(std::vector<Model *> models) {
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
-    if (vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr,
-                        &model->getMaterial().getDiffuseTexture().sampler) !=
-        VK_SUCCESS) {
-      throw std::runtime_error("failed to create texture sampler!");
-    }
+    VK_CHECK(vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr, &model->getMaterial().getDiffuseTexture().sampler));
   }
 }
 

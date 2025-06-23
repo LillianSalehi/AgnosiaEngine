@@ -1,9 +1,9 @@
 #pragma once
-#include "model.h"
 
 #define VK_NO_PROTOTYPES
-
 #include "volk.h"
+
+#include "model.h"
 #include <cstdint>
 class Texture {
 public:

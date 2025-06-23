@@ -1,16 +1,14 @@
 #pragma once
 
-#include <cstdint>
-#include <vector>
-
 #define VK_NO_PROTOTYPES
+#include "volk.h"
 
 #include "../types.h"
-
 #include "material.h"
-#include "volk.h"
 #include <glm/glm.hpp>
 #include <string>
+#include <vector>
+
 class Model {
 protected:
   std::string ID;

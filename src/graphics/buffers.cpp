@@ -1,13 +1,10 @@
 #include "../devicelibrary.h"
-
+#include "../utils.h"
 #include "buffers.h"
 #include "model.h"
-
 #include <cstdint>
-
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
-
 #include <stdexcept>
 
 std::vector<VkDescriptorSetLayout> modelSetLayouts;
@@ -31,7 +28,6 @@ constexpr int SAMPLER_COUNT = 65536;
 constexpr int IMAGE_COUNT = 65536;
 
 // Create descriptor pool
-
 VkDescriptorPool descriptorPool;
 VkDescriptorSetLayout descriptorSetLayout;
 VkDescriptorSet descriptorSet;
@@ -80,26 +76,20 @@ void Buffers::createDescriptorSetLayout() {
           VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
   };
   VkDescriptorSetLayoutBindingFlagsCreateInfo setLayoutBindingsFlags = {
-      .sType =
-          VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+      .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
       .bindingCount = 3,
       .pBindingFlags = bindingFlags.data(),
   };
 
   VkDescriptorSetLayoutCreateInfo layoutInfo = {
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-
       .pNext = &setLayoutBindingsFlags,
       .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
       .bindingCount = static_cast<uint32_t>(bindings.size()),
       .pBindings = bindings.data(),
 
   };
-  if (vkCreateDescriptorSetLayout(DeviceControl::getDevice(), &layoutInfo,
-                                  nullptr,
-                                  &descriptorSetLayout) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create descriptor set layout! (Buffers.cpp:103)");
-  }
+  VK_CHECK(vkCreateDescriptorSetLayout(DeviceControl::getDevice(), &layoutInfo, nullptr, &descriptorSetLayout));
 }
 void Buffers::createDescriptorPool() {
 
@@ -108,32 +98,28 @@ void Buffers::createDescriptorPool() {
       {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, SAMPLER_COUNT},
       {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, IMAGE_COUNT},
   };
-  VkDescriptorPoolCreateInfo poolInfo{};
-  poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-  poolInfo.pPoolSizes = poolSizes.data();
-  poolInfo.maxSets = 1;
-  poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-
-  if (vkCreateDescriptorPool(DeviceControl::getDevice(), &poolInfo, nullptr,
-                             &descriptorPool) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create descriptor pool! (Buffers.cpp:122)");
-  }
+  VkDescriptorPoolCreateInfo poolInfo = {
+  .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+  .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+  .maxSets = 1,
+  .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
+  .pPoolSizes = poolSizes.data(),
+  };
+  
+  VK_CHECK(vkCreateDescriptorPool(DeviceControl::getDevice(), &poolInfo, nullptr, &descriptorPool));
 }
 void Buffers::destroyDescriptorPool() {
   vkDestroyDescriptorPool(DeviceControl::getDevice(), descriptorPool, nullptr);
 }
 void Buffers::createDescriptorSet(std::vector<Model *> models) {
-  VkDescriptorSetAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  allocInfo.descriptorPool = descriptorPool;
-  allocInfo.descriptorSetCount = 1;
-  allocInfo.pSetLayouts = &descriptorSetLayout;
+  VkDescriptorSetAllocateInfo allocInfo = {
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+    .descriptorPool = descriptorPool,
+    .descriptorSetCount = 1,
+    .pSetLayouts = &descriptorSetLayout,
+  };
+  VK_CHECK(vkAllocateDescriptorSets(DeviceControl::getDevice(), &allocInfo, &descriptorSet));
 
-  if (vkAllocateDescriptorSets(DeviceControl::getDevice(), &allocInfo,
-                               &descriptorSet) != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate descriptor sets! (Buffers.cpp:137)");
-  }
   std::vector<VkDescriptorImageInfo> imageInfoSet;
   imageInfoSet.resize(models.size());
 
@@ -182,33 +168,35 @@ uint32_t Buffers::findMemoryType(uint32_t typeFilter,
 }
 
 void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
-  VkCommandBufferAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandPool = commandPool;
-  allocInfo.commandBufferCount = 1;
-
+  VkCommandBufferAllocateInfo allocInfo = {
+  .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+  .commandPool = commandPool,
+  .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+  .commandBufferCount = 1,
+  };
+  
   VkCommandBuffer commandBuffer;
   vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo,
                            &commandBuffer);
 
-  VkCommandBufferBeginInfo beginInfo{};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
+  VkCommandBufferBeginInfo beginInfo = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+    .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+  };
   vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
-  VkBufferCopy copyRegion{};
-  copyRegion.size = size;
+  VkBufferCopy copyRegion = {
+    .size = size,
+  };
   vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
   vkEndCommandBuffer(commandBuffer);
 
-  VkSubmitInfo submitInfo{};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &commandBuffer;
-
+  VkSubmitInfo submitInfo = {
+    .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .commandBufferCount = 1,
+    .pCommandBuffers = &commandBuffer,
+  };
   vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo,
                 VK_NULL_HANDLE);
   vkQueueWaitIdle(DeviceControl::getGraphicsQueue());
@@ -220,32 +208,24 @@ void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
 void Buffers::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
                            VkMemoryPropertyFlags properties, VkBuffer &buffer,
                            VkDeviceMemory &bufferMemory) {
-  VkBufferCreateInfo bufferInfo{};
-  bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  bufferInfo.size = size;
-  bufferInfo.usage = usage;
-  bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-  if (vkCreateBuffer(DeviceControl::getDevice(), &bufferInfo, nullptr,
-                     &buffer) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create buffer! (Buffers.cpp:233)");
-  }
+  VkBufferCreateInfo bufferInfo = {
+    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+    .size = size,
+    .usage = usage,
+    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+  };
+  VK_CHECK(vkCreateBuffer(DeviceControl::getDevice(), &bufferInfo, nullptr, &buffer));
 
   VkMemoryRequirements memRequirements;
-  vkGetBufferMemoryRequirements(DeviceControl::getDevice(), buffer,
-                                &memRequirements);
+  vkGetBufferMemoryRequirements(DeviceControl::getDevice(), buffer, &memRequirements);
 
-  VkMemoryAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocInfo.allocationSize = memRequirements.size;
-  allocInfo.memoryTypeIndex =
-      findMemoryType(memRequirements.memoryTypeBits, properties);
-
-  if (vkAllocateMemory(DeviceControl::getDevice(), &allocInfo, nullptr,
-                       &bufferMemory) != VK_SUCCESS) {
-    throw std::runtime_error("failed to allocate buffer memory! (Buffers.cpp:248)");
-  }
-
+  VkMemoryAllocateInfo allocInfo = {
+    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+    .allocationSize = memRequirements.size,
+    .memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties),
+  };
+  
+  VK_CHECK(vkAllocateMemory(DeviceControl::getDevice(), &allocInfo, nullptr, &bufferMemory));
   vkBindBufferMemory(DeviceControl::getDevice(), buffer, bufferMemory, 0);
 }
 VkDescriptorPool &Buffers::getDescriptorPool() { return descriptorPool; }

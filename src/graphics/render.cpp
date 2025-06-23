@@ -1,6 +1,6 @@
+#define VK_NO_PROTOTYPES
+#include <volk.h>
 
-#include <cstddef>
-#include <stdexcept>
 #include "../devicelibrary.h"
 #include "../entrypoint.h"
 #include "buffers.h"
@@ -86,8 +86,7 @@ void Render::drawFrame() {
   };
 
   result = vkQueuePresentKHR(DeviceControl::getPresentQueue(), &presentInfo);
-  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
-      EntryApp::getInstance()->getFramebufferResized()) {
+  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || EntryApp::getInstance()->getFramebufferResized()) {
     EntryApp::getInstance()->setFramebufferResized(false);
     recreateSwapChain();
   }
@@ -124,51 +123,41 @@ void Render::createSyncObject() {
   renderFinishedSemaphores.resize(DeviceControl::getSwapChainImages().size());
   inFlightFences.resize(Buffers::getMaxFramesInFlight());
 
-  VkSemaphoreCreateInfo semaphoreInfo{};
-  semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-  VkFenceCreateInfo fenceInfo{};
-  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
+  VkSemaphoreCreateInfo semaphoreInfo = {
+    .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+  };
+  
+  VkFenceCreateInfo fenceInfo = {
+    .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+    .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+  };
+  
   for (size_t i = 0; i < Buffers::getMaxFramesInFlight(); i++) {
-    if (vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-        vkCreateFence(DeviceControl::getDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create semaphores! (Render.cpp:155)");
-    }
+    VK_CHECK(vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]));
+    VK_CHECK(vkCreateFence(DeviceControl::getDevice(), &fenceInfo, nullptr, &inFlightFences[i]));
   }
   for(size_t i = 0; i < DeviceControl::getSwapChainImages().size(); i++) {
-    if(vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to fuck your mom (Render.cpp:152)");
-    }
-    
+    VK_CHECK(vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]));    
   }
 }
 void Render::destroyFenceSemaphores() {
   for (size_t i = 0; i < Buffers::getMaxFramesInFlight(); i++) {
-    vkDestroySemaphore(DeviceControl::getDevice(), renderFinishedSemaphores[i],
-                       nullptr);
-    vkDestroySemaphore(DeviceControl::getDevice(), imageAvailableSemaphores[i],
-                       nullptr);
+    vkDestroySemaphore(DeviceControl::getDevice(), renderFinishedSemaphores[i], nullptr);
+    vkDestroySemaphore(DeviceControl::getDevice(), imageAvailableSemaphores[i], nullptr);
     vkDestroyFence(DeviceControl::getDevice(), inFlightFences[i], nullptr);
   }
 }
 void Render::cleanupSwapChain() {
-  vkDestroyImageView(DeviceControl::getDevice(), Texture::getColorImageView(),
-                     nullptr);
+  vkDestroyImageView(DeviceControl::getDevice(), Texture::getColorImageView(), nullptr);
   vkDestroyImage(DeviceControl::getDevice(), Texture::getColorImage(), nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), Texture::getColorImageMemory(),
-               nullptr);
-  vkDestroyImageView(DeviceControl::getDevice(), Texture::getDepthImageView(),
-                     nullptr);
+  vkFreeMemory(DeviceControl::getDevice(), Texture::getColorImageMemory(), nullptr);
+  vkDestroyImageView(DeviceControl::getDevice(), Texture::getDepthImageView(), nullptr);
   vkDestroyImage(DeviceControl::getDevice(), Texture::getDepthImage(), nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), Texture::getDepthImageMemory(),
-               nullptr);
+  vkFreeMemory(DeviceControl::getDevice(), Texture::getDepthImageMemory(), nullptr);
 
   for (auto imageView : DeviceControl::getSwapChainImageViews()) {
     vkDestroyImageView(DeviceControl::getDevice(), imageView, nullptr);
   }
-  vkDestroySwapchainKHR(DeviceControl::getDevice(),
-                        DeviceControl::getSwapChain(), nullptr);
+  vkDestroySwapchainKHR(DeviceControl::getDevice(), DeviceControl::getSwapChain(), nullptr);
 }
 uint32_t Render::getCurrentFrame() { return currentFrame; }
