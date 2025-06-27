@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #define VK_NO_PROTOTYPES
 #include "volk.h"
 
@@ -15,6 +16,7 @@ protected:
   Agnosia_T::GPUMeshBuffers buffers;
   Material material;
   glm::vec3 objPosition;
+  uint32_t verticeCount;
   uint32_t indiceCount;
   std::string modelPath;
   static std::vector<Model *> instances;
@@ -36,4 +38,5 @@ public:
   Material &getMaterial();
   std::string getModelPath();
   uint32_t getIndices();
+  uint32_t getVertices();
 };

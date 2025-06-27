@@ -41,8 +41,7 @@ static void framebufferResizeCallback(GLFWwindow *window, int width,
   app->setFramebufferResized(true);
 }
 
-// Initialize GLFW Window. First, Initialize GLFW lib, disable resizing for
-// now, and create window.
+// Initialize GLFW Window. First, Initialize GLFW lib, disable resizing for now, and create window.
 void initWindow() {
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -112,7 +111,7 @@ void initVulkan() {
   
   PipelineBuilder builder;
     
-  Agnosia_T::Pipeline graphics = builder.setCullMode(VK_CULL_MODE_NONE)
+  Agnosia_T::Pipeline graphics = builder.setCullMode(VK_CULL_MODE_BACK_BIT)
                                         .Build();
 
   Agnosia_T::Pipeline fullscreen = builder.setCullMode(VK_CULL_MODE_NONE)
@@ -130,14 +129,12 @@ void initVulkan() {
   Texture::createMaterialTextures(Model::getInstances());
   Texture::createColorResources();
   Texture::createDepthResources();
-
   Buffers::createDescriptorPool();
   Buffers::createDescriptorSet(Model::getInstances());
   Graphics::createCommandBuffer();
   Render::createSyncObject();
 
   Gui::initImgui(vulkaninstance);
-  
 }
 
 void mainLoop() {

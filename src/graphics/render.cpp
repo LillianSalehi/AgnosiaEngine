@@ -22,15 +22,9 @@ void recreateSwapChain() {
     glfwWaitEvents();
   }
   vkDeviceWaitIdle(DeviceControl::getDevice());
-  // Don't really wanna do this but I also don't want to create an extra class
-  // instance just to call the cleanup function.
 
-  for (auto imageView : DeviceControl::getSwapChainImageViews()) {
-    vkDestroyImageView(DeviceControl::getDevice(), imageView, nullptr);
-  }
-  vkDestroySwapchainKHR(DeviceControl::getDevice(),
-                        DeviceControl::getSwapChain(), nullptr);
-
+  Render::cleanupSwapChain();
+  
   DeviceControl::createSwapChain(EntryApp::getWindow());
   DeviceControl::createImageViews();
   Texture::createColorResources();
@@ -41,14 +35,13 @@ void recreateSwapChain() {
 // record a comman d buffer which draws the scene onto that image
 // submit the recorded command buffer and present the image!
 void Render::drawFrame() {
-  vkWaitForFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame],
-                  VK_TRUE, UINT64_MAX);
+  vkWaitForFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
   vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
 
   uint32_t imageIndex;
   VkSemaphore acquireSemaphore = imageAvailableSemaphores[currentFrame];
   VkResult result = vkAcquireNextImageKHR(DeviceControl::getDevice(), DeviceControl::getSwapChain(), UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex);
-  if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
     recreateSwapChain();
     return;
   }

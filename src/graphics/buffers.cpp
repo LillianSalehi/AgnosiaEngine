@@ -99,11 +99,11 @@ void Buffers::createDescriptorPool() {
       {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, IMAGE_COUNT},
   };
   VkDescriptorPoolCreateInfo poolInfo = {
-  .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-  .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
-  .maxSets = 1,
-  .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
-  .pPoolSizes = poolSizes.data(),
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+    .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
+    .maxSets = 1,
+    .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
+    .pPoolSizes = poolSizes.data(),
   };
   
   VK_CHECK(vkCreateDescriptorPool(DeviceControl::getDevice(), &poolInfo, nullptr, &descriptorPool));
@@ -143,9 +143,7 @@ void Buffers::createDescriptorSet(std::vector<Model *> models) {
     descriptorWrites[i].pImageInfo = &imageInfoSet[i];
   }
 
-  vkUpdateDescriptorSets(DeviceControl::getDevice(),
-                         static_cast<uint32_t>(descriptorWrites.size()),
-                         descriptorWrites.data(), 0, nullptr);
+  vkUpdateDescriptorSets(DeviceControl::getDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }
 
 uint32_t Buffers::findMemoryType(uint32_t typeFilter,
@@ -159,25 +157,23 @@ uint32_t Buffers::findMemoryType(uint32_t typeFilter,
   // iterate over and see if any of the memory types match our needs, in this
   // case, HOST_VISIBLE and HOST_COHERENT. These will be explained shortly.
   for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-    if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags &
-                                    properties) == properties) {
+    if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
       return i;
     }
   }
-  throw std::runtime_error("failed to find suitable memory type! (Buffers.cpp:183)");
+  throw std::runtime_error("failed to find suitable memory type! (Buffers.cpp:164)");
 }
 
 void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
   VkCommandBufferAllocateInfo allocInfo = {
-  .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-  .commandPool = commandPool,
-  .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-  .commandBufferCount = 1,
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+    .commandPool = commandPool,
+    .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+    .commandBufferCount = 1,
   };
   
   VkCommandBuffer commandBuffer;
-  vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo,
-                           &commandBuffer);
+  vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo, &commandBuffer);
 
   VkCommandBufferBeginInfo beginInfo = {
     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -197,12 +193,9 @@ void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
     .commandBufferCount = 1,
     .pCommandBuffers = &commandBuffer,
   };
-  vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo,
-                VK_NULL_HANDLE);
+  vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
   vkQueueWaitIdle(DeviceControl::getGraphicsQueue());
-
-  vkFreeCommandBuffers(DeviceControl::getDevice(), commandPool, 1,
-                       &commandBuffer);
+  vkFreeCommandBuffers(DeviceControl::getDevice(), commandPool, 1, &commandBuffer);
 }
 
 void Buffers::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
@@ -230,9 +223,7 @@ void Buffers::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
 }
 VkDescriptorPool &Buffers::getDescriptorPool() { return descriptorPool; }
 VkDescriptorSet &Buffers::getDescriptorSet() { return descriptorSet; }
-VkDescriptorSetLayout &Buffers::getDescriptorSetLayout() {
-  return descriptorSetLayout;
-}
+VkDescriptorSetLayout &Buffers::getDescriptorSetLayout() { return descriptorSetLayout; }
 
 void Buffers::destroyBuffers() {
   vkDestroyBuffer(DeviceControl::getDevice(), indexBuffer, nullptr);
@@ -243,9 +234,6 @@ void Buffers::destroyBuffers() {
 }
 
 uint32_t Buffers::getMaxFramesInFlight() { return MAX_FRAMES_IN_FLIGHT; }
-std::vector<VkCommandBuffer> &Buffers::getCommandBuffers() {
-  return commandBuffers;
-}
-
+std::vector<VkCommandBuffer> &Buffers::getCommandBuffers() { return commandBuffers; }
 VkCommandPool &Buffers::getCommandPool() { return commandPool; }
 uint32_t Buffers::getIndicesSize() { return indicesSize; }

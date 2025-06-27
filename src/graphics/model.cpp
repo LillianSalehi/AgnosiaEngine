@@ -32,8 +32,7 @@ template <> struct hash<Agnosia_T::Vertex> {
     size_t hashNormal = hash<glm::vec3>()(vertex.normal);
 
     // Combine all hashes
-    return ((hashPos ^ (hashColor << 1)) >> 1) ^ (hashUV << 1) ^
-           (hashNormal << 2);
+    return ((hashPos ^ (hashColor << 1)) >> 1) ^ (hashUV << 1) ^ (hashNormal << 2);
   }
 };
 
@@ -49,21 +48,23 @@ void Model::createMemoryAllocator(VkInstance vkInstance) {
       .device = DeviceControl::getDevice(),
       .pVulkanFunctions = &vulkanFuncs,
       .instance = vkInstance,
-      .vulkanApiVersion = VK_API_VERSION_1_3,
+      .vulkanApiVersion = VK_API_VERSION_1_4,
 
   };
   vmaCreateAllocator(&allocInfo, &_allocator);
 }
-Agnosia_T::AllocatedBuffer createBuffer(size_t allocSize,
-                                        VkBufferUsageFlags usage,
-                                        VmaMemoryUsage memUsage) {
+Agnosia_T::AllocatedBuffer createBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memUsage) {
   // Allocate the buffer we will use for Device Addresses
-  VkBufferCreateInfo bufferInfo{.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                                .pNext = nullptr,
-                                .size = allocSize,
-                                .usage = usage};
+  VkBufferCreateInfo bufferInfo{
+    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+    .pNext = nullptr,
+    .size = allocSize,
+    .usage = usage
+  };
   VmaAllocationCreateInfo vmaAllocInfo{
-      .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT, .usage = memUsage};
+    .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT,
+    .usage = memUsage
+  };
 
   Agnosia_T::AllocatedBuffer newBuffer;
   VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaAllocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info));
@@ -167,26 +168,23 @@ void Model::populateModels() {
 
     Agnosia_T::GPUMeshBuffers newSurface;
 
-    // Create a Vertex Buffer here, infinitely easier than the old Vulkan
-    // method!
-    newSurface.vertexBuffer = createBuffer(
-        vertexBufferSize,
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-        VMA_MEMORY_USAGE_GPU_ONLY);
+    // Create a Vertex Buffer here, infinitely easier than the old Vulkan method!
+    newSurface.vertexBuffer = createBuffer(vertexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
     // Find the address of the vertex buffer!
-    VkBufferDeviceAddressInfo deviceAddressInfo{
+    VkBufferDeviceAddressInfo vertexDeviceAddressInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
         .buffer = newSurface.vertexBuffer.buffer,
     };
-    newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(
-        DeviceControl::getDevice(), &deviceAddressInfo);
+    newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &vertexDeviceAddressInfo);
 
     // Create the index buffer to iterate over and check for duplicate vertices
-    newSurface.indexBuffer = createBuffer(indexBufferSize,
-                                          VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-                                              VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                                          VMA_MEMORY_USAGE_GPU_ONLY);
+    newSurface.indexBuffer = createBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+    // Find the address of the vertex buffer!
+    VkBufferDeviceAddressInfo indexDeviceAddressInfo = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .buffer = newSurface.indexBuffer.buffer,
+    };
+    newSurface.indexBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &indexDeviceAddressInfo);
 
     Agnosia_T::AllocatedBuffer stagingBuffer = createBuffer(
         vertexBufferSize + indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -220,6 +218,7 @@ void Model::populateModels() {
                      stagingBuffer.allocation);
 
     model->buffers = newSurface;
+    model->verticeCount = vertices.size();
     model->indiceCount = indices.size();
   }
 }
@@ -249,4 +248,5 @@ glm::vec3 &Model::getPos() { return this->objPosition; }
 Material &Model::getMaterial() { return this->material; }
 Agnosia_T::GPUMeshBuffers Model::getBuffers() { return this->buffers; }
 uint32_t Model::getIndices() { return this->indiceCount; }
+uint32_t Model::getVertices() { return this->verticeCount; }
 const std::vector<Model *> &Model::getInstances() { return instances; }

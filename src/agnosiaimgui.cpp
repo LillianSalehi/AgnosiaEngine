@@ -9,8 +9,10 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 #include "types.h"
+#include <cstdint>
 #include <glm/gtc/type_ptr.hpp>
 #include <stdexcept>
+#include <iostream>
 
 PipelineBuilder builder;
 Agnosia_T::Pipeline graphicsSolid;
@@ -62,6 +64,9 @@ void initRenderWindow() {
     if(ImGui::Button(("Kill " + model->getID()).c_str())) {
       Model::destroyModel(model->getID());
     }
+    
+    int polycount =  model->getIndices()/3;
+    ImGui::InputInt("polycount ", &polycount);
   }
   
 }

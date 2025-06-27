@@ -1,5 +1,4 @@
 #pragma once
-
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "vk_mem_alloc.h"
 #include <glm/glm.hpp>
@@ -35,6 +34,7 @@ public:
   };
   struct GPUMeshBuffers {
     AllocatedBuffer indexBuffer;
+    VkDeviceAddress indexBufferAddress;
     AllocatedBuffer vertexBuffer;
     VkDeviceAddress vertexBufferAddress;
   };

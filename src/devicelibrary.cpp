@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 
+
 VkPhysicalDeviceProperties deviceProperties;
 VkDevice device;
 VkSurfaceKHR surface;
@@ -28,6 +29,9 @@ struct SwapChainSupportDetails {
 const std::vector<const char *> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+    VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+    VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+    VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
 };
 
 DeviceControl::QueueFamilyIndices
@@ -84,8 +88,7 @@ SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) {
   vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
   if (presentModeCount != 0) {
     details.presentModes.resize(presentModeCount);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(
-        device, surface, &presentModeCount, details.presentModes.data());
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
   }
 
   return details;
@@ -128,8 +131,7 @@ bool isDeviceSuitable(VkPhysicalDevice device) {
 
   if (extensionSupported) {
     SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
-    swapChainAdequate = !swapChainSupport.formats.empty() &&
-                        !swapChainSupport.presentModes.empty();
+    swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
   }
 
   return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
@@ -138,17 +140,15 @@ bool isDeviceSuitable(VkPhysicalDevice device) {
 }
 // -------------------------------------- Swap Chain Settings ----------------------------------------- //
 VkSurfaceFormatKHR chooseSwapSurfaceFormat(
-    const std::vector<VkSurfaceFormatKHR> &availableFormats) {
-  // One of three settings we can set, Surface Format controls the color space
-  // and format.
+  const std::vector<VkSurfaceFormatKHR> &availableFormats) {
+    // One of three settings we can set, Surface Format controls the color space and format.
 
-  for (const auto &availableFormat : availableFormats) {
-    if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
-        availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-      // sRGB & 32bit BGRA
-      return availableFormat;
+    for (const auto &availableFormat : availableFormats) {
+      if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        // sRGB & 32bit BGRA
+        return availableFormat;
+      }
     }
-  }
   return availableFormats[0];
 }
 VkPresentModeKHR chooseSwapPresentMode(
@@ -278,9 +278,21 @@ void DeviceControl::createLogicalDevice() {
     queueCreateSingularInfo.pQueuePriorities = &queuePriority;
     queueCreateInfos.push_back(queueCreateSingularInfo);
   }
+  
+  
+  VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracingFeatures {
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+    .pNext = nullptr,
+  };
+
+  VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationFeatures {
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+    .pNext = &raytracingFeatures,
+  };
+  
   VkPhysicalDeviceVulkan12Features features12{
       .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-      .pNext = nullptr,
+      .pNext = &accelerationFeatures,
       .shaderSampledImageArrayNonUniformIndexing = true,
       .shaderStorageBufferArrayNonUniformIndexing = true,
       .shaderStorageImageArrayNonUniformIndexing = true,
@@ -424,7 +436,6 @@ VkImageView DeviceControl::createImageView(VkImage image, VkFormat format,
   viewInfo.format = format;
   viewInfo.subresourceRange.aspectMask = flags;
   viewInfo.subresourceRange.baseMipLevel = 0;
-  viewInfo.subresourceRange.levelCount = 1;
   viewInfo.subresourceRange.baseArrayLayer = 0;
   viewInfo.subresourceRange.layerCount = 1;
   viewInfo.subresourceRange.levelCount = mipLevels;
