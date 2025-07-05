@@ -1,6 +1,6 @@
-#extension GL_EXT_buffer_reference : require
-#extension GL_EXT_scalar_block_layout : require
-#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_buffer_reference : require // BDA
+#extension GL_EXT_scalar_block_layout : require // Sane buffer layout
+#extension GL_EXT_nonuniform_qualifier : require // Descriptor Indexing
 
 struct Vertex {
     vec3 pos;

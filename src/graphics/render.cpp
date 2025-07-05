@@ -32,7 +32,7 @@ void recreateSwapChain() {
 }
 // At a high level, rendering in Vulkan consists of 5 steps:
 // Wait for the previous frame, acquire a image from the swap chain
-// record a comman d buffer which draws the scene onto that image
+// record a command buffer which draws the scene onto that image
 // submit the recorded command buffer and present the image!
 void Render::drawFrame() {
   vkWaitForFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);

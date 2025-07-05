@@ -26,7 +26,6 @@ const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
 EntryApp* EntryApp::instance_{nullptr};
-std::mutex EntryApp::mutex_;
 
 // Getters and Setters!
 void EntryApp::setFramebufferResized(bool setter) {
@@ -115,8 +114,8 @@ void initVulkan() {
                                         .Build();
 
   Agnosia_T::Pipeline fullscreen = builder.setCullMode(VK_CULL_MODE_NONE)
-                                    .setVertexShader("src/shaders/fullscreen.vert.spv")
-                                    .setFragmentShader("src/shaders/fullscreen.frag.spv")
+                                    .setVertexShader("src/shaders/fullscreen.vert")
+                                    .setFragmentShader("src/shaders/fullscreen.frag")
                                     .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
                                     .Build();
                                       
@@ -173,8 +172,6 @@ void cleanup() {
 
 // Thread safe singleton fetching with mutex
 EntryApp* EntryApp::getInstance() {
-
-  std::lock_guard<std::mutex> lock(mutex_);
   if(instance_ == nullptr) {
     instance_ = new EntryApp();
   }

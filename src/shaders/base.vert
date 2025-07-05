@@ -1,5 +1,4 @@
-#version 450
-#extension GL_GOOGLE_include_directive : enable
+#version 460 core
 #include "common.glsl"
 
 layout(location = 0) out vec3 v_norm;

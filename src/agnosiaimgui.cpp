@@ -9,10 +9,8 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
 #include "types.h"
-#include <cstdint>
 #include <glm/gtc/type_ptr.hpp>
 #include <stdexcept>
-#include <iostream>
 
 PipelineBuilder builder;
 Agnosia_T::Pipeline graphicsSolid;
@@ -28,8 +26,7 @@ void initTransformsWindow() {
   if (ImGui::TreeNode("Model Transforms")) {
     for (Model *model : Model::getInstances()) {
 
-      ImGui::DragFloat3(model->getID().c_str(),
-                        const_cast<float *>(glm::value_ptr(model->getPos())));
+      ImGui::DragFloat3(model->getID().c_str(), const_cast<float *>(glm::value_ptr(model->getPos())));
     }
     ImGui::TreePop();
   }
@@ -38,7 +35,7 @@ void initTransformsWindow() {
     ImGui::DragFloat3("Light Position", Graphics::getLightPos());
     ImGui::DragFloat3("Center Position", Graphics::getCenterPos());
     ImGui::DragFloat("Depth of Field", &Graphics::getDepthField(), 0.1f, 1.0f,
-                   180.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
+                     180.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat2("Near and Far fields", Graphics::getDistanceField());
     ImGui::TreePop();
   }
@@ -110,11 +107,9 @@ void Gui::initImgui(VkInstance instance) {
       return proc;
     return vkGetInstanceProcAddr(instance, fn);
   };
-  ImGui_ImplVulkan_LoadFunctions(
-      [](const char *fn, void *data) {
-        return (*(decltype(load_vk_func) *)data)(fn);
-      },
-      &load_vk_func);
+  ImGui_ImplVulkan_LoadFunctions([](const char *fn, void *data) {
+    return (*(decltype(load_vk_func) *)data)(fn);
+  }, &load_vk_func);
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -137,8 +132,7 @@ void Gui::initImgui(VkInstance instance) {
       .poolSizeCount = 1,
       .pPoolSizes = ImGuiPoolSizes,
   };
-  if (vkCreateDescriptorPool(DeviceControl::getDevice(), &ImGuiPoolInfo,
-                             nullptr, &imGuiDescriptorPool) != VK_SUCCESS) {
+  if (vkCreateDescriptorPool(DeviceControl::getDevice(), &ImGuiPoolInfo, nullptr, &imGuiDescriptorPool) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create ImGui descriptor pool!");
   }
 
@@ -153,9 +147,7 @@ void Gui::initImgui(VkInstance instance) {
       .Instance = instance,
       .PhysicalDevice = DeviceControl::getPhysicalDevice(),
       .Device = DeviceControl::getDevice(),
-      .QueueFamily =
-          DeviceControl::findQueueFamilies(DeviceControl::getPhysicalDevice())
-              .graphicsFamily.value(),
+      .QueueFamily = DeviceControl::findQueueFamilies(DeviceControl::getPhysicalDevice()).graphicsFamily.value(),
       .Queue = DeviceControl::getGraphicsQueue(),
       .DescriptorPool = imGuiDescriptorPool,
       .MinImageCount = Buffers::getMaxFramesInFlight(),
@@ -169,25 +161,25 @@ void Gui::initImgui(VkInstance instance) {
 
   
   graphicsSolid = builder.setCullMode(VK_CULL_MODE_NONE)
-                                     .setPolygonMode(VK_POLYGON_MODE_FILL)
-                                     .Build();
+                         .setPolygonMode(VK_POLYGON_MODE_FILL)
+                         .Build();
   graphicsWireframe = builder.setCullMode(VK_CULL_MODE_NONE)
-                                     .setPolygonMode(VK_POLYGON_MODE_LINE)
-                                     .Build();
+                             .setPolygonMode(VK_POLYGON_MODE_LINE)
+                             .Build();
 
   fullscreenSolid = builder.setCullMode(VK_CULL_MODE_NONE)
-                                  .setVertexShader("src/shaders/fullscreen.vert.spv")
-                                  .setFragmentShader("src/shaders/fullscreen.frag.spv")
-                                  .setPolygonMode(VK_POLYGON_MODE_FILL)
-                                  .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
-                                  .Build();
+                           .setVertexShader("src/shaders/fullscreen.vert")
+                           .setFragmentShader("src/shaders/fullscreen.frag")
+                           .setPolygonMode(VK_POLYGON_MODE_FILL)
+                           .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
+                           .Build();
   
   fullscreenWireframe = builder.setCullMode(VK_CULL_MODE_NONE)
-                                  .setVertexShader("src/shaders/fullscreen.vert.spv")
-                                  .setFragmentShader("src/shaders/fullscreen.frag.spv")
-                                  .setPolygonMode(VK_POLYGON_MODE_LINE)
-                                  .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
-                                  .Build();
+                               .setVertexShader("src/shaders/fullscreen.vert")
+                               .setFragmentShader("src/shaders/fullscreen.frag")
+                               .setPolygonMode(VK_POLYGON_MODE_LINE)
+                               .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
+                               .Build();
 }
 bool Gui::getWireframe() {
   return wireframe;

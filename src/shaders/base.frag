@@ -1,9 +1,7 @@
-#version 450
-#extension GL_GOOGLE_include_directive : enable
+#version 460 core
 #include "common.glsl"
 
 layout(binding = 1) uniform sampler2D texSampler[];
-
 
 layout(location = 0) in vec3 v_norm;
 layout(location = 1) in vec3 v_pos;

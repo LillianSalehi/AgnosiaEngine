@@ -137,8 +137,7 @@ void Buffers::createDescriptorSet(std::vector<Model *> models) {
     descriptorWrites[i].dstSet = descriptorSet;
     descriptorWrites[i].dstBinding = SAMPLER_BINDING;
     descriptorWrites[i].dstArrayElement = i;
-    descriptorWrites[i].descriptorType =
-        VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descriptorWrites[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descriptorWrites[i].descriptorCount = 1;
     descriptorWrites[i].pImageInfo = &imageInfoSet[i];
   }

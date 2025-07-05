@@ -52,4 +52,17 @@ public:
     glm::mat4 view;
     glm::mat4 proj;
   };
+
+  enum PipelineStage  {
+    VERTEX_SHADER,
+    FRAGMENT_SHADER,
+    COMPUTE_SHADER,
+    RAYGEN_SHADER,
+    MISS_SHADER,
+    CLOSEST_HIT_SHADER,
+    ANY_HIT_SHADER,
+    INTERSECTION_SHADER,
+  };
+  
 };
+

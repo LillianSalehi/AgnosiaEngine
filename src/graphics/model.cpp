@@ -169,7 +169,13 @@ void Model::populateModels() {
     Agnosia_T::GPUMeshBuffers newSurface;
 
     // Create a Vertex Buffer here, infinitely easier than the old Vulkan method!
-    newSurface.vertexBuffer = createBuffer(vertexBufferSize, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+    newSurface.vertexBuffer = createBuffer(vertexBufferSize,
+                                           VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                                           VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                                           VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                                           VMA_MEMORY_USAGE_GPU_ONLY
+                                         );
+    
     // Find the address of the vertex buffer!
     VkBufferDeviceAddressInfo vertexDeviceAddressInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
@@ -178,7 +184,12 @@ void Model::populateModels() {
     newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &vertexDeviceAddressInfo);
 
     // Create the index buffer to iterate over and check for duplicate vertices
-    newSurface.indexBuffer = createBuffer(indexBufferSize, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+    newSurface.indexBuffer = createBuffer(indexBufferSize,
+                                          VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | 
+                                          VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                                          VMA_MEMORY_USAGE_GPU_ONLY
+                                        );
     // Find the address of the vertex buffer!
     VkBufferDeviceAddressInfo indexDeviceAddressInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
