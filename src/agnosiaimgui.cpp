@@ -63,7 +63,7 @@ void initRenderWindow() {
     }
     
     int polycount =  model->getIndices()/3;
-    ImGui::InputInt("polycount ", &polycount);
+    ImGui::Text("Polycount: %d", polycount);
   }
   
 }

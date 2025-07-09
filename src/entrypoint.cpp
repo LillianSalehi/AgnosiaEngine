@@ -25,8 +25,6 @@ GLFWwindow *window;
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
-EntryApp* EntryApp::instance_{nullptr};
-
 // Getters and Setters!
 void EntryApp::setFramebufferResized(bool setter) {
   framebufferResized = setter;
@@ -46,7 +44,7 @@ void initWindow() {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   // Settings for the window are set, create window reference.
   window = glfwCreateWindow(WIDTH, HEIGHT, "Trimgles :o", nullptr, nullptr);
-  glfwSetWindowUserPointer(window, EntryApp::getInstance());
+  glfwSetWindowUserPointer(window, &EntryApp::getInstance());
   glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
 
@@ -171,11 +169,9 @@ void cleanup() {
 }
 
 // Thread safe singleton fetching with mutex
-EntryApp* EntryApp::getInstance() {
-  if(instance_ == nullptr) {
-    instance_ = new EntryApp();
-  }
-  return instance_;
+EntryApp& EntryApp::getInstance() {
+  static EntryApp instance;
+  return instance;
 }
 
 EntryApp::EntryApp() : initialized(false), framebufferResized(false) {}

@@ -79,8 +79,8 @@ void Render::drawFrame() {
   };
 
   result = vkQueuePresentKHR(DeviceControl::getPresentQueue(), &presentInfo);
-  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || EntryApp::getInstance()->getFramebufferResized()) {
-    EntryApp::getInstance()->setFramebufferResized(false);
+  if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || EntryApp::getInstance().getFramebufferResized()) {
+    EntryApp::getInstance().setFramebufferResized(false);
     recreateSwapChain();
   }
   VK_CHECK(result);
