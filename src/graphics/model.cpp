@@ -196,7 +196,7 @@ void Model::populateModels() {
 }
 void Model::destroyModel(Model* model) {
   // Remove instance from instances list
-  instances.erase(std::remove(instances.begin(), instances.end(), model), instances.end());
+  std::erase(instances, model);
   
   // Destroy Vertex and Index buffers
   vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.indexBuffer.buffer, model->buffers.indexBuffer.allocation);
@@ -207,7 +207,7 @@ void Model::destroyModel(Model* model) {
 void Model::destroyModels() {
   for(Model* model : instances) {
     //remove instace from instances list
-    instances.erase(std::remove(instances.begin(), instances.end(), model), instances.end());
+    std::erase(instances, model);
     
     // Destroy Vertex and Index buffers
     vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.indexBuffer.buffer, model->buffers.indexBuffer.allocation);
