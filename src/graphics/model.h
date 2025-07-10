@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #define VK_NO_PROTOTYPES
 #include "volk.h"
 
@@ -25,12 +24,11 @@ public:
   Model(const std::string &modelID, const Material &material,
         const std::string &modelPath, const glm::vec3 &opjPos);
 
-  static void createMemoryAllocator(VkInstance instance);
   static const std::vector<Model *> &getInstances();
 
   static void populateModels();
-  static void destroyTextures();
-  static void destroyModel(const std::string &modelID);
+  static void destroyModel(Model* model);
+  static void destroyModels();
 
   Agnosia_T::GPUMeshBuffers getBuffers();
   std::string getID();

@@ -1,10 +1,10 @@
+#pragma once
 
-
+#include <vector>
 #define VK_NO_PROTOTYPES
 #include "volk.h"
 #include "../types.h"
 #include <string>
-#include <glm/fwd.hpp>
 
 class Material {
 protected:
@@ -17,11 +17,16 @@ protected:
   float specular;
   float shine;
 
+  static std::vector<Material *> instances;
+
 public:
   Material(const std::string &matID, const std::string &texPath,
            const float ambient, const float spec, const float shine);
+  
   std::string getID() const;
-
+  
+  static const std::vector<Material *> &getInstances();
+  
   std::string getDiffusePath() const;
 
   Agnosia_T::Texture &getDiffuseTexture();
@@ -33,4 +38,7 @@ public:
   void setDiffuseImage(VkImage image);
   void setDiffuseView(VkImageView imageView);
   void setDiffuseSampler(VkSampler sampler);
+
+  static void destroyMaterial(Material* material);
+  static void destroyMaterials();
 };

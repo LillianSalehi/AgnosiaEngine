@@ -27,8 +27,7 @@ void createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
                  VkImageTiling tiling, VkImageUsageFlags usage,
                  VkMemoryPropertyFlags properties, VkImage &image,
                  VkDeviceMemory &imageMemory) {
-  // This function specifies all the data in an image object, this is called
-  // directly after the creation of an image object.
+  // This function specifies all the data in an image object, this is called directly after the creation of an image object.
   VkImageCreateInfo imageInfo{};
   imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -101,8 +100,7 @@ void endSingleTimeCommands(VkCommandBuffer commandBuffer) {
 void transitionImageLayout(VkImage image, VkFormat format,
                            VkImageLayout oldLayout, VkImageLayout newLayout,
                            uint32_t mipLevels) {
-  // This function handles transitioning image layout data from one layout to
-  // another.
+  // This function handles transitioning image layout data from one layout to another.
   VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
   VkImageMemoryBarrier barrier{};
@@ -194,13 +192,10 @@ void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t textureWidth,
                      int32_t textureHeight, uint32_t mipLevels) {
   // Check if image format supports linear blitting
   VkFormatProperties formatProperties;
-  vkGetPhysicalDeviceFormatProperties(DeviceControl::getPhysicalDevice(),
-                                      imageFormat, &formatProperties);
+  vkGetPhysicalDeviceFormatProperties(DeviceControl::getPhysicalDevice(), imageFormat, &formatProperties);
 
-  if (!(formatProperties.optimalTilingFeatures &
-        VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-    throw std::runtime_error(
-        "texture image format does not support linear blitting!");
+  if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+    throw std::runtime_error("texture image format does not support linear blitting!");
   }
 
   VkCommandBuffer commandBuffer = beginSingleTimeCommands();
@@ -275,8 +270,7 @@ void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t textureWidth,
 
   endSingleTimeCommands(commandBuffer);
 }
-// -------------------------------- Image Libraries
-// ------------------------------- //
+// -------------------------------- Image Libraries ------------------------------- //
 void Texture::createMaterialTextures(std::vector<Model *> models) {
   // Import pixels from image with data on color channels, width and height, and
   // colorspace! Its a lot of kind of complicated memory calls to bring it from
@@ -285,51 +279,42 @@ void Texture::createMaterialTextures(std::vector<Model *> models) {
 
     int textureWidth, textureHeight, textureChannels;
 
-    stbi_uc *pixels =
-        stbi_load(model->getMaterial().getDiffusePath().c_str(), &textureWidth,
-                  &textureHeight, &textureChannels, STBI_rgb_alpha);
+    stbi_uc *pixels = stbi_load(model->getMaterial().getDiffusePath().c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
 
-    mipLevels = static_cast<uint32_t>(std::floor(
-                    std::log2(std::max(textureWidth, textureHeight)))) +
-                1;
+    mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(textureWidth, textureHeight)))) + 1;
 
     VkDeviceSize imageSize = textureWidth * textureHeight * 4;
 
     if (!pixels) {
       throw std::runtime_error("Failed to load texture!");
     }
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    Buffers::createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                          stagingBuffer, stagingBufferMemory);
-
+    Agnosia_T::AllocatedBuffer stagingBuffer = Buffers::createBuffer(imageSize,
+      VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      VMA_MEMORY_USAGE_AUTO);
+    
     void *data;
-    vkMapMemory(DeviceControl::getDevice(), stagingBufferMemory, 0, imageSize,
-                0, &data);
+    
+    vmaMapMemory(Buffers::getAllocator(), stagingBuffer.allocation, &data);
     memcpy(data, pixels, static_cast<size_t>(imageSize));
-    vkUnmapMemory(DeviceControl::getDevice(), stagingBufferMemory);
-
+    vmaUnmapMemory(Buffers::getAllocator(), stagingBuffer.allocation);
+    
     stbi_image_free(pixels);
 
     createImage(textureWidth, textureHeight, mipLevels, VK_SAMPLE_COUNT_1_BIT,
                 VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-                VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-                    VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                    VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                 model->getMaterial().getDiffuseTexture().image, textureImageMemory);
 
     transitionImageLayout(model->getMaterial().getDiffuseTexture().image,
                           VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-    copyBufferToImage(stagingBuffer, model->getMaterial().getDiffuseTexture().image,
+    copyBufferToImage(stagingBuffer.buffer, model->getMaterial().getDiffuseTexture().image,
                       static_cast<uint32_t>(textureWidth),
                       static_cast<uint32_t>(textureHeight));
 
-    vkDestroyBuffer(DeviceControl::getDevice(), stagingBuffer, nullptr);
-    vkFreeMemory(DeviceControl::getDevice(), stagingBufferMemory, nullptr);
+    vmaDestroyBuffer(Buffers::getAllocator(), stagingBuffer.buffer, stagingBuffer.allocation);
 
     generateMipmaps(model->getMaterial().getDiffuseTexture().image,
                     VK_FORMAT_R8G8B8A8_SRGB, textureWidth, textureHeight,
@@ -399,28 +384,24 @@ void Texture::createColorResources() {
   createImage(swapChainExtent.width, swapChainExtent.height, 1,
               DeviceControl::getPerPixelSampleCount(), colorFormat,
               VK_IMAGE_TILING_OPTIMAL,
-              VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-                  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, colorImage,
+              VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+              colorImage,
               colorImageMemory);
-  colorImageView = DeviceControl::createImageView(colorImage, colorFormat,
-                                                  VK_IMAGE_ASPECT_COLOR_BIT, 1);
+  colorImageView = DeviceControl::createImageView(colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
 void Texture::createDepthResources() {
   VkFormat depthFormat = findDepthFormat();
   VkExtent2D swapChainExtent = DeviceControl::getSwapChainExtent();
-  createImage(
-      swapChainExtent.width, swapChainExtent.height, 1,
+  createImage(swapChainExtent.width, swapChainExtent.height, 1,
       DeviceControl::getPerPixelSampleCount(), depthFormat,
       VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
-  depthImageView = DeviceControl::createImageView(depthImage, depthFormat,
-                                                  VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+  depthImageView = DeviceControl::createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
   // Explicit transition from the layout of the image to the depth attachment is
   // unnecessary here, since that will be handled in the render pass!
 }
-// ---------------------------- Getters & Setters
-// ---------------------------------//
+// ---------------------------- Getters & Setters ---------------------------------//
 uint32_t Texture::getMipLevels() { return mipLevels; }
 
 VkImage &Texture::getColorImage() { return colorImage; }

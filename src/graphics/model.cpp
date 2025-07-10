@@ -1,17 +1,12 @@
 #include "buffers.h"
 #include "model.h"
-#include <cstdint>
-#include <cstring>
-#include <unordered_map>
 #include <stdexcept>
 #include "../devicelibrary.h"
-#include "../utils.h"
 
 #define TINY_OBJ_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 #define GLM_ENABLE_EXPERIMENTAL
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
 
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
@@ -21,7 +16,6 @@
 
 // This is a container for ALL model instances alive
 std::vector<Model *> Model::instances;
-VmaAllocator _allocator;
 // chatgpt did this and the haters can WEEP fuck hash functions.
 namespace std {
 template <> struct hash<Agnosia_T::Vertex> {
@@ -37,39 +31,6 @@ template <> struct hash<Agnosia_T::Vertex> {
 };
 
 } // namespace std
-void Model::createMemoryAllocator(VkInstance vkInstance) {
-  VmaVulkanFunctions vulkanFuncs{
-      .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
-      .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
-  };
-  VmaAllocatorCreateInfo allocInfo{
-      .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
-      .physicalDevice = DeviceControl::getPhysicalDevice(),
-      .device = DeviceControl::getDevice(),
-      .pVulkanFunctions = &vulkanFuncs,
-      .instance = vkInstance,
-      .vulkanApiVersion = VK_API_VERSION_1_4,
-
-  };
-  vmaCreateAllocator(&allocInfo, &_allocator);
-}
-Agnosia_T::AllocatedBuffer createBuffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memUsage) {
-  // Allocate the buffer we will use for Device Addresses
-  VkBufferCreateInfo bufferInfo{
-    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-    .pNext = nullptr,
-    .size = allocSize,
-    .usage = usage
-  };
-  VmaAllocationCreateInfo vmaAllocInfo{
-    .flags = VMA_ALLOCATION_CREATE_MAPPED_BIT,
-    .usage = memUsage
-  };
-
-  Agnosia_T::AllocatedBuffer newBuffer;
-  VK_CHECK(vmaCreateBuffer(_allocator, &bufferInfo, &vmaAllocInfo, &newBuffer.buffer, &newBuffer.allocation, &newBuffer.info));
-  return newBuffer;
-}
 void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) {
   VkCommandBufferAllocateInfo allocInfo{};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -106,8 +67,7 @@ void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) {
 
 Model::Model(const std::string &modelID, const Material &material,
              const std::string &modelPath, const glm::vec3 &objPos)
-    : ID(modelID), material(material), objPosition(objPos),
-      modelPath(modelPath) {
+    : ID(modelID), material(material), objPosition(objPos), modelPath(modelPath) {
   instances.push_back(this);
 }
 
@@ -167,13 +127,12 @@ void Model::populateModels() {
     const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
     Agnosia_T::GPUMeshBuffers newSurface;
-
-    // Create a Vertex Buffer here, infinitely easier than the old Vulkan method!
-    newSurface.vertexBuffer = createBuffer(vertexBufferSize,
+    
+    newSurface.vertexBuffer = Buffers::createBuffer(vertexBufferSize, VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
                                            VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                           VMA_MEMORY_USAGE_GPU_ONLY
+                                           VMA_MEMORY_USAGE_AUTO
                                          );
     
     // Find the address of the vertex buffer!
@@ -184,11 +143,11 @@ void Model::populateModels() {
     newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &vertexDeviceAddressInfo);
 
     // Create the index buffer to iterate over and check for duplicate vertices
-    newSurface.indexBuffer = createBuffer(indexBufferSize,
+    newSurface.indexBuffer = Buffers::createBuffer(indexBufferSize, VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
                                           VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
                                           VK_BUFFER_USAGE_TRANSFER_DST_BIT | 
                                           VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                          VMA_MEMORY_USAGE_GPU_ONLY
+                                          VMA_MEMORY_USAGE_AUTO
                                         );
     // Find the address of the vertex buffer!
     VkBufferDeviceAddressInfo indexDeviceAddressInfo = {
@@ -197,9 +156,12 @@ void Model::populateModels() {
     };
     newSurface.indexBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &indexDeviceAddressInfo);
 
-    Agnosia_T::AllocatedBuffer stagingBuffer = createBuffer(
-        vertexBufferSize + indexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VMA_MEMORY_USAGE_CPU_ONLY);
+    // Allocate a buffer to use memory that will first, request the ability to *be* mapped, then persistently mapped and fetched.
+    Agnosia_T::AllocatedBuffer stagingBuffer = Buffers::createBuffer(
+        vertexBufferSize + indexBufferSize,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VMA_MEMORY_USAGE_AUTO);
 
     void *data = stagingBuffer.allocation->GetMappedData();
 
@@ -225,35 +187,36 @@ void Model::populateModels() {
       vkCmdCopyBuffer(cmd, stagingBuffer.buffer, newSurface.indexBuffer.buffer,
                       1, &indexCopy);
     });
-    vmaDestroyBuffer(_allocator, stagingBuffer.buffer,
-                     stagingBuffer.allocation);
+    vmaDestroyBuffer(Buffers::getAllocator(), stagingBuffer.buffer, stagingBuffer.allocation);
 
     model->buffers = newSurface;
     model->verticeCount = vertices.size();
     model->indiceCount = indices.size();
   }
 }
+void Model::destroyModel(Model* model) {
+  // Remove instance from instances list
+  instances.erase(std::remove(instances.begin(), instances.end(), model), instances.end());
+  
+  // Destroy Vertex and Index buffers
+  vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.indexBuffer.buffer, model->buffers.indexBuffer.allocation);
+  vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.vertexBuffer.buffer, model->buffers.vertexBuffer.allocation);
 
-// TODO: Modify this and the material definition to allow for a fetch into all active textures
-void Model::destroyTextures() {
-  for (Model *model : Model::getInstances()) {
-    vkDestroySampler(DeviceControl::getDevice(),
-                     model->getMaterial().getDiffuseTexture().sampler, nullptr);
-    vkDestroyImageView(DeviceControl::getDevice(),
-                       model->getMaterial().getDiffuseTexture().imageView, nullptr);
-    vkDestroyImage(DeviceControl::getDevice(),
-                   model->getMaterial().getDiffuseTexture().image, nullptr);
-  }
+  delete model;
 }
-void Model::destroyModel(const std::string &modelID) {
-  auto iterator = std::find_if(instances.begin(), instances.end(),
-                               [&modelID](Model* model) { return model->ID == modelID; }
-                              );
-  if(iterator != instances.end()) {
-    // Remove model from the instances array!
-    instances.erase(iterator);
-  }
+void Model::destroyModels() {
+  for(Model* model : instances) {
+    //remove instace from instances list
+    instances.erase(std::remove(instances.begin(), instances.end(), model), instances.end());
+    
+    // Destroy Vertex and Index buffers
+    vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.indexBuffer.buffer, model->buffers.indexBuffer.allocation);
+    vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.vertexBuffer.buffer, model->buffers.vertexBuffer.allocation);
+
+    delete model;
+  }  
 }
+
 std::string Model::getID() { return this->ID; }
 glm::vec3 &Model::getPos() { return this->objPosition; }
 Material &Model::getMaterial() { return this->material; }
@@ -261,3 +224,4 @@ Agnosia_T::GPUMeshBuffers Model::getBuffers() { return this->buffers; }
 uint32_t Model::getIndices() { return this->indiceCount; }
 uint32_t Model::getVertices() { return this->verticeCount; }
 const std::vector<Model *> &Model::getInstances() { return instances; }
+

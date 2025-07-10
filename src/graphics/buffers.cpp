@@ -9,11 +9,6 @@
 
 std::vector<VkDescriptorSetLayout> modelSetLayouts;
 
-VkBuffer vertexBuffer;
-VkDeviceMemory vertexBufferMemory;
-VkBuffer indexBuffer;
-VkDeviceMemory indexBufferMemory;
-
 uint32_t indicesSize;
 
 // Select a binding for each descriptor type
@@ -36,6 +31,25 @@ VkCommandPool commandPool;
 std::vector<VkCommandBuffer> commandBuffers;
 
 const int MAX_FRAMES_IN_FLIGHT = 2;
+
+VmaAllocator allocator;
+
+void Buffers::createMemoryAllocator(VkInstance vkInstance) {
+  VmaVulkanFunctions vulkanFuncs{
+      .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
+      .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+  };
+  VmaAllocatorCreateInfo allocInfo{
+      .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
+      .physicalDevice = DeviceControl::getPhysicalDevice(),
+      .device = DeviceControl::getDevice(),
+      .pVulkanFunctions = &vulkanFuncs,
+      .instance = vkInstance,
+      .vulkanApiVersion = VK_API_VERSION_1_4,
+
+  };
+  vmaCreateAllocator(&allocInfo, &allocator);
+}
 
 void Buffers::createDescriptorSetLayout() {
   // Create a table of pointers to data, a Descriptor Set!
@@ -197,42 +211,33 @@ void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
   vkFreeCommandBuffers(DeviceControl::getDevice(), commandPool, 1, &commandBuffer);
 }
 
-void Buffers::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                           VkMemoryPropertyFlags properties, VkBuffer &buffer,
-                           VkDeviceMemory &bufferMemory) {
+Agnosia_T::AllocatedBuffer Buffers::createBuffer(size_t allocSize, VmaAllocationCreateFlags vmaFlags, VkBufferUsageFlags usageFlags, VmaMemoryUsage memUsage) {
+  // Allocate a VMA Buffer and return it back.
   VkBufferCreateInfo bufferInfo = {
     .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-    .size = size,
-    .usage = usage,
-    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    .pNext = nullptr,
+    .size = allocSize,
+    .usage = usageFlags,
   };
-  VK_CHECK(vkCreateBuffer(DeviceControl::getDevice(), &bufferInfo, nullptr, &buffer));
-
-  VkMemoryRequirements memRequirements;
-  vkGetBufferMemoryRequirements(DeviceControl::getDevice(), buffer, &memRequirements);
-
-  VkMemoryAllocateInfo allocInfo = {
-    .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-    .allocationSize = memRequirements.size,
-    .memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties),
+  VmaAllocationCreateInfo vmaAllocInfo = {
+    .flags = vmaFlags,
+    .usage = memUsage,
   };
-  
-  VK_CHECK(vkAllocateMemory(DeviceControl::getDevice(), &allocInfo, nullptr, &bufferMemory));
-  vkBindBufferMemory(DeviceControl::getDevice(), buffer, bufferMemory, 0);
+
+  Agnosia_T::AllocatedBuffer buffer;
+  VK_CHECK(vmaCreateBuffer(allocator, &bufferInfo, &vmaAllocInfo, &buffer.buffer, &buffer.allocation, &buffer.info));
+  return buffer;
 }
+
 VkDescriptorPool &Buffers::getDescriptorPool() { return descriptorPool; }
 VkDescriptorSet &Buffers::getDescriptorSet() { return descriptorSet; }
 VkDescriptorSetLayout &Buffers::getDescriptorSetLayout() { return descriptorSetLayout; }
-
-void Buffers::destroyBuffers() {
-  vkDestroyBuffer(DeviceControl::getDevice(), indexBuffer, nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), indexBufferMemory, nullptr);
-
-  vkDestroyBuffer(DeviceControl::getDevice(), vertexBuffer, nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), vertexBufferMemory, nullptr);
-}
 
 uint32_t Buffers::getMaxFramesInFlight() { return MAX_FRAMES_IN_FLIGHT; }
 std::vector<VkCommandBuffer> &Buffers::getCommandBuffers() { return commandBuffers; }
 VkCommandPool &Buffers::getCommandPool() { return commandPool; }
 uint32_t Buffers::getIndicesSize() { return indicesSize; }
+
+VmaAllocator Buffers::getAllocator() {
+  return allocator;
+}

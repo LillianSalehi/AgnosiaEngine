@@ -12,19 +12,18 @@
 class Buffers {
 public:
   static Agnosia_T::AllocatedBuffer createBuffer(size_t allocSize,
-                                                 VkBufferUsageFlags usage,
+                                                 VmaAllocationCreateFlags vmaFlags,
+                                                 VkBufferUsageFlags usageFlags,
                                                  VmaMemoryUsage memUsage);
   static void createMemoryAllocator(VkInstance vkInstance);
+  static VmaAllocator getAllocator();
   static void createDescriptorSetLayout();
   static void createDescriptorSet(std::vector<Model *> models);
   static void createDescriptorPool();
   static void destroyDescriptorPool();
-  static void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                           VkMemoryPropertyFlags props, VkBuffer &buffer,
-                           VkDeviceMemory &bufferMemory);
+  
   static uint32_t findMemoryType(uint32_t typeFilter,
                                  VkMemoryPropertyFlags flags);
-  static void destroyBuffers();
   static VkDescriptorPool &getDescriptorPool();
   static VkDescriptorSet &getDescriptorSet();
 

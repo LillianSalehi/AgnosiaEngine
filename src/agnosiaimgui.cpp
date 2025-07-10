@@ -59,7 +59,7 @@ void initRenderWindow() {
   for(Model *model : Model::getInstances()) {
     
     if(ImGui::Button(("Kill " + model->getID()).c_str())) {
-      Model::destroyModel(model->getID());
+      Model::destroyModel(model);
     }
     
     int polycount =  model->getIndices()/3;

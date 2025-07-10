@@ -7,7 +7,6 @@
 #include <cstdint>
 class Texture {
 public:
-  static const uint32_t TEXTURE_COUNT = 2;
   static void createMaterialTextures(std::vector<Model *> models);
   static void destroyTextureImage();
   static void destroyTextureSampler();

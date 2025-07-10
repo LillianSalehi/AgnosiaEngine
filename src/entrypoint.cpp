@@ -102,7 +102,7 @@ void initVulkan() {
   DeviceControl::createLogicalDevice();
   volkLoadDevice(DeviceControl::getDevice());
   DeviceControl::createSwapChain(window);
-  Model::createMemoryAllocator(vulkaninstance);
+  Buffers::createMemoryAllocator(vulkaninstance);
   DeviceControl::createImageViews();
   Buffers::createDescriptorSetLayout();
   
@@ -120,8 +120,7 @@ void initVulkan() {
   Graphics::addGraphicsPipeline(graphics);
   Graphics::addFullscreenPipeline(fullscreen);
   Graphics::createCommandPool();
-  // Image creation MUST be after command pool, because command
-  // buffers are utilized.
+  // Image creation MUST be after command pool, because command buffers are utilized.
   Model::populateModels();
   Texture::createMaterialTextures(Model::getInstances());
   Texture::createColorResources();
@@ -145,24 +144,22 @@ void mainLoop() {
 }
 
 void cleanup() {
+  
+  Model::destroyModels();
+  Material::destroyMaterials();
+  vmaDestroyAllocator(Buffers::getAllocator());
   Render::cleanupSwapChain();
-  Graphics::destroyPipelines();
-  Buffers::destroyDescriptorPool();
-  Model::destroyTextures();
-
-  vkDestroyDescriptorSetLayout(DeviceControl::getDevice(),
-                               Buffers::getDescriptorSetLayout(), nullptr);
-
-  Buffers::destroyBuffers();
-  Render::destroyFenceSemaphores();
   Graphics::destroyCommandPool();
-
+  Render::destroyFenceSemaphores();
+  Graphics::destroyPipelines();
+  vkDestroyDescriptorSetLayout(DeviceControl::getDevice(), Buffers::getDescriptorSetLayout(), nullptr);
+  Buffers::destroyDescriptorPool();
   ImGui_ImplVulkan_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext();
 
-  vkDestroyDevice(DeviceControl::getDevice(), nullptr);
   DeviceControl::destroySurface(vulkaninstance);
+  vkDestroyDevice(DeviceControl::getDevice(), nullptr);
   vkDestroyInstance(vulkaninstance, nullptr);
   glfwDestroyWindow(window);
   glfwTerminate();
