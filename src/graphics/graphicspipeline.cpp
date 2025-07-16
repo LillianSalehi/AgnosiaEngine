@@ -102,10 +102,9 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   vkCmdPipelineBarrier2(commandBuffer, &dependencyInfo);
 
   // ------------------- DYNAMIC RENDER INFO ---------------------- //
-
-  const VkRenderingAttachmentInfo colorAttachmentInfo{
+  const VkRenderingAttachmentInfo colorAttachmentInfo = {
       .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-      .imageView = Texture::getColorImageView(),
+      .imageView = Texture::getColorImage().imageView,
       .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
       .resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT,
       .resolveImageView = DeviceControl::getSwapChainImageViews()[imageIndex],
@@ -114,9 +113,9 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
       .clearValue = {.color = {0.0f, 0.0f, 0.0f, 1.0f}},
   };
-  const VkRenderingAttachmentInfo depthAttachmentInfo{
+  const VkRenderingAttachmentInfo depthAttachmentInfo = {
       .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-      .imageView = Texture::getDepthImageView(),
+      .imageView = Texture::getDepthImage().imageView,
       .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
       .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
       .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -125,8 +124,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
   const VkRenderingInfo renderInfo{
       .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-      .renderArea = {.offset = {0, 0},
-                     .extent = DeviceControl::getSwapChainExtent()},
+      .renderArea = { .offset = {0, 0}, .extent = DeviceControl::getSwapChainExtent() },
       .layerCount = 1,
       .colorAttachmentCount = 1,
       .pColorAttachments = &colorAttachmentInfo,
@@ -135,8 +133,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
   vkCmdBeginRendering(commandBuffer, &renderInfo);
 
-  vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    graphicsHistory.front().pipeline);
+  vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsHistory.front().pipeline);
   VkViewport viewport{};
   viewport.x = 0.0f;
   viewport.y = 0.0f;
@@ -156,19 +153,15 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   int texID = 0;
   Agnosia_T::GPUPushConstants pushConsts;
   
-  pushConsts.model =
-    glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+  pushConsts.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
-  pushConsts.view =
-    glm::lookAt(glm::vec3(camPos[0], camPos[1], camPos[2]),
-                glm::vec3(centerPos[0], centerPos[1], centerPos[2]),
-                glm::vec3(upDir[0], upDir[1], upDir[2]));
+  pushConsts.view = glm::lookAt(glm::vec3(camPos[0], camPos[1], camPos[2]),
+                    glm::vec3(centerPos[0], centerPos[1], centerPos[2]),
+                    glm::vec3(upDir[0], upDir[1], upDir[2]));
 
-  pushConsts.proj =
-    glm::perspective(glm::radians(depthField),
-                     DeviceControl::getSwapChainExtent().width /
-                     (float)DeviceControl::getSwapChainExtent().height,
-                     distanceField[0], distanceField[1]);
+  pushConsts.proj = glm::perspective(glm::radians(depthField),
+                    DeviceControl::getSwapChainExtent().width / (float)DeviceControl::getSwapChainExtent().height,
+                    distanceField[0], distanceField[1]);
     
   // GLM was created for OpenGL, where the Y coordinate was inverted. This
   // simply flips the sign.
@@ -202,8 +195,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   }
   
 
-  vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    fullscreenHistory.front().pipeline);
+  vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, fullscreenHistory.front().pipeline);
   
   if(Model::getInstances().empty()) {
       vkCmdPushConstants(commandBuffer, fullscreenHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
@@ -243,8 +235,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
       .pImageMemoryBarriers = &prePresentImageBarrier,
   };
 
-  vkCmdPipelineBarrier2(Buffers::getCommandBuffers()[Render::getCurrentFrame()],
-                        &depInfo);
+  vkCmdPipelineBarrier2(Buffers::getCommandBuffers()[Render::getCurrentFrame()], &depInfo);
 
   VK_CHECK(vkEndCommandBuffer(commandBuffer));  
 }

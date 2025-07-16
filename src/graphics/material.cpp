@@ -18,9 +18,14 @@ float Material::getShininess() { return this->shine; }
 
 void Material::destroyMaterial(Material* material) {
   std::erase(instances, material);
-  
-  //vkDestroySampler(DeviceControl::getDevice(), material->getDiffuseTexture().sampler, nullptr);
-  //vkDestroyImageView(DeviceControl::getDevice(), material->getDiffuseTexture().imageView, nullptr);
-  //vkDestroyImage(DeviceControl::getDevice(), material->getDiffuseTexture().image, nullptr);
+  delete material;
 }
+
+void Material::destroyMaterials() {
+  instances.clear();
+  for(Material* mat : instances) {
+    delete mat;
+  }
+}
+
 const std::vector<Material *> &Material::getInstances() { return instances; }

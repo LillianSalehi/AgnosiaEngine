@@ -8,19 +8,14 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
-
+std::vector<Texture*> Texture::instances;
 
 VkDeviceMemory textureImageMemory;
 VkPipelineStageFlags sourceStage;
 VkPipelineStageFlags destinationStage;
 
-VkImage colorImage;
-VkImageView colorImageView;
-VkDeviceMemory colorImageMemory;
-
-VkImage depthImage;
-VkImageView depthImageView;
-VkDeviceMemory depthImageMemory;
+Texture::Image colorImage;
+Texture::Image depthImage;
 
 void createImage(uint32_t width, uint32_t height, uint32_t mipLevels,
                  VkSampleCountFlagBits sampleNum, VkFormat format,
@@ -333,44 +328,67 @@ Texture::Texture(const std::string& texturePath) {
   samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
   VK_CHECK(vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr, &this->sampler));
+
+  instances.push_back(this);
 }
 
 
-void Texture::createColorResources() {
+void Texture::createColorImage() {
   VkFormat colorFormat = DeviceControl::getImageFormat();
   VkExtent2D swapChainExtent = DeviceControl::getSwapChainExtent();
 
   createImage(swapChainExtent.width, swapChainExtent.height, 1,
-              DeviceControl::getPerPixelSampleCount(), colorFormat,
+              DeviceControl::getPerPixelSampleCount(),
+              colorFormat,
               VK_IMAGE_TILING_OPTIMAL,
               VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-              colorImage,
-              colorImageMemory);
-  colorImageView = DeviceControl::createImageView(colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+              colorImage.image,
+              colorImage.memory);
+  colorImage.imageView = DeviceControl::createImageView(colorImage.image, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
-void Texture::createDepthResources() {
+void Texture::createDepthImage() {
   VkFormat depthFormat = DeviceControl::getDepthFormat();
   VkExtent2D swapChainExtent = DeviceControl::getSwapChainExtent();
   createImage(swapChainExtent.width, swapChainExtent.height, 1,
-      DeviceControl::getPerPixelSampleCount(), depthFormat,
-      VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depthImage, depthImageMemory);
-  depthImageView = DeviceControl::createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
-  // Explicit transition from the layout of the image to the depth attachment is
-  // unnecessary here, since that will be handled in the render pass!
+      DeviceControl::getPerPixelSampleCount(),
+      depthFormat,
+      VK_IMAGE_TILING_OPTIMAL,
+      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+      depthImage.image,
+      depthImage.memory);
+  depthImage.imageView = DeviceControl::createImageView(depthImage.image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 }
+
 // ---------------------------- Getters & Setters ---------------------------------//
 uint32_t Texture::getMipLevels() { return this->mipLevels; }
 
-VkImage &Texture::getColorImage() { return colorImage; }
-VkImageView &Texture::getColorImageView() { return colorImageView; }
-VkDeviceMemory &Texture::getColorImageMemory() { return colorImageMemory; }
-
-VkImage &Texture::getDepthImage() { return depthImage; }
-VkImageView &Texture::getDepthImageView() { return depthImageView; }
-VkDeviceMemory &Texture::getDepthImageMemory() { return depthImageMemory; }
+Texture::Image &Texture::getColorImage() { return colorImage; }
+Texture::Image &Texture::getDepthImage() { return depthImage; }
 
 VkImage &Texture::getImage() { return this->image; }
 VkImageView &Texture::getImageView() { return this->imageView; }
 VkSampler &Texture::getSampler() { return this->sampler; }
+
+void Texture::destroyTexture(Texture* texture) {
+  std::erase(instances, texture);
+
+  vkDestroySampler(DeviceControl::getDevice(), texture->getSampler(), nullptr);
+  vkDestroyImageView(DeviceControl::getDevice(), texture->getImageView(), nullptr);
+  vkDestroyImage(DeviceControl::getDevice(), texture->getImage(), nullptr);
+
+  delete texture;
+}
+
+void Texture::destroyTextures() {
+  instances.clear();
+
+  for(Texture* texture : instances) {
+    vkDestroySampler(DeviceControl::getDevice(), texture->getSampler(), nullptr);
+    vkDestroyImageView(DeviceControl::getDevice(), texture->getImageView(), nullptr);
+    vkDestroyImage(DeviceControl::getDevice(), texture->getImage(), nullptr);
+
+    delete texture;
+  }
+}

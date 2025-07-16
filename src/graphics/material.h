@@ -4,7 +4,6 @@
 #include <vector>
 #define VK_NO_PROTOTYPES
 #include "volk.h"
-#include "../types.h"
 #include <string>
 
 class Material {
@@ -37,5 +36,5 @@ public:
   float getShininess();
 
   static void destroyMaterial(Material* material);
-  
+  static void destroyMaterials();
 };

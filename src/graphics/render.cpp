@@ -27,8 +27,8 @@ void recreateSwapChain() {
   
   DeviceControl::createSwapChain(EntryApp::getWindow());
   DeviceControl::createImageViews();
-  Texture::createColorResources();
-  Texture::createDepthResources();
+  Texture::createColorImage();
+  Texture::createDepthImage();
 }
 // At a high level, rendering in Vulkan consists of 5 steps:
 // Wait for the previous frame, acquire a image from the swap chain
@@ -141,12 +141,12 @@ void Render::destroyFenceSemaphores() {
   }
 }
 void Render::cleanupSwapChain() {
-  vkDestroyImageView(DeviceControl::getDevice(), Texture::getColorImageView(), nullptr);
-  vkDestroyImage(DeviceControl::getDevice(), Texture::getColorImage(), nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), Texture::getColorImageMemory(), nullptr);
-  vkDestroyImageView(DeviceControl::getDevice(), Texture::getDepthImageView(), nullptr);
-  vkDestroyImage(DeviceControl::getDevice(), Texture::getDepthImage(), nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), Texture::getDepthImageMemory(), nullptr);
+  vkDestroyImageView(DeviceControl::getDevice(), Texture::getColorImage().imageView, nullptr);
+  vkDestroyImage(DeviceControl::getDevice(), Texture::getColorImage().image, nullptr);
+  vkFreeMemory(DeviceControl::getDevice(), Texture::getColorImage().memory, nullptr);
+  vkDestroyImageView(DeviceControl::getDevice(), Texture::getDepthImage().imageView, nullptr);
+  vkDestroyImage(DeviceControl::getDevice(), Texture::getDepthImage().image, nullptr);
+  vkFreeMemory(DeviceControl::getDevice(), Texture::getDepthImage().memory, nullptr);
 
   for (auto imageView : DeviceControl::getSwapChainImageViews()) {
     vkDestroyImageView(DeviceControl::getDevice(), imageView, nullptr);

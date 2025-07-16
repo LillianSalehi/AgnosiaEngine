@@ -121,8 +121,8 @@ void initVulkan() {
   initAgnosia();
   // Image creation MUST be after command pool, because command buffers are utilized.
   Model::populateModels();
-  Texture::createColorResources();
-  Texture::createDepthResources();
+  Texture::createColorImage();
+  Texture::createDepthImage();
   Buffers::createDescriptorPool();
   Buffers::createDescriptorSet(Model::getInstances());
   Graphics::createCommandBuffer();
@@ -144,7 +144,8 @@ void mainLoop() {
 void cleanup() {
   
   Model::destroyModels();
-  
+  Material::destroyMaterials();
+  Texture::destroyTextures();
   vmaDestroyAllocator(Buffers::getAllocator());
   Render::cleanupSwapChain();
   Graphics::destroyCommandPool();

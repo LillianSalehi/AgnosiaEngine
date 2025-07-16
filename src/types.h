@@ -5,11 +5,6 @@
 
 class Agnosia_T {
 public:
-  struct Texture {
-    VkImage image;
-    VkImageView imageView;
-    VkSampler sampler;
-  };
   struct Vertex {
     // This defines what a vertex is!
     // We control the position, color and texture coordinate here!
