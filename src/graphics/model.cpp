@@ -199,10 +199,10 @@ void Model::destroyModel(Model* model) {
   std::erase(instances, model);
   
   // Destroy Vertex and Index buffers
-  vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.indexBuffer.buffer, model->buffers.indexBuffer.allocation);
-  vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.vertexBuffer.buffer, model->buffers.vertexBuffer.allocation);
+  //vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.indexBuffer.buffer, model->buffers.indexBuffer.allocation);
+  //vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.vertexBuffer.buffer, model->buffers.vertexBuffer.allocation);
 
-  delete model;
+  //delete model;
 }
 void Model::destroyModels() {
   for(Model* model : instances) {
@@ -210,10 +210,10 @@ void Model::destroyModels() {
     std::erase(instances, model);
     
     // Destroy Vertex and Index buffers
-    vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.indexBuffer.buffer, model->buffers.indexBuffer.allocation);
-    vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.vertexBuffer.buffer, model->buffers.vertexBuffer.allocation);
+    //vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.indexBuffer.buffer, model->buffers.indexBuffer.allocation);
+    //vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.vertexBuffer.buffer, model->buffers.vertexBuffer.allocation);
 
-    delete model;
+    //delete model;
   }  
 }
 

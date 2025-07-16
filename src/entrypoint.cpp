@@ -146,7 +146,7 @@ void mainLoop() {
 void cleanup() {
   
   Model::destroyModels();
-  Material::destroyMaterials();
+  
   vmaDestroyAllocator(Buffers::getAllocator());
   Render::cleanupSwapChain();
   Graphics::destroyCommandPool();
