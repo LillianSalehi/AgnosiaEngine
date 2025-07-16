@@ -1,5 +1,6 @@
 #pragma once
 
+#include "texture.h"
 #include <vector>
 #define VK_NO_PROTOTYPES
 #include "volk.h"
@@ -11,7 +12,7 @@ protected:
   std::string ID;
   std::string diffusePath;
 
-  Agnosia_T::Texture diffuseTexture;
+  Texture diffuseTexture;
 
   float ambient;
   float specular;
@@ -29,16 +30,12 @@ public:
   
   std::string getDiffusePath() const;
 
-  Agnosia_T::Texture &getDiffuseTexture();
+  Texture &getDiffuseTexture();
 
   float getAmbient();
   float getSpecular();
   float getShininess();
 
-  void setDiffuseImage(VkImage image);
-  void setDiffuseView(VkImageView imageView);
-  void setDiffuseSampler(VkSampler sampler);
-
   static void destroyMaterial(Material* material);
-  static void destroyMaterials();
+  
 };

@@ -1,26 +1,30 @@
 #pragma once
 
+#include <string>
 #define VK_NO_PROTOTYPES
 #include "volk.h"
 
-#include "model.h"
+
 #include <cstdint>
 class Texture {
 protected:
-
+  uint32_t mipLevels;
   VkImage image;
   VkImageView imageView;
   VkSampler sampler;
   
 public:
-  static void createMaterialTextures(std::vector<Model *> models);
-  static void destroyTextureImage();
-  static void destroyTextureSampler();
+  Texture(const std::string& texturePath);
 
+  VkImage& getImage();
+  VkImageView& getImageView();
+  VkSampler& getSampler();
+  uint32_t getMipLevels();
+  
   static void createDepthResources();
   static void createColorResources();
   // ------------ Getters & Setters ------------ //
-  static uint32_t getMipLevels();
+  
 
   static VkImage &getColorImage();
   static VkImageView &getColorImageView();

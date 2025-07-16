@@ -105,11 +105,9 @@ void initVulkan() {
   Buffers::createMemoryAllocator(vulkaninstance);
   DeviceControl::createImageViews();
   Buffers::createDescriptorSetLayout();
-  
   PipelineBuilder builder;
     
-  Agnosia_T::Pipeline graphics = builder.setCullMode(VK_CULL_MODE_BACK_BIT)
-                                        .Build();
+  Agnosia_T::Pipeline graphics = builder.setCullMode(VK_CULL_MODE_BACK_BIT).Build();
 
   Agnosia_T::Pipeline fullscreen = builder.setCullMode(VK_CULL_MODE_NONE)
                                     .setVertexShader("src/shaders/fullscreen.vert")
@@ -120,9 +118,9 @@ void initVulkan() {
   Graphics::addGraphicsPipeline(graphics);
   Graphics::addFullscreenPipeline(fullscreen);
   Graphics::createCommandPool();
+  initAgnosia();
   // Image creation MUST be after command pool, because command buffers are utilized.
   Model::populateModels();
-  Texture::createMaterialTextures(Model::getInstances());
   Texture::createColorResources();
   Texture::createDepthResources();
   Buffers::createDescriptorPool();
@@ -179,7 +177,7 @@ GLFWwindow *EntryApp::getWindow() { return window; }
 
 void EntryApp::run() {
   initWindow();
-  initAgnosia();
+  
   initVulkan();
   mainLoop();
   cleanup();
