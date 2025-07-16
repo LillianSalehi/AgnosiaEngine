@@ -36,6 +36,7 @@ public:
 
   // ---------- Getters & Setters ----------- //
   static VkFormat &getImageFormat();
+  static VkFormat getDepthFormat();
   static VkExtent2D &getSwapChainExtent();
   static std::vector<VkImage> &getSwapChainImages();
   static std::vector<VkFramebuffer> &getSwapChainFramebuffers();

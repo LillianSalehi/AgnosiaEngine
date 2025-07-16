@@ -478,3 +478,30 @@ VkSampleCountFlagBits &DeviceControl::getPerPixelSampleCount() {
 VkQueue &DeviceControl::getGraphicsQueue() { return graphicsQueue; }
 VkQueue &DeviceControl::getPresentQueue() { return presentQueue; }
 VkSurfaceKHR &DeviceControl::getSurface() { return surface; }
+
+VkFormat findSupportedFormat(const std::vector<VkFormat> &candidates,
+                             VkImageTiling tiling,
+                             VkFormatFeatureFlags features) {
+  for (VkFormat format : candidates) {
+    VkFormatProperties props;
+    vkGetPhysicalDeviceFormatProperties(DeviceControl::getPhysicalDevice(),
+                                        format, &props);
+
+    // Do we support linear tiling?
+    if (tiling == VK_IMAGE_TILING_LINEAR &&
+        (props.linearTilingFeatures & features) == features) {
+      return format;
+      // Or do we support optimal tiling?
+    } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
+               (props.optimalTilingFeatures & features) == features) {
+      return format;
+    }
+  }
+  throw std::runtime_error("failed to find supported depth buffering format!");
+}
+VkFormat DeviceControl::getDepthFormat() {
+  return findSupportedFormat(
+      {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
+       VK_FORMAT_D24_UNORM_S8_UINT},
+      VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+}

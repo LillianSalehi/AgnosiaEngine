@@ -140,7 +140,7 @@ void Gui::initImgui(VkInstance instance) {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
       .colorAttachmentCount = 1,
       .pColorAttachmentFormats = &DeviceControl::getImageFormat(),
-      .depthAttachmentFormat = Texture::findDepthFormat(),
+      .depthAttachmentFormat = DeviceControl::getDepthFormat(),
   };
 
   ImGui_ImplVulkan_InitInfo initInfo{

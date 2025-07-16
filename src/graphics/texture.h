@@ -6,11 +6,17 @@
 #include "model.h"
 #include <cstdint>
 class Texture {
+protected:
+
+  VkImage image;
+  VkImageView imageView;
+  VkSampler sampler;
+  
 public:
   static void createMaterialTextures(std::vector<Model *> models);
   static void destroyTextureImage();
   static void destroyTextureSampler();
-  static VkFormat findDepthFormat();
+
   static void createDepthResources();
   static void createColorResources();
   // ------------ Getters & Setters ------------ //

@@ -268,7 +268,7 @@ PipelineBuilder::PipelineBuilder() : vertexShader("src/shaders/base.vert"),
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
       .colorAttachmentCount = 1,
       .pColorAttachmentFormats = &DeviceControl::getImageFormat(),
-      .depthAttachmentFormat = Texture::findDepthFormat()
+      .depthAttachmentFormat = DeviceControl::getDepthFormat()
     };
     VkGraphicsPipelineCreateInfo pipelineInfo {
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,

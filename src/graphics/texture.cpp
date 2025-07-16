@@ -164,26 +164,7 @@ void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width,
 
   endSingleTimeCommands(commandBuffer);
 }
-VkFormat findSupportedFormat(const std::vector<VkFormat> &candidates,
-                             VkImageTiling tiling,
-                             VkFormatFeatureFlags features) {
-  for (VkFormat format : candidates) {
-    VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(DeviceControl::getPhysicalDevice(),
-                                        format, &props);
 
-    // Do we support linear tiling?
-    if (tiling == VK_IMAGE_TILING_LINEAR &&
-        (props.linearTilingFeatures & features) == features) {
-      return format;
-      // Or do we support optimal tiling?
-    } else if (tiling == VK_IMAGE_TILING_OPTIMAL &&
-               (props.optimalTilingFeatures & features) == features) {
-      return format;
-    }
-  }
-  throw std::runtime_error("failed to find supported depth buffering format!");
-}
 bool hasStencilComponent(VkFormat format) {
   return format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
          format == VK_FORMAT_D24_UNORM_S8_UINT;
@@ -371,12 +352,7 @@ void Texture::createMaterialTextures(std::vector<Model *> models) {
   }
 }
 
-VkFormat Texture::findDepthFormat() {
-  return findSupportedFormat(
-      {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
-       VK_FORMAT_D24_UNORM_S8_UINT},
-      VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-}
+
 void Texture::createColorResources() {
   VkFormat colorFormat = DeviceControl::getImageFormat();
   VkExtent2D swapChainExtent = DeviceControl::getSwapChainExtent();
@@ -391,7 +367,7 @@ void Texture::createColorResources() {
   colorImageView = DeviceControl::createImageView(colorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
 void Texture::createDepthResources() {
-  VkFormat depthFormat = findDepthFormat();
+  VkFormat depthFormat = DeviceControl::getDepthFormat();
   VkExtent2D swapChainExtent = DeviceControl::getSwapChainExtent();
   createImage(swapChainExtent.width, swapChainExtent.height, 1,
       DeviceControl::getPerPixelSampleCount(), depthFormat,
