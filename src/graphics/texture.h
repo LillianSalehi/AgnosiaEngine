@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <vector>
 #define VK_NO_PROTOTYPES
 #include "volk.h"
 #include <cstdint>
@@ -13,11 +12,8 @@ protected:
   VkImageView imageView;
   VkSampler sampler;
 
-  static std::vector<Texture*> instances;
 public:
-  Texture(const std::string& texturePath);
-
-  static const std::vector<Texture *> &getInstances();
+  Texture(const std::string& ID, const std::string& texturePath);
 
   VkImage& getImage();
   VkImageView& getImageView();

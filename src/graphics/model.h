@@ -7,7 +7,6 @@
 #include "material.h"
 #include <glm/glm.hpp>
 #include <string>
-#include <vector>
 
 class Model {
 protected:
@@ -18,17 +17,10 @@ protected:
   uint32_t verticeCount;
   uint32_t indiceCount;
   std::string modelPath;
-  static std::vector<Model *> instances;
 
 public:
   Model(const std::string &modelID, const Material &material,
         const std::string &modelPath, const glm::vec3 &opjPos);
-
-  static const std::vector<Model *> &getInstances();
-
-  static void populateModels();
-  static void destroyModel(Model* model);
-  static void destroyModels();
 
   Agnosia_T::GPUMeshBuffers getBuffers();
   std::string getID();

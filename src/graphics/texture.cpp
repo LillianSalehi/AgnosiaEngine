@@ -8,8 +8,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
-std::vector<Texture*> Texture::instances;
-
 VkDeviceMemory textureImageMemory;
 VkPipelineStageFlags sourceStage;
 VkPipelineStageFlags destinationStage;
@@ -247,7 +245,7 @@ void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t textureWidth,
   endSingleTimeCommands(commandBuffer);
 }
 
-Texture::Texture(const std::string& texturePath) {
+Texture::Texture(const std::string& ID, const std::string& texturePath) {
   int textureWidth, textureHeight, textureChannels;
   stbi_uc *pixels = stbi_load(texturePath.c_str(), &textureWidth, &textureHeight, &textureChannels, STBI_rgb_alpha);
 
@@ -328,8 +326,6 @@ Texture::Texture(const std::string& texturePath) {
   samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
   VK_CHECK(vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr, &this->sampler));
-
-  instances.push_back(this);
 }
 
 
@@ -371,24 +367,10 @@ VkImage &Texture::getImage() { return this->image; }
 VkImageView &Texture::getImageView() { return this->imageView; }
 VkSampler &Texture::getSampler() { return this->sampler; }
 
-void Texture::destroyTexture(Texture* texture) {
-  std::erase(instances, texture);
-
-  vkDestroySampler(DeviceControl::getDevice(), texture->getSampler(), nullptr);
-  vkDestroyImageView(DeviceControl::getDevice(), texture->getImageView(), nullptr);
-  vkDestroyImage(DeviceControl::getDevice(), texture->getImage(), nullptr);
-
-  delete texture;
-}
-
-void Texture::destroyTextures() {
-  instances.clear();
-
-  for(Texture* texture : instances) {
-    vkDestroySampler(DeviceControl::getDevice(), texture->getSampler(), nullptr);
-    vkDestroyImageView(DeviceControl::getDevice(), texture->getImageView(), nullptr);
-    vkDestroyImage(DeviceControl::getDevice(), texture->getImage(), nullptr);
-
-    delete texture;
-  }
-}
+//void destroyTextures() {
+  //for(Texture* texture : instances) {
+    //vkDestroySampler(DeviceControl::getDevice(), texture->getSampler(), nullptr);
+    //vkDestroyImageView(DeviceControl::getDevice(), texture->getImageView(), nullptr);
+    //vkDestroyImage(DeviceControl::getDevice(), texture->getImage(), nullptr)
+  //}
+//}

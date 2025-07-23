@@ -34,7 +34,7 @@ void recreateSwapChain() {
 // Wait for the previous frame, acquire a image from the swap chain
 // record a command buffer which draws the scene onto that image
 // submit the recorded command buffer and present the image!
-void Render::drawFrame() {
+void Render::drawFrame(AssetCache& cache) {
   vkWaitForFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
   vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
 
@@ -51,7 +51,7 @@ void Render::drawFrame() {
     
   vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
   vkResetCommandBuffer(Buffers::getCommandBuffers()[currentFrame], 0);
-  Graphics::recordCommandBuffer(Buffers::getCommandBuffers()[currentFrame], imageIndex);
+  Graphics::recordCommandBuffer(Buffers::getCommandBuffers()[currentFrame], imageIndex, cache);
   
   VkPipelineStageFlags waitStages[] = {
       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};

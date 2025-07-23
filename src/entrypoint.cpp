@@ -1,4 +1,5 @@
 #include "agnosiaimgui.h"
+#include "assetcache.h"
 #include "devicelibrary.h"
 #include "entrypoint.h"
 #include "graphics/buffers.h"
@@ -9,6 +10,8 @@
 #include "graphics/render.h"
 #include "graphics/texture.h"
 #include "types.h"
+#include <iostream>
+#include <memory>
 
 #define VK_NO_PROTOTYPES
 #include "volk.h"
@@ -22,6 +25,7 @@
 #include <stdexcept>
 VkInstance vulkaninstance;
 GLFWwindow *window;
+AssetCache cache;
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
@@ -78,17 +82,30 @@ void createInstance() {
   };
 
   if (vkCreateInstance(&createInfo, nullptr, &vulkaninstance) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create instance! (Entrypoint.cpp:87)");
+    throw std::runtime_error("failed to create instance! (Entrypoint.cpp:81)");
   }
 }
 void initAgnosia() {
-  Material *sphereMaterial = new Material("sphereMaterial", "assets/textures/checkermap.png", 0.1f, 1.0f, 32);
-  Material *stanfordDragonMaterial = new Material("stanfordDragonMaterial", "assets/textures/checkermap.png", 0.1f, 1.0f, 256);
-  Material *teapotMaterial = new Material("teapotMaterial", "assets/textures/checkermap.png", 0.1f, 1.0f, 128);
+  Texture* checkermap = cache.fetchLoadTexture("checkermap", "assets/textures/checkermap.png");
+  
+  auto sphereMaterial = std::make_unique<Material>("sphereMaterial", checkermap, 0.1f, 1.0f, 32);
+  auto stanfordDragonMaterial = std::make_unique<Material>("stanfordDragonMaterial", checkermap, 0.1f, 1.0f, 256);
+  auto teapotMaterial = std::make_unique<Material>("teapotMaterial", checkermap, 0.1f, 1.0f, 128);
+  cache.store(std::move(sphereMaterial));
+  cache.store(std::move(stanfordDragonMaterial));
+  cache.store(std::move(teapotMaterial));
 
-  Model *uvSphere = new Model("uvSphere", *sphereMaterial, "assets/models/UVSphere.obj", glm::vec3(0.0f, 0.0f, 0.0f));
-  Model *stanfordDragon = new Model("stanfordDragon", *stanfordDragonMaterial, "assets/models/StanfordDragon800k.obj", glm::vec3(0.0f, 2.0f, 0.0f));
-  Model *teapot = new Model("teapot", *teapotMaterial, "assets/models/teapot.obj", glm::vec3(1.0f, -3.0f, -1.0f));
+  auto uvSphere = std::make_unique<Model>("uvSphere", *cache.findMaterial("sphereMaterial"), "assets/models/UVSphere.obj", glm::vec3(0.0f, 0.0f, 0.0f));
+  auto stanfordDragon = std::make_unique<Model>("stanfordDragon", *cache.findMaterial("stanfordDragonMaterial"), "assets/models/StanfordDragon800k.obj", glm::vec3(0.0f, 2.0f, 0.0f));
+  auto teapot = std::make_unique<Model>("teapot", *cache.findMaterial("teapotMaterial"), "assets/models/teapot.obj", glm::vec3(1.0f, -3.0f, -1.0f));
+  cache.store(std::move(uvSphere));
+  cache.store(std::move(stanfordDragon));
+  cache.store(std::move(teapot));
+
+  for(Model* model : cache.getModels()) {
+    std::cout << model->getID() << "\n\n\n";
+  }
+
 }
 void initVulkan() {
   
@@ -110,21 +127,21 @@ void initVulkan() {
   Agnosia_T::Pipeline graphics = builder.setCullMode(VK_CULL_MODE_BACK_BIT).Build();
 
   Agnosia_T::Pipeline fullscreen = builder.setCullMode(VK_CULL_MODE_NONE)
-                                    .setVertexShader("src/shaders/fullscreen.vert")
-                                    .setFragmentShader("src/shaders/fullscreen.frag")
-                                    .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
-                                    .Build();
+                                          .setVertexShader("src/shaders/fullscreen.vert")
+                                          .setFragmentShader("src/shaders/fullscreen.frag")
+                                          .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
+                                          .Build();
                                       
   Graphics::addGraphicsPipeline(graphics);
   Graphics::addFullscreenPipeline(fullscreen);
   Graphics::createCommandPool();
   initAgnosia();
   // Image creation MUST be after command pool, because command buffers are utilized.
-  Model::populateModels();
+  
   Texture::createColorImage();
   Texture::createDepthImage();
   Buffers::createDescriptorPool();
-  Buffers::createDescriptorSet(Model::getInstances());
+  Buffers::createDescriptorSet(cache.getModels());
   Graphics::createCommandBuffer();
   Render::createSyncObject();
 
@@ -135,17 +152,17 @@ void mainLoop() {
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
-    Gui::drawImGui();
-    Render::drawFrame();
+    Gui::drawImGui(cache);
+    Render::drawFrame(cache);
   }
   vkDeviceWaitIdle(DeviceControl::getDevice());
 }
 
 void cleanup() {
   
-  Model::destroyModels();
-  Material::destroyMaterials();
-  Texture::destroyTextures();
+  
+  
+  
   vmaDestroyAllocator(Buffers::getAllocator());
   Render::cleanupSwapChain();
   Graphics::destroyCommandPool();

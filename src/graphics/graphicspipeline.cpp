@@ -66,7 +66,7 @@ void Graphics::createCommandBuffer() {
   VK_CHECK(vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo, Buffers::getCommandBuffers().data()));
 }
 void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
-                                   uint32_t imageIndex) {
+                                   uint32_t imageIndex, AssetCache& cache) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -169,7 +169,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
   pushConsts.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
   pushConsts.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
   // TODO: write defaults and check in shade rmaybe to prevent weird behavior?
-  for (Model *model : Model::getInstances()) {
+  for (Model *model : cache.getModels()) {
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             graphicsHistory.front().layout, 0, 1, &Buffers::getDescriptorSet(),
@@ -197,7 +197,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, fullscreenHistory.front().pipeline);
   
-  if(Model::getInstances().empty()) {
+  if(cache.getModels().empty()) {
       vkCmdPushConstants(commandBuffer, fullscreenHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
   }
 

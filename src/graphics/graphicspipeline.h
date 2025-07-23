@@ -2,6 +2,8 @@
 #define VK_NO_PROTOTYPES
 #include "volk.h"
 #include "../types.h"
+#include "../assetcache.h"
+
 class Graphics {
 public:
   static void destroyPipelines();
@@ -11,7 +13,7 @@ public:
   static void destroyCommandPool();
   static void createCommandBuffer();
   static void recordCommandBuffer(VkCommandBuffer cmndBuffer,
-                                  uint32_t imageIndex);
+                                  uint32_t imageIndex, AssetCache& cache);
 
   static void addGraphicsPipeline(Agnosia_T::Pipeline pipeline);
   static void addFullscreenPipeline(Agnosia_T::Pipeline pipeline);

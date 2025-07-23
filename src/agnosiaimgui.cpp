@@ -1,4 +1,5 @@
 #include "agnosiaimgui.h"
+#include "assetcache.h"
 #include "devicelibrary.h"
 #include "entrypoint.h"
 #include "graphics/buffers.h"
@@ -22,9 +23,12 @@ VkDescriptorPool imGuiDescriptorPool;
 static bool wireframe = false;
 float lineWidth = 1.0f;
 
-void initTransformsWindow() {
+
+void initTransformsWindow(AssetCache& cache) {
+  
   if (ImGui::TreeNode("Model Transforms")) {
-    for (Model *model : Model::getInstances()) {
+    
+    for (Model *model : cache.getModels()) {
 
       ImGui::DragFloat3(model->getID().c_str(), const_cast<float *>(glm::value_ptr(model->getPos())));
     }
@@ -41,7 +45,7 @@ void initTransformsWindow() {
   }
   
 }
-void initRenderWindow() {
+void initRenderWindow(AssetCache& cache) {
   if(ImGui::Checkbox("Wireframe?", &wireframe)) {
     // Rebuild graphics pipeline if setting is changed.
 
@@ -56,10 +60,10 @@ void initRenderWindow() {
   }
   ImGui::DragFloat("Line Width", &lineWidth, 1.0f, 1.0f, 64.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
   
-  for(Model *model : Model::getInstances()) {
+  for(Model *model : cache.getModels()) {
     
     if(ImGui::Button(("Kill " + model->getID()).c_str())) {
-      Model::destroyModel(model);
+      cache.remove(model->getID());
     }
     
     int polycount =  model->getIndices()/3;
@@ -68,14 +72,14 @@ void initRenderWindow() {
   
 }
 
-void drawTabs() {
+void drawTabs(AssetCache& cache) {
   if (ImGui::BeginTabBar("MainTabBar", ImGuiTabBarFlags_Reorderable)) {
     if (ImGui::BeginTabItem("Transforms Control")) {
-      initTransformsWindow();
+      initTransformsWindow(cache);
       ImGui::EndTabItem();
     }
     if(ImGui::BeginTabItem("Render Control")) {
-      initRenderWindow();
+      initRenderWindow(cache);
       ImGui::EndTabItem();
     }
 
@@ -83,7 +87,7 @@ void drawTabs() {
   }
 }
 
-void Gui::drawImGui() {
+void Gui::drawImGui(AssetCache& cache) {
 
   ImGui_ImplVulkan_NewFrame();
   ImGui_ImplGlfw_NewFrame();
@@ -94,7 +98,7 @@ void Gui::drawImGui() {
   ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
               1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-  drawTabs();
+  drawTabs(cache);
 
   ImGui::End();
 
