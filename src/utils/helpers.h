@@ -6,7 +6,6 @@
 #include <stdexcept>
 #include <string>
 
-
 static void VK_CHECK(VkResult result, std::source_location location = std::source_location::current()) {
   if(result != VK_SUCCESS) {
     std::string const fileName = location.file_name();

@@ -1,11 +1,12 @@
 #include "../devicelibrary.h"
-#include "../utils.h"
+#include "../utils/helpers.h"
 #include "buffers.h"
 #include "model.h"
 #include <cstdint>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <stdexcept>
+#include "../utils/deletion.h"
 
 std::vector<VkDescriptorSetLayout> modelSetLayouts;
 
@@ -49,6 +50,7 @@ void Buffers::createMemoryAllocator(VkInstance vkInstance) {
 
   };
   vmaCreateAllocator(&allocInfo, &allocator);
+  DeletionQueue::get().push_function([=](){vmaDestroyAllocator(allocator);});
 }
 
 void Buffers::createDescriptorSetLayout() {
@@ -104,6 +106,8 @@ void Buffers::createDescriptorSetLayout() {
 
   };
   VK_CHECK(vkCreateDescriptorSetLayout(DeviceControl::getDevice(), &layoutInfo, nullptr, &descriptorSetLayout));
+
+  DeletionQueue::get().push_function([=](){vkDestroyDescriptorSetLayout(DeviceControl::getDevice(), descriptorSetLayout, nullptr);});
 }
 void Buffers::createDescriptorPool() {
 
@@ -121,9 +125,8 @@ void Buffers::createDescriptorPool() {
   };
   
   VK_CHECK(vkCreateDescriptorPool(DeviceControl::getDevice(), &poolInfo, nullptr, &descriptorPool));
-}
-void Buffers::destroyDescriptorPool() {
-  vkDestroyDescriptorPool(DeviceControl::getDevice(), descriptorPool, nullptr);
+
+  DeletionQueue::get().push_function([=](){vkDestroyDescriptorPool(DeviceControl::getDevice(), descriptorPool, nullptr);});
 }
 void Buffers::createDescriptorSet(std::vector<Model *> models) {
   VkDescriptorSetAllocateInfo allocInfo = {

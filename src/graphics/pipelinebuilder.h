@@ -2,7 +2,7 @@
 #define VK_NO_PROTOTYPES
 #include "volk.h"
 #include <string>
-#include "../types.h"
+#include "../utils/types.h"
 #include "texture.h"
 
 class PipelineBuilder {

@@ -13,8 +13,7 @@
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
-
-
+#include "../utils/deletion.h"
 
 // chatgpt did this and the haters can WEEP fuck hash functions.
 namespace std {
@@ -183,19 +182,10 @@ Model::Model(const std::string &modelID, const Material &material, const std::st
   this->buffers = newSurface;
   this->verticeCount = vertices.size();
   this->indiceCount = indices.size();
+
+  //DeletionQueue::get().push_function([=](){vmaDestroyBuffer(Buffers::getAllocator(), this->buffers.indexBuffer.buffer, this->buffers.indexBuffer.allocation);});
+  //DeletionQueue::get().push_function([=](){vmaDestroyBuffer(Buffers::getAllocator(), this->buffers.vertexBuffer.buffer, this->buffers.vertexBuffer.allocation);});
 }
-
-void destroyModel(Model* model) {
-  // Remove instance from instances list
-//  std::erase(instances, model);
-  
-  // Destroy Vertex and Index buffers
-  //vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.indexBuffer.buffer, model->buffers.indexBuffer.allocation);
-  //vmaDestroyBuffer(Buffers::getAllocator(), model->buffers.vertexBuffer.buffer, model->buffers.vertexBuffer.allocation);
-
-  //delete model;
-}
-
 
 std::string Model::getID() { return this->ID; }
 glm::vec3 &Model::getPos() { return this->objPosition; }

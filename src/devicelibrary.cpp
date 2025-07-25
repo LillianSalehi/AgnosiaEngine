@@ -1,10 +1,12 @@
 #include "devicelibrary.h"
-#include "utils.h"
+#include "utils/deletion.h"
+#include "utils/helpers.h"
 #include <algorithm>
 #include <limits>
 #include <set>
 #include <stdexcept>
 #include <string>
+#include "graphics/render.h"
 
 
 VkPhysicalDeviceProperties deviceProperties;
@@ -251,11 +253,9 @@ void DeviceControl::pickPhysicalDevice(VkInstance &instance) {
     throw std::runtime_error("Failed to find a suitable GPU! (DeviceLibrary.cpp:269)");
   }
 }
-void DeviceControl::destroySurface(VkInstance &instance) {
-  vkDestroySurfaceKHR(instance, surface, nullptr);
-}
 void DeviceControl::createSurface(VkInstance &instance, GLFWwindow *window) {
   VK_CHECK(glfwCreateWindowSurface(instance, window, nullptr, &surface));
+  DeletionQueue::get().push_function([=](){vkDestroySurfaceKHR(instance, surface, nullptr);});
 }
 void DeviceControl::createLogicalDevice() {
   // Describe how many queues we want for a single family (1) here, right now we
@@ -339,6 +339,7 @@ void DeviceControl::createLogicalDevice() {
   createDeviceInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
   VK_CHECK(vkCreateDevice(physicalDevice, &createDeviceInfo, nullptr, &device));
+  DeletionQueue::get().push_function([=](){vkDestroyDevice(device, nullptr);});
   
   vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
   vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
@@ -421,10 +422,9 @@ void DeviceControl::createSwapChain(GLFWwindow *window) {
 
   swapChainImageFormat = surfaceFormat.format;
   swapChainExtent = extent;
+  DeletionQueue::get().push_function([=](){Render::cleanupSwapChain();});
 }
-void DeviceControl::destroySwapChain() {
-  vkDestroySwapchainKHR(device, swapChain, nullptr);
-}
+
 VkImageView DeviceControl::createImageView(VkImage image, VkFormat format,
                                            VkImageAspectFlags flags,
                                            uint32_t mipLevels) {
@@ -449,13 +449,8 @@ void DeviceControl::createImageViews() {
   swapChainImageViews.resize(swapChainImages.size());
 
   for (uint32_t i = 0; i < swapChainImages.size(); i++) {
-    swapChainImageViews[i] = createImageView(
-        swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-  }
-}
-void DeviceControl::destroyImageViews() {
-  for (auto imageView : swapChainImageViews) {
-    vkDestroyImageView(device, imageView, nullptr);
+    swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+    //DeletionQueue::get().push_function([=](){vkDestroyImageView(device, swapChainImageViews[i], nullptr);});
   }
 }
 

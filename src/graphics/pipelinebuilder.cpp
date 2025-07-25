@@ -4,7 +4,8 @@
 #include <cstdint>
 #include "buffers.h"
 #include "../devicelibrary.h"
-#include "../utils.h"
+#include "../utils/helpers.h"
+#include "../utils/deletion.h"
 #include "shader.h"
 #define STB_INCLUDE_IMPLEMENTATION
 #define STB_INCLUDE_LINE_GLSL
@@ -289,6 +290,9 @@ PipelineBuilder::PipelineBuilder() : vertexShader("src/shaders/base.vert"),
     };
 
     VK_CHECK(vkCreateGraphicsPipelines(DeviceControl::getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline));
+
+    DeletionQueue::get().push_function([=](){vkDestroyPipeline(DeviceControl::getDevice(), pipeline, nullptr);});
+    DeletionQueue::get().push_function([=](){vkDestroyPipelineLayout(DeviceControl::getDevice(), pipelineLayout, nullptr);});
 
     Agnosia_T::Pipeline finalPipeline = {pipeline, pipelineLayout};
       

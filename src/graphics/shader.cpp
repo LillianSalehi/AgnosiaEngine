@@ -6,7 +6,7 @@
 #include <glslang/SPIRV/Logger.h>
 #include <iostream>
 #include <fstream>
-#include "../utils.h"
+#include "../utils/helpers.h"
 #include "../devicelibrary.h"
 
 constexpr EShLanguage VkShaderStageToGlslang(VkShaderStageFlagBits stage) {

@@ -19,9 +19,6 @@ public:
   VkImageView& getImageView();
   VkSampler& getSampler();
   uint32_t getMipLevels();
-
-  static void destroyTexture(Texture* texture);
-  static void destroyTextures();
   
   static void createDepthImage();
   static void createColorImage();

@@ -9,18 +9,15 @@
 #include "graphics/pipelinebuilder.h"
 #include "graphics/render.h"
 #include "graphics/texture.h"
-#include "types.h"
+#include "utils/types.h"
 #include <iostream>
 #include <memory>
+#include "utils/deletion.h"
 
 #define VK_NO_PROTOTYPES
 #include "volk.h"
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_vulkan.h"
 
 #include <stdexcept>
 VkInstance vulkaninstance;
@@ -28,6 +25,8 @@ GLFWwindow *window;
 AssetCache cache;
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
+
+DeletionQueue* DeletionQueue::instance = nullptr;
 
 // Getters and Setters!
 void EntryApp::setFramebufferResized(bool setter) {
@@ -84,6 +83,7 @@ void createInstance() {
   if (vkCreateInstance(&createInfo, nullptr, &vulkaninstance) != VK_SUCCESS) {
     throw std::runtime_error("failed to create instance! (Entrypoint.cpp:81)");
   }
+  DeletionQueue::get().push_function([=](){vkDestroyInstance(vulkaninstance, nullptr);});
 }
 void initAgnosia() {
   Texture* checkermap = cache.fetchLoadTexture("checkermap", "assets/textures/checkermap.png");
@@ -101,10 +101,6 @@ void initAgnosia() {
   cache.store(std::move(uvSphere));
   cache.store(std::move(stanfordDragon));
   cache.store(std::move(teapot));
-
-  for(Model* model : cache.getModels()) {
-    std::cout << model->getID() << "\n\n\n";
-  }
 
 }
 void initVulkan() {
@@ -137,7 +133,6 @@ void initVulkan() {
   Graphics::createCommandPool();
   initAgnosia();
   // Image creation MUST be after command pool, because command buffers are utilized.
-  
   Texture::createColorImage();
   Texture::createDepthImage();
   Buffers::createDescriptorPool();
@@ -159,24 +154,8 @@ void mainLoop() {
 }
 
 void cleanup() {
+  DeletionQueue::get().flush();
   
-  
-  
-  
-  vmaDestroyAllocator(Buffers::getAllocator());
-  Render::cleanupSwapChain();
-  Graphics::destroyCommandPool();
-  Render::destroyFenceSemaphores();
-  Graphics::destroyPipelines();
-  vkDestroyDescriptorSetLayout(DeviceControl::getDevice(), Buffers::getDescriptorSetLayout(), nullptr);
-  Buffers::destroyDescriptorPool();
-  ImGui_ImplVulkan_Shutdown();
-  ImGui_ImplGlfw_Shutdown();
-  ImGui::DestroyContext();
-
-  DeviceControl::destroySurface(vulkaninstance);
-  vkDestroyDevice(DeviceControl::getDevice(), nullptr);
-  vkDestroyInstance(vulkaninstance, nullptr);
   glfwDestroyWindow(window);
   glfwTerminate();
 }

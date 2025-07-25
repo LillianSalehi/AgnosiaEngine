@@ -7,7 +7,8 @@
 #include "graphicspipeline.h"
 #include "render.h"
 #include "texture.h"
-#include "../utils.h"
+#include "../utils/helpers.h"
+#include "../utils/deletion.h"
 
 uint32_t currentFrame = 0;
 std::vector<VkSemaphore> imageAvailableSemaphores;
@@ -132,12 +133,10 @@ void Render::createSyncObject() {
   for(size_t i = 0; i < DeviceControl::getSwapChainImages().size(); i++) {
     VK_CHECK(vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]));    
   }
-}
-void Render::destroyFenceSemaphores() {
   for (size_t i = 0; i < Buffers::getMaxFramesInFlight(); i++) {
-    vkDestroySemaphore(DeviceControl::getDevice(), renderFinishedSemaphores[i], nullptr);
-    vkDestroySemaphore(DeviceControl::getDevice(), imageAvailableSemaphores[i], nullptr);
-    vkDestroyFence(DeviceControl::getDevice(), inFlightFences[i], nullptr);
+    DeletionQueue::get().push_function([=](){vkDestroySemaphore(DeviceControl::getDevice(), renderFinishedSemaphores[i], nullptr);});
+    DeletionQueue::get().push_function([=](){vkDestroySemaphore(DeviceControl::getDevice(), imageAvailableSemaphores[i], nullptr);});
+    DeletionQueue::get().push_function([=](){vkDestroyFence(DeviceControl::getDevice(), inFlightFences[i], nullptr);});
   }
 }
 void Render::cleanupSwapChain() {

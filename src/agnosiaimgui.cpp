@@ -9,9 +9,10 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
-#include "types.h"
+#include "utils/types.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <stdexcept>
+#include "utils/deletion.h"
 
 PipelineBuilder builder;
 Agnosia_T::Pipeline graphicsSolid;
@@ -22,7 +23,6 @@ Agnosia_T::Pipeline fullscreenWireframe;
 VkDescriptorPool imGuiDescriptorPool;
 static bool wireframe = false;
 float lineWidth = 1.0f;
-
 
 void initTransformsWindow(AssetCache& cache) {
   
@@ -184,6 +184,9 @@ void Gui::initImgui(VkInstance instance) {
                                .setPolygonMode(VK_POLYGON_MODE_LINE)
                                .setDepthCompareOp(VK_COMPARE_OP_LESS_OR_EQUAL)
                                .Build();
+  DeletionQueue::get().push_function([=](){ImGui::DestroyContext();});
+  DeletionQueue::get().push_function([=](){ImGui_ImplGlfw_Shutdown();});
+  DeletionQueue::get().push_function([=](){ImGui_ImplVulkan_Shutdown();});
 }
 bool Gui::getWireframe() {
   return wireframe;

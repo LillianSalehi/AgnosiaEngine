@@ -2,7 +2,7 @@
 
 #define VK_NO_PROTOTYPES
 #include "volk.h"
-#include "../types.h"
+#include "../utils/types.h"
 #include "model.h"
 #include <vector>
 #include <cstdint>
@@ -20,7 +20,7 @@ public:
   static void createDescriptorSetLayout();
   static void createDescriptorSet(std::vector<Model *> models);
   static void createDescriptorPool();
-  static void destroyDescriptorPool();
+  
   
   static uint32_t findMemoryType(uint32_t typeFilter,
                                  VkMemoryPropertyFlags flags);

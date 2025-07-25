@@ -1,6 +1,6 @@
 #include "../devicelibrary.h"
-#include "../types.h"
-#include "../utils.h"
+#include "../utils/types.h"
+#include "../utils/helpers.h"
 #include "buffers.h"
 #include "graphicspipeline.h"
 #include "../agnosiaimgui.h"
@@ -8,7 +8,7 @@
 #include "imgui_impl_vulkan.h"
 #include "render.h"
 #include "texture.h"
-#include <deque>
+#include "../utils/deletion.h"
  
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/ext/matrix_clip_space.hpp>
@@ -24,17 +24,6 @@ float distanceField[2] = {0.1f, 100.0f};
 
 std::deque<Agnosia_T::Pipeline> graphicsHistory;
 std::deque<Agnosia_T::Pipeline> fullscreenHistory;
-                                         
-void Graphics::destroyPipelines() {
-  for(const Agnosia_T::Pipeline& graphics : graphicsHistory) {
-      vkDestroyPipeline(DeviceControl::getDevice(), graphics.pipeline, nullptr);
-      vkDestroyPipelineLayout(DeviceControl::getDevice(), graphics.layout, nullptr);
-  }
-  for(const Agnosia_T::Pipeline& fullscreen : fullscreenHistory) {
-      vkDestroyPipeline(DeviceControl::getDevice(), fullscreen.pipeline, nullptr);
-      vkDestroyPipelineLayout(DeviceControl::getDevice(), fullscreen.layout, nullptr);
-  }
-}
 
 void Graphics::createCommandPool() {
   // Commands in Vulkan are not executed using function calls, you have to
@@ -49,10 +38,8 @@ void Graphics::createCommandPool() {
   poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
   VK_CHECK(vkCreateCommandPool(DeviceControl::getDevice(), &poolInfo, nullptr, &Buffers::getCommandPool()));
-}
-void Graphics::destroyCommandPool() {
-  vkDestroyCommandPool(DeviceControl::getDevice(), Buffers::getCommandPool(),
-                       nullptr);
+  
+  DeletionQueue::get().push_function([=](){vkDestroyCommandPool(DeviceControl::getDevice(), Buffers::getCommandPool(), nullptr);});
 }
 void Graphics::createCommandBuffer() {
   Buffers::getCommandBuffers().resize(Buffers::getMaxFramesInFlight());

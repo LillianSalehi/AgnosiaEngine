@@ -1,7 +1,8 @@
 #include "../devicelibrary.h"
 #include "buffers.h"
 #include "texture.h"
-#include "../utils.h"
+#include "../utils/helpers.h"
+#include "../utils/deletion.h"
 
 #include <stdexcept>
 #include <string>
@@ -326,6 +327,9 @@ Texture::Texture(const std::string& ID, const std::string& texturePath) {
   samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
   VK_CHECK(vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr, &this->sampler));
+  //DeletionQueue::get().push_function([=](){vkDestroySampler(DeviceControl::getDevice(), this->sampler, nullptr);});
+  //DeletionQueue::get().push_function([=](){vkDestroyImageView(DeviceControl::getDevice(), this->imageView, nullptr);});
+  //DeletionQueue::get().push_function([=](){vkDestroyImage(DeviceControl::getDevice(), this->image, nullptr);});
 }
 
 
@@ -366,11 +370,3 @@ Texture::Image &Texture::getDepthImage() { return depthImage; }
 VkImage &Texture::getImage() { return this->image; }
 VkImageView &Texture::getImageView() { return this->imageView; }
 VkSampler &Texture::getSampler() { return this->sampler; }
-
-//void destroyTextures() {
-  //for(Texture* texture : instances) {
-    //vkDestroySampler(DeviceControl::getDevice(), texture->getSampler(), nullptr);
-    //vkDestroyImageView(DeviceControl::getDevice(), texture->getImageView(), nullptr);
-    //vkDestroyImage(DeviceControl::getDevice(), texture->getImage(), nullptr)
-  //}
-//}

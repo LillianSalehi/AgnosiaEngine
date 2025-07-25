@@ -3,7 +3,7 @@
 #define VK_NO_PROTOTYPES
 #include "volk.h"
 
-#include "../types.h"
+#include "../utils/types.h"
 #include "material.h"
 #include <glm/glm.hpp>
 #include <string>
