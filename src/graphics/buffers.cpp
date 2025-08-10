@@ -36,11 +36,11 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 VmaAllocator allocator;
 
 void Buffers::createMemoryAllocator(VkInstance vkInstance) {
-  VmaVulkanFunctions vulkanFuncs{
+  VmaVulkanFunctions vulkanFuncs = {
       .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
       .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
   };
-  VmaAllocatorCreateInfo allocInfo{
+  VmaAllocatorCreateInfo allocInfo = {
       .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
       .physicalDevice = DeviceControl::getPhysicalDevice(),
       .device = DeviceControl::getDevice(),
@@ -226,7 +226,7 @@ Agnosia_T::AllocatedBuffer Buffers::createBuffer(size_t allocSize, VmaAllocation
     .flags = vmaFlags,
     .usage = memUsage,
   };
-
+  
   Agnosia_T::AllocatedBuffer buffer;
   VK_CHECK(vmaCreateBuffer(allocator, &bufferInfo, &vmaAllocInfo, &buffer.buffer, &buffer.allocation, &buffer.info));
   return buffer;

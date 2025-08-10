@@ -422,7 +422,6 @@ void DeviceControl::createSwapChain(GLFWwindow *window) {
 
   swapChainImageFormat = surfaceFormat.format;
   swapChainExtent = extent;
-  DeletionQueue::get().push_function([=](){Render::cleanupSwapChain();});
 }
 
 VkImageView DeviceControl::createImageView(VkImage image, VkFormat format,

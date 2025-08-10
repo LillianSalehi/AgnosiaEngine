@@ -128,24 +128,20 @@ void Render::createSyncObject() {
   
   for (size_t i = 0; i < Buffers::getMaxFramesInFlight(); i++) {
     VK_CHECK(vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]));
+    DeletionQueue::get().push_function([=](){vkDestroySemaphore(DeviceControl::getDevice(), imageAvailableSemaphores[i], nullptr);});
     VK_CHECK(vkCreateFence(DeviceControl::getDevice(), &fenceInfo, nullptr, &inFlightFences[i]));
+    DeletionQueue::get().push_function([=](){vkDestroyFence(DeviceControl::getDevice(), inFlightFences[i], nullptr);});
   }
   for(size_t i = 0; i < DeviceControl::getSwapChainImages().size(); i++) {
     VK_CHECK(vkCreateSemaphore(DeviceControl::getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]));    
-  }
-  for (size_t i = 0; i < Buffers::getMaxFramesInFlight(); i++) {
     DeletionQueue::get().push_function([=](){vkDestroySemaphore(DeviceControl::getDevice(), renderFinishedSemaphores[i], nullptr);});
-    DeletionQueue::get().push_function([=](){vkDestroySemaphore(DeviceControl::getDevice(), imageAvailableSemaphores[i], nullptr);});
-    DeletionQueue::get().push_function([=](){vkDestroyFence(DeviceControl::getDevice(), inFlightFences[i], nullptr);});
   }
 }
 void Render::cleanupSwapChain() {
   vkDestroyImageView(DeviceControl::getDevice(), Texture::getColorImage().imageView, nullptr);
-  vkDestroyImage(DeviceControl::getDevice(), Texture::getColorImage().image, nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), Texture::getColorImage().memory, nullptr);
+  vmaDestroyImage(Buffers::getAllocator(), Texture::getColorImage().image, Texture::getColorImage().alloc);
   vkDestroyImageView(DeviceControl::getDevice(), Texture::getDepthImage().imageView, nullptr);
-  vkDestroyImage(DeviceControl::getDevice(), Texture::getDepthImage().image, nullptr);
-  vkFreeMemory(DeviceControl::getDevice(), Texture::getDepthImage().memory, nullptr);
+  vmaDestroyImage(Buffers::getAllocator(), Texture::getDepthImage().image, Texture::getDepthImage().alloc);
 
   for (auto imageView : DeviceControl::getSwapChainImageViews()) {
     vkDestroyImageView(DeviceControl::getDevice(), imageView, nullptr);

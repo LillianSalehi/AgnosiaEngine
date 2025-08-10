@@ -9,6 +9,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
+#include "utils/helpers.h"
 #include "utils/types.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <stdexcept>
@@ -136,9 +137,8 @@ void Gui::initImgui(VkInstance instance) {
       .poolSizeCount = 1,
       .pPoolSizes = ImGuiPoolSizes,
   };
-  if (vkCreateDescriptorPool(DeviceControl::getDevice(), &ImGuiPoolInfo, nullptr, &imGuiDescriptorPool) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create ImGui descriptor pool!");
-  }
+  VK_CHECK(vkCreateDescriptorPool(DeviceControl::getDevice(), &ImGuiPoolInfo, nullptr, &imGuiDescriptorPool));
+  DeletionQueue::get().push_function([=](){vkDestroyDescriptorPool(DeviceControl::getDevice(), imGuiDescriptorPool, nullptr);});
 
   VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo{
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,

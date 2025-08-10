@@ -10,7 +10,6 @@
 #include "graphics/render.h"
 #include "graphics/texture.h"
 #include "utils/types.h"
-#include <iostream>
 #include <memory>
 #include "utils/deletion.h"
 
@@ -130,15 +129,17 @@ void initVulkan() {
                                       
   Graphics::addGraphicsPipeline(graphics);
   Graphics::addFullscreenPipeline(fullscreen);
+  Buffers::createDescriptorPool();
   Graphics::createCommandPool();
   initAgnosia();
   // Image creation MUST be after command pool, because command buffers are utilized.
   Texture::createColorImage();
   Texture::createDepthImage();
-  Buffers::createDescriptorPool();
+  
   Buffers::createDescriptorSet(cache.getModels());
   Graphics::createCommandBuffer();
   Render::createSyncObject();
+  
 
   Gui::initImgui(vulkaninstance);
 }
@@ -154,6 +155,7 @@ void mainLoop() {
 }
 
 void cleanup() {
+  DeletionQueue::get().push_function([=](){Render::cleanupSwapChain();});
   DeletionQueue::get().flush();
   
   glfwDestroyWindow(window);

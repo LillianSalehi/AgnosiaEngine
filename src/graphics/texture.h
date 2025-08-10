@@ -4,6 +4,7 @@
 #define VK_NO_PROTOTYPES
 #include "volk.h"
 #include <cstdint>
+#include "vk_mem_alloc.h"
 
 class Texture {
 protected:
@@ -27,7 +28,7 @@ public:
   struct Image {
     VkImage image;
     VkImageView imageView;
-    VkDeviceMemory memory;
+    VmaAllocation alloc;
   };
   static Image &getColorImage();
   static Image &getDepthImage();

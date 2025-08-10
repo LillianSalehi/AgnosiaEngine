@@ -5,8 +5,6 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-
-
 #NB! Include directories are included so that you can reference them without a relative path in code, just the file.
 include_directories(lib lib/imgui)
 

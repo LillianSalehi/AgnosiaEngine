@@ -119,33 +119,29 @@ Model::Model(const std::string &modelID, const Material &material, const std::st
   const size_t vertexBufferSize = vertices.size() * sizeof(Agnosia_T::Vertex);
   const size_t indexBufferSize = indices.size() * sizeof(uint32_t);
 
-  Agnosia_T::GPUMeshBuffers newSurface;
-    
-  newSurface.vertexBuffer = Buffers::createBuffer(vertexBufferSize,
+  this->buffers.vertexBuffer = Buffers::createBuffer(vertexBufferSize,
                                                   VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
                                                   VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                                  VMA_MEMORY_USAGE_AUTO
-                                                 );
+                                                  VMA_MEMORY_USAGE_AUTO);
     
   // Find the address of the vertex buffer!
   VkBufferDeviceAddressInfo vertexDeviceAddressInfo = {
     .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-    .buffer = newSurface.vertexBuffer.buffer,
+    .buffer = this->buffers.vertexBuffer.buffer,
   };
-  newSurface.vertexBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &vertexDeviceAddressInfo);
+  this->buffers.vertexBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &vertexDeviceAddressInfo);
 
   // Create the index buffer to iterate over and check for duplicate vertices
-  newSurface.indexBuffer = Buffers::createBuffer(indexBufferSize,
+  this->buffers.indexBuffer = Buffers::createBuffer(indexBufferSize,
                                                  VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-                                                 VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |  VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                                                 VMA_MEMORY_USAGE_AUTO
-                                                );
+                                                 VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                                                 VMA_MEMORY_USAGE_AUTO);
   // Find the address of the vertex buffer!
   VkBufferDeviceAddressInfo indexDeviceAddressInfo = {
     .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-    .buffer = newSurface.indexBuffer.buffer,
+    .buffer = this->buffers.indexBuffer.buffer,
   };
-  newSurface.indexBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &indexDeviceAddressInfo);
+  this->buffers.indexBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &indexDeviceAddressInfo);
 
   // Allocate a buffer to use memory that will first, request the ability to *be* mapped, then persistently mapped and fetched.
   Agnosia_T::AllocatedBuffer stagingBuffer = Buffers::createBuffer(
@@ -167,24 +163,25 @@ Model::Model(const std::string &modelID, const Material &material, const std::st
     vertexCopy.srcOffset = 0;
     vertexCopy.size = vertexBufferSize;
 
-    vkCmdCopyBuffer(cmd, stagingBuffer.buffer, newSurface.vertexBuffer.buffer, 1, &vertexCopy);
+    vkCmdCopyBuffer(cmd, stagingBuffer.buffer, this->buffers.vertexBuffer.buffer, 1, &vertexCopy);
 
     VkBufferCopy indexCopy{0};
     indexCopy.dstOffset = 0;
     indexCopy.srcOffset = vertexBufferSize;
     indexCopy.size = indexBufferSize;
 
-    vkCmdCopyBuffer(cmd, stagingBuffer.buffer, newSurface.indexBuffer.buffer, 1, &indexCopy);
+    vkCmdCopyBuffer(cmd, stagingBuffer.buffer, this->buffers.indexBuffer.buffer, 1, &indexCopy);
   });
   
   vmaDestroyBuffer(Buffers::getAllocator(), stagingBuffer.buffer, stagingBuffer.allocation);
-
-  this->buffers = newSurface;
+  
   this->verticeCount = vertices.size();
   this->indiceCount = indices.size();
-
-  //DeletionQueue::get().push_function([=](){vmaDestroyBuffer(Buffers::getAllocator(), this->buffers.indexBuffer.buffer, this->buffers.indexBuffer.allocation);});
-  //DeletionQueue::get().push_function([=](){vmaDestroyBuffer(Buffers::getAllocator(), this->buffers.vertexBuffer.buffer, this->buffers.vertexBuffer.allocation);});
+  
+  Agnosia_T::AllocatedBuffer vertexBuffer = this->buffers.vertexBuffer;
+  Agnosia_T::AllocatedBuffer indexBuffer = this->buffers.indexBuffer;
+  DeletionQueue::get().push_function([=](){vmaDestroyBuffer(Buffers::getAllocator(), indexBuffer.buffer, indexBuffer.allocation);});
+  DeletionQueue::get().push_function([=](){vmaDestroyBuffer(Buffers::getAllocator(), vertexBuffer.buffer, vertexBuffer.allocation);});
 }
 
 std::string Model::getID() { return this->ID; }
