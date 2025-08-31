@@ -121,7 +121,7 @@ std::vector<uint32_t> CompileShaderToSpirv(VkShaderStageFlagBits stageFlag, std:
   if (!parseResult) {
     printf("Info log: %s\nDebug log: %s\n", shader.getInfoLog(), shader.getInfoDebugLog());
     // TODO: throw shader compile error
-    throw std::runtime_error("rip");
+    throw std::runtime_error("Shader compilation failed");
   }
   
   glslang::TProgram program;

@@ -6,8 +6,6 @@
 #include <set>
 #include <stdexcept>
 #include <string>
-#include "graphics/render.h"
-
 
 VkPhysicalDeviceProperties deviceProperties;
 VkDevice device;
@@ -53,8 +51,7 @@ DeviceControl::findQueueFamilies(VkPhysicalDevice device) {
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
   std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount,
-                                           queueFamilies.data());
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
   int i = 0;
   for (const auto &queueFamily : queueFamilies) {
@@ -126,8 +123,7 @@ bool isDeviceSuitable(VkPhysicalDevice device) {
   // We need to find a device that supports graphical operations, or else we
   // cant do much with it! This function just runs over all the queueFamilies
   // and sees if there is a queue family with the VK_QUEUE_GRAPHICS_BIT flipped!
-  DeviceControl::QueueFamilyIndices indices =
-      DeviceControl::findQueueFamilies(device);
+  DeviceControl::QueueFamilyIndices indices = DeviceControl::findQueueFamilies(device);
   bool extensionSupported = checkDeviceExtensionSupport(device);
   bool swapChainAdequate = false;
 
@@ -271,14 +267,14 @@ void DeviceControl::createLogicalDevice() {
 
   float queuePriority = 1.0f;
   for (uint32_t queueFamily : uniqueQueueFamilies) {
-    VkDeviceQueueCreateInfo queueCreateSingularInfo = {};
-    queueCreateSingularInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    queueCreateSingularInfo.queueFamilyIndex = queueFamily;
-    queueCreateSingularInfo.queueCount = 1;
-    queueCreateSingularInfo.pQueuePriorities = &queuePriority;
+    VkDeviceQueueCreateInfo queueCreateSingularInfo = {
+      .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+      .queueFamilyIndex = queueFamily,
+      .queueCount = 1,
+      .pQueuePriorities = &queuePriority,
+    };
     queueCreateInfos.push_back(queueCreateSingularInfo);
   }
-  
   
   VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracingFeatures {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
@@ -328,16 +324,15 @@ void DeviceControl::createLogicalDevice() {
       .features = featuresBase,
   };
 
-  VkDeviceCreateInfo createDeviceInfo = {};
-  createDeviceInfo.pNext = &deviceFeatures;
-  createDeviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-  createDeviceInfo.pQueueCreateInfos = queueCreateInfos.data();
-  createDeviceInfo.queueCreateInfoCount =
-      static_cast<uint32_t>(queueCreateInfos.size());
-  createDeviceInfo.enabledExtensionCount =
-      static_cast<uint32_t>(deviceExtensions.size());
-  createDeviceInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
+  VkDeviceCreateInfo createDeviceInfo = {
+    .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+    .pNext = &deviceFeatures,
+    .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
+    .pQueueCreateInfos = queueCreateInfos.data(),
+    .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
+    .ppEnabledExtensionNames = deviceExtensions.data(),
+  };
+  
   VK_CHECK(vkCreateDevice(physicalDevice, &createDeviceInfo, nullptr, &device));
   DeletionQueue::get().push_function([=](){vkDestroyDevice(device, nullptr);});
   
@@ -345,34 +340,29 @@ void DeviceControl::createLogicalDevice() {
   vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &presentQueue);
 }
 void DeviceControl::createSwapChain(GLFWwindow *window) {
-  SwapChainSupportDetails swapChainSupport =
-      querySwapChainSupport(physicalDevice);
+  SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
 
-  VkSurfaceFormatKHR surfaceFormat =
-      chooseSwapSurfaceFormat(swapChainSupport.formats);
-  VkPresentModeKHR presentMode =
-      chooseSwapPresentMode(swapChainSupport.presentModes);
+  VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+  VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
   VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities, window);
 
   // Number of images to hold in the swap chain, 1 over the minimum guarantees
   // we won't have to wait on the driver to complete internal operations before
-  // acquiring another image. Absolutely a TODO to determine the best amount to
-  // queue.
+  // acquiring another image. Absolutely a TODO to determine the best amount to queue.
   uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-  // Make sure not to queue more than the max! 0 indicates that there is no
-  // maximum.
-  if (swapChainSupport.capabilities.maxImageCount > 0 &&
-      imageCount > swapChainSupport.capabilities.maxImageCount) {
+  // Make sure not to queue more than the max! 0 indicates that there is no maximum.
+  if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
     imageCount = swapChainSupport.capabilities.maxImageCount;
   }
 
-  VkSwapchainCreateInfoKHR createSwapChainInfo{};
-  createSwapChainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-  createSwapChainInfo.surface = surface;
-  createSwapChainInfo.minImageCount = imageCount;
-  createSwapChainInfo.imageFormat = surfaceFormat.format;
-  createSwapChainInfo.imageColorSpace = surfaceFormat.colorSpace;
-  createSwapChainInfo.imageExtent = extent;
+  VkSwapchainCreateInfoKHR createSwapChainInfo = {
+    .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+    .surface = surface,
+    .minImageCount = imageCount,
+    .imageFormat = surfaceFormat.format,
+    .imageColorSpace = surfaceFormat.colorSpace,
+    .imageExtent = extent,
+  };
   // Image array layers is always 1 unless we are developing for VR (Spoiler: we
   // are, we will use a build flag.) Image Usage specifies what operations you
   // use the images for, COLOR_ATTACH means we render directly to them, if you
@@ -399,8 +389,7 @@ void DeviceControl::createSwapChain(GLFWwindow *window) {
     createSwapChainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   }
   // Transformation of image support.
-  createSwapChainInfo.preTransform =
-      swapChainSupport.capabilities.currentTransform;
+  createSwapChainInfo.preTransform = swapChainSupport.capabilities.currentTransform;
   // Do NOT blend with other windows on the system.
   createSwapChainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   createSwapChainInfo.presentMode = presentMode;
@@ -417,16 +406,13 @@ void DeviceControl::createSwapChain(GLFWwindow *window) {
 
   vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
   swapChainImages.resize(imageCount);
-  vkGetSwapchainImagesKHR(device, swapChain, &imageCount,
-                          swapChainImages.data());
+  vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
 
   swapChainImageFormat = surfaceFormat.format;
   swapChainExtent = extent;
 }
 
-VkImageView DeviceControl::createImageView(VkImage image, VkFormat format,
-                                           VkImageAspectFlags flags,
-                                           uint32_t mipLevels) {
+VkImageView DeviceControl::createImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, uint32_t mipLevels) {
   // This defines the parameters of a newly created image object!
   VkImageViewCreateInfo viewInfo{};
   viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -473,13 +459,10 @@ VkQueue &DeviceControl::getGraphicsQueue() { return graphicsQueue; }
 VkQueue &DeviceControl::getPresentQueue() { return presentQueue; }
 VkSurfaceKHR &DeviceControl::getSurface() { return surface; }
 
-VkFormat findSupportedFormat(const std::vector<VkFormat> &candidates,
-                             VkImageTiling tiling,
-                             VkFormatFeatureFlags features) {
+VkFormat findSupportedFormat(const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
   for (VkFormat format : candidates) {
     VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(DeviceControl::getPhysicalDevice(),
-                                        format, &props);
+    vkGetPhysicalDeviceFormatProperties(DeviceControl::getPhysicalDevice(), format, &props);
 
     // Do we support linear tiling?
     if (tiling == VK_IMAGE_TILING_LINEAR &&
@@ -495,7 +478,6 @@ VkFormat findSupportedFormat(const std::vector<VkFormat> &candidates,
 }
 VkFormat DeviceControl::getDepthFormat() {
   return findSupportedFormat(
-      {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT,
-       VK_FORMAT_D24_UNORM_S8_UINT},
+      {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
       VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }

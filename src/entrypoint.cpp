@@ -9,6 +9,7 @@
 #include "graphics/pipelinebuilder.h"
 #include "graphics/render.h"
 #include "graphics/texture.h"
+#include "utils/helpers.h"
 #include "utils/types.h"
 #include <memory>
 #include "utils/deletion.h"
@@ -18,7 +19,6 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include <stdexcept>
 VkInstance vulkaninstance;
 GLFWwindow *window;
 AssetCache cache;
@@ -34,8 +34,7 @@ void EntryApp::setFramebufferResized(bool setter) {
 
 bool EntryApp::getFramebufferResized() const { return framebufferResized; }
 
-static void framebufferResizeCallback(GLFWwindow *window, int width,
-                                      int height) {
+static void framebufferResizeCallback(GLFWwindow *window, int width, int height) {
   auto app = reinterpret_cast<EntryApp *>(glfwGetWindowUserPointer(window));
   app->setFramebufferResized(true);
 }
@@ -45,7 +44,7 @@ void initWindow() {
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   // Settings for the window are set, create window reference.
-  window = glfwCreateWindow(WIDTH, HEIGHT, "Trimgles :o", nullptr, nullptr);
+  window = glfwCreateWindow(WIDTH, HEIGHT, "Agnosia", nullptr, nullptr);
   glfwSetWindowUserPointer(window, &EntryApp::getInstance());
   glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
@@ -79,9 +78,7 @@ void createInstance() {
     .ppEnabledExtensionNames = extensions.data(),
   };
 
-  if (vkCreateInstance(&createInfo, nullptr, &vulkaninstance) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create instance! (Entrypoint.cpp:81)");
-  }
+  VK_CHECK(vkCreateInstance(&createInfo, nullptr, &vulkaninstance));
   DeletionQueue::get().push_function([=](){vkDestroyInstance(vulkaninstance, nullptr);});
 }
 void initAgnosia() {
@@ -103,7 +100,6 @@ void initAgnosia() {
 
 }
 void initVulkan() {
-  
   // Initialize volk and continue if successful.
   volkInitialize();
   // Initialize vulkan and set up pipeline.
@@ -135,7 +131,6 @@ void initVulkan() {
   // Image creation MUST be after command pool, because command buffers are utilized.
   Texture::createColorImage();
   Texture::createDepthImage();
-  
   Buffers::createDescriptorSet(cache.getModels());
   Graphics::createCommandBuffer();
   Render::createSyncObject();
@@ -176,7 +171,6 @@ GLFWwindow *EntryApp::getWindow() { return window; }
 
 void EntryApp::run() {
   initWindow();
-  
   initVulkan();
   mainLoop();
   cleanup();

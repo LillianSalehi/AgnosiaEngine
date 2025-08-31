@@ -12,7 +12,6 @@
 #include "utils/helpers.h"
 #include "utils/types.h"
 #include <glm/gtc/type_ptr.hpp>
-#include <stdexcept>
 #include "utils/deletion.h"
 
 PipelineBuilder builder;
@@ -26,11 +25,8 @@ static bool wireframe = false;
 float lineWidth = 1.0f;
 
 void initTransformsWindow(AssetCache& cache) {
-  
   if (ImGui::TreeNode("Model Transforms")) {
-    
     for (Model *model : cache.getModels()) {
-
       ImGui::DragFloat3(model->getID().c_str(), const_cast<float *>(glm::value_ptr(model->getPos())));
     }
     ImGui::TreePop();
@@ -39,8 +35,7 @@ void initTransformsWindow(AssetCache& cache) {
     ImGui::DragFloat3("Camera Position", Graphics::getCamPos());
     ImGui::DragFloat3("Light Position", Graphics::getLightPos());
     ImGui::DragFloat3("Center Position", Graphics::getCenterPos());
-    ImGui::DragFloat("Depth of Field", &Graphics::getDepthField(), 0.1f, 1.0f,
-                     180.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Depth of Field", &Graphics::getDepthField(), 0.1f, 1.0f, 180.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat2("Near and Far fields", Graphics::getDistanceField());
     ImGui::TreePop();
   }
@@ -49,11 +44,9 @@ void initTransformsWindow(AssetCache& cache) {
 void initRenderWindow(AssetCache& cache) {
   if(ImGui::Checkbox("Wireframe?", &wireframe)) {
     // Rebuild graphics pipeline if setting is changed.
-
     if(wireframe) {
       Graphics::addGraphicsPipeline(graphicsWireframe);
       Graphics::addFullscreenPipeline(fullscreenWireframe);
-      
     } else {                                  
       Graphics::addGraphicsPipeline(graphicsSolid);
       Graphics::addFullscreenPipeline(fullscreenSolid);
