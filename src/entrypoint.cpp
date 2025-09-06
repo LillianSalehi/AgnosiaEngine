@@ -84,8 +84,8 @@ void createInstance() {
 void initAgnosia() {
   Texture* checkermap = cache.fetchLoadTexture("checkermap", "assets/textures/checkermap.png");
   
-  auto sphereMaterial = std::make_unique<Material>("sphereMaterial", checkermap, 0.1f, 1.0f, 32);
-  auto stanfordDragonMaterial = std::make_unique<Material>("stanfordDragonMaterial", checkermap, 0.1f, 1.0f, 256);
+  auto sphereMaterial = std::make_unique<Material>("sphereMaterial", checkermap, 0.1f, 1.0f, 256);
+  auto stanfordDragonMaterial = std::make_unique<Material>("stanfordDragonMaterial", checkermap, 0.1f, 1.0f, 16);
   auto teapotMaterial = std::make_unique<Material>("teapotMaterial", checkermap, 0.1f, 1.0f, 128);
   cache.store(std::move(sphereMaterial));
   cache.store(std::move(stanfordDragonMaterial));

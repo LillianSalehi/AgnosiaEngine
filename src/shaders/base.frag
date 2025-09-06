@@ -9,25 +9,93 @@ layout(location = 2) in vec2 texCoord;
 
 layout(location = 0) out vec4 outColor;
 
-void main() {
-  float lightPower = 1;
-  vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);
-  
-  vec3 objectColor = texture(texSampler[PushConstants.textureID], texCoord).rgb;
-  vec3 ambient = PushConstants.ambient * vec3(0.2f, 0.2f, 0.2f);
-  
-  vec3 reflectPos = reflect(-PushConstants.lightPos, v_norm);
-  float spec = pow(max(dot(normalize(PushConstants.camPos), normalize(reflectPos)), 0.0), PushConstants.shine);
-  vec3 specular = PushConstants.spec * spec * vec3(1.0f, 1.0f, 1.0f);
+// Trowbridge-Reitz GGX NDF- Approximate the relative surface area of microfacets exactly aligned to the halfway vector.
+float DistributionTRGGX(vec3 N, vec3 H, float roughness) {
+  float a = roughness*roughness;
+  float a2 = a*a;
+  float NdotH = max(dot(N, H), 0.0);
+  float NdotH2 = NdotH*NdotH;
 
-  // Lambertian reflectance model; Diffuse = (LightDirection⋅Normal)(Color)(Intensity)
-  float lightDotNorm = max(dot(normalize(PushConstants.lightPos), normalize(v_norm)), 0.0f);
-  vec3 diffuse = lightDotNorm * lightColor * vec3(0.5f, 0.5f, 0.5f);
-  // Inverse Square law; light intensity falls off proportionally to the the distance from the light source.
-  // This will be implemented for point lights, right now lights act as undirected suns, complete uniform brightness regardless of distance and angle.
-  // Note; we multiply by hand here rather than use pow() because pow() is only more/equally performant than by hand multiplication after 8 iterations.
-  //float sqrDist = distance(v_pos, PushConstants.lightPos)*distance(v_pos, PushConstants.lightPos);
-  
-  outColor = vec4((ambient + diffuse + specular) * objectColor, 1.0f);
-  
+  float num = a2;
+  float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+  denom = 3.14159 * denom * denom;
+
+  return num / denom;
 }
+// Schlick GGX, Approximate overshadowed microfacets occlusion. 
+float GeometrySchlickGGX(float NdotV, float roughness) {
+  float r = (roughness + 1.0);
+  float k = (r*r) / 8.0;
+
+  float num = NdotV;  
+  float denom = NdotV * (1.0 - k) + k;
+	
+  return num / denom;
+}
+// Smith's method- take into account both view direction and light direction.
+float GeometrySmith(vec3 normal, vec3 viewDir, vec3 lightDir, float k) {
+  float NdotV = max(dot(normal, viewDir), 0.0);
+  float NdotL = max(dot(normal, lightDir), 0.0);
+  float ggx1 = GeometrySchlickGGX(NdotV, k);
+  float ggx2 = GeometrySchlickGGX(NdotL, k);
+
+  return ggx1 * ggx2;
+}
+// Fresnel-Schlick equation- approximate base reflectivity at grazing angles.
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+  return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+void main() {
+  const float PI = 3.14159265359;
+
+  vec3 lightColor = vec3(23.47, 21.31, 20.79);
+  float metallic = 0.5;
+  vec3 albedo = texture(texSampler[PushConstants.textureID], texCoord).rgb;
+  vec3 ao = PushConstants.ambient * vec3(0.5f, 0.5f, 0.5f);
+  float roughness = 0.5;
+  
+  vec3 F0 = vec3(0.04); 
+  F0 = mix(F0, albedo, metallic);
+
+  vec3 N = normalize(v_norm);
+  vec3 V = normalize(PushConstants.camPos - v_pos);
+
+  vec3 Lo = vec3(0.0);
+
+  // iterate over each light
+  for(int i = 0; i < 1; ++i) {
+    vec3 L = normalize(PushConstants.lightPos - v_pos);
+    vec3 H = normalize(V+L);
+
+    float distance = length(PushConstants.lightPos - v_pos);
+    float attenuation = 1.0 / (distance * distance);
+    vec3 radiance = lightColor * attenuation;
+      
+    // Cook-Torrance BRDF
+    float NDF = DistributionTRGGX(N, H, roughness);       
+    float G = GeometrySmith(N, V, L, roughness);       
+    vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+    
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= 1.0 - metallic;
+    
+    vec3 numerator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+    vec3 specular = numerator / denominator;
+
+    float NdotL = max(dot(N, L), 0.0);
+    Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+  }
+
+  vec3 ambient = vec3(0.03) * albedo * ao;
+  vec3 color = ambient + Lo;
+
+  // Tonemap using the Reinhard operator to gamma color space
+  color = color / (color + vec3(1.0));
+  color = pow(color, vec3(1.0/2.2));
+
+  outColor = vec4(color, 1.0);
+}
+
