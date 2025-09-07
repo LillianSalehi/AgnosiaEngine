@@ -10,34 +10,34 @@ layout(location = 2) in vec2 texCoord;
 layout(location = 0) out vec4 outColor;
 
 // Trowbridge-Reitz GGX NDF- Approximate the relative surface area of microfacets exactly aligned to the halfway vector.
-float DistributionTRGGX(vec3 N, vec3 H, float roughness) {
-  float a = roughness*roughness;
-  float a2 = a*a;
+vec3 DistributionTRGGX(vec3 N, vec3 H, vec3 roughness) {
+  vec3 a = roughness*roughness;
+  vec3 a2 = a*a;
   float NdotH = max(dot(N, H), 0.0);
   float NdotH2 = NdotH*NdotH;
 
-  float num = a2;
-  float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+  vec3 num = a2;
+  vec3 denom = (NdotH2 * (a2 - 1.0) + 1.0);
   denom = 3.14159 * denom * denom;
 
   return num / denom;
 }
 // Schlick GGX, Approximate overshadowed microfacets occlusion. 
-float GeometrySchlickGGX(float NdotV, float roughness) {
-  float r = (roughness + 1.0);
-  float k = (r*r) / 8.0;
+vec3 GeometrySchlickGGX(float NdotV, vec3 roughness) {
+  vec3 r = (roughness + vec3(1.0));
+  vec3 k = (r*r) / 8.0;
 
   float num = NdotV;  
-  float denom = NdotV * (1.0 - k) + k;
+  vec3 denom = NdotV * (1.0 - k) + k;
 	
   return num / denom;
 }
 // Smith's method- take into account both view direction and light direction.
-float GeometrySmith(vec3 normal, vec3 viewDir, vec3 lightDir, float k) {
+vec3 GeometrySmith(vec3 normal, vec3 viewDir, vec3 lightDir, vec3 k) {
   float NdotV = max(dot(normal, viewDir), 0.0);
   float NdotL = max(dot(normal, lightDir), 0.0);
-  float ggx1 = GeometrySchlickGGX(NdotV, k);
-  float ggx2 = GeometrySchlickGGX(NdotL, k);
+  vec3 ggx1 = GeometrySchlickGGX(NdotV, k);
+  vec3 ggx2 = GeometrySchlickGGX(NdotL, k);
 
   return ggx1 * ggx2;
 }
@@ -50,10 +50,11 @@ void main() {
   const float PI = 3.14159265359;
 
   vec3 lightColor = vec3(23.47, 21.31, 20.79);
-  float metallic = 0.5;
   vec3 albedo = texture(texSampler[PushConstants.textureID], texCoord).rgb;
-  vec3 ao = PushConstants.ambient * vec3(0.5f, 0.5f, 0.5f);
-  float roughness = 0.5;
+  vec3 metallic = vec3(0.5);
+  
+  vec3 ao = vec3(0.5f, 0.5f, 0.5f);
+  vec3 roughness = vec3(0.5);
   
   vec3 F0 = vec3(0.04); 
   F0 = mix(F0, albedo, metallic);
@@ -73,8 +74,8 @@ void main() {
     vec3 radiance = lightColor * attenuation;
       
     // Cook-Torrance BRDF
-    float NDF = DistributionTRGGX(N, H, roughness);       
-    float G = GeometrySmith(N, V, L, roughness);       
+    vec3 NDF = DistributionTRGGX(N, H, roughness);       
+    vec3 G = GeometrySmith(N, V, L, roughness);       
     vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
     
     vec3 kS = F;

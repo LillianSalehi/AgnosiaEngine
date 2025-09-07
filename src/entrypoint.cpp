@@ -83,10 +83,13 @@ void createInstance() {
 }
 void initAgnosia() {
   Texture* checkermap = cache.fetchLoadTexture("checkermap", "assets/textures/checkermap.png");
+  Texture* metallicPlaceholder = cache.fetchLoadTexture("metallicPlaceholder", "assets/textures/placeholderMetallic.jpg");
+  Texture* roughnessPlaceholder = cache.fetchLoadTexture("roughnessPlaceholder", "assets/textures/placeholderRoughness.jpg");
+  Texture* ambientOcclusionPlaceholder = cache.fetchLoadTexture("ambientOcclusionPlaceholder", "assets/textures/placeholderAO.jpg");
   
-  auto sphereMaterial = std::make_unique<Material>("sphereMaterial", checkermap, 0.1f, 1.0f, 256);
-  auto stanfordDragonMaterial = std::make_unique<Material>("stanfordDragonMaterial", checkermap, 0.1f, 1.0f, 16);
-  auto teapotMaterial = std::make_unique<Material>("teapotMaterial", checkermap, 0.1f, 1.0f, 128);
+  auto sphereMaterial = std::make_unique<Material>("sphereMaterial", checkermap, metallicPlaceholder, roughnessPlaceholder, ambientOcclusionPlaceholder);
+  auto stanfordDragonMaterial = std::make_unique<Material>("stanfordDragonMaterial", checkermap, metallicPlaceholder, roughnessPlaceholder, ambientOcclusionPlaceholder);
+  auto teapotMaterial = std::make_unique<Material>("teapotMaterial", checkermap, metallicPlaceholder, roughnessPlaceholder, ambientOcclusionPlaceholder);
   cache.store(std::move(sphereMaterial));
   cache.store(std::move(stanfordDragonMaterial));
   cache.store(std::move(teapotMaterial));

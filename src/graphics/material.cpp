@@ -1,13 +1,13 @@
 #include "material.h"
 
-Material::Material(const std::string &matID, Texture* diffuseTexture, const float ambient, const float spec, const float shine)
-    : ID(matID), ambient(ambient), specular(spec), shine(shine), diffuseTexture(diffuseTexture) {}
+Material::Material(const std::string &matID, Texture* diffuseTexture, Texture* metallicTexture, Texture* roughnessTexture, Texture* ambientOcclusionTexture)
+    : ID(matID), diffuseTexture(diffuseTexture), metallicTexture(metallicTexture), roughnessTexture(roughnessTexture), ambientOcclusionTexture(ambientOcclusionTexture) {}
 
 std::string Material::getID() const { return ID; }
 
 Texture* Material::getDiffuseTexture() { return this->diffuseTexture; }
-float Material::getAmbient() { return this->ambient; }
-float Material::getSpecular() { return this->specular; }
-float Material::getShininess() { return this->shine; }
+Texture* Material::getMetallicTexture() { return this->metallicTexture; }
+Texture* Material::getRoughnessTexture() { return this->roughnessTexture; }
+Texture* Material::getAOTexture() { return this->ambientOcclusionTexture; }
 
 

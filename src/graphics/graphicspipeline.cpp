@@ -166,9 +166,9 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
     pushConsts.vertexBuffer = model->getBuffers().vertexBufferAddress;
     pushConsts.objPosition = model->getPos();
     pushConsts.textureID = texID;
-    pushConsts.ambient = model->getMaterial().getAmbient();
-    pushConsts.spec = model->getMaterial().getSpecular();
-    pushConsts.shine = model->getMaterial().getShininess();
+    //pushConsts.ambient = model->getMaterial().getAmbient();
+    //pushConsts.spec = model->getMaterial().getSpecular();
+    //pushConsts.shine = model->getMaterial().getShininess();
 
     vkCmdPushConstants(commandBuffer, graphicsHistory.front().layout, VK_SHADER_STAGE_ALL, 0,
                        sizeof(Agnosia_T::GPUPushConstants), &pushConsts);

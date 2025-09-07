@@ -9,20 +9,18 @@ class Material {
 protected:
   std::string ID;
   Texture* diffuseTexture;
-
-  float ambient;
-  float specular;
-  float shine;
+  Texture* metallicTexture;
+  Texture* roughnessTexture;
+  Texture* ambientOcclusionTexture;
 
 public:
-  Material(const std::string &matID, Texture* texture,
-           const float ambient, const float spec, const float shine);
+  Material(const std::string &matID, Texture* diffuseTexture, Texture* metallicTexture, Texture* roughnessTexture, Texture* ambientOcclusionTexture);
   
   std::string getID() const;
   
   Texture* getDiffuseTexture();
-
-  float getAmbient();
-  float getSpecular();
-  float getShininess();
+  Texture* getMetallicTexture();
+  Texture* getRoughnessTexture();
+  Texture* getAOTexture();
+  
 };
