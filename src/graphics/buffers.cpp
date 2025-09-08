@@ -6,6 +6,8 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 #include <stdexcept>
+#include <vector>
+#include <vulkan/vulkan_core.h>
 #include "../utils/deletion.h"
 
 std::vector<VkDescriptorSetLayout> modelSetLayouts;
@@ -14,8 +16,9 @@ uint32_t indicesSize;
 
 // Select a binding for each descriptor type
 constexpr int STORAGE_BINDING = 0;
-constexpr int SAMPLER_BINDING = 1;
-constexpr int IMAGE_BINDING = 2;
+constexpr int IMAGE_BINDING = 1;
+constexpr int SAMPLER_BINDING = 2;
+
 // Max count of each descriptor type
 // You can query the max values for these with
 // physicalDevice.getProperties().limits.maxDescriptorSet*******
@@ -25,8 +28,13 @@ constexpr int IMAGE_COUNT = 65536;
 
 // Create descriptor pool
 VkDescriptorPool descriptorPool;
-VkDescriptorSetLayout descriptorSetLayout;
-VkDescriptorSet descriptorSet;
+
+VkDescriptorSetLayout texturesSetLayouts;
+VkDescriptorSet texturesSets;
+
+VkSampler sampler;
+VkDescriptorSetLayout samplerDescriptorSetLayout;
+VkDescriptorSet samplerDescriptorSet;
 
 VkCommandPool commandPool;
 std::vector<VkCommandBuffer> commandBuffers;
@@ -66,7 +74,7 @@ void Buffers::createDescriptorSetLayout() {
 
   VkDescriptorSetLayoutBinding samplerLayoutBinding = {
       .binding = SAMPLER_BINDING,
-      .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+      .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
       .descriptorCount = SAMPLER_COUNT,
       .stageFlags = VK_SHADER_STAGE_ALL,
       .pImmutableSamplers = nullptr,
@@ -74,7 +82,7 @@ void Buffers::createDescriptorSetLayout() {
 
   VkDescriptorSetLayoutBinding imageLayoutBinding = {
       .binding = IMAGE_BINDING,
-      .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+      .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
       .descriptorCount = IMAGE_COUNT,
       .stageFlags = VK_SHADER_STAGE_ALL,
       .pImmutableSamplers = nullptr,
@@ -84,12 +92,9 @@ void Buffers::createDescriptorSetLayout() {
       storageLayoutBinding, imageLayoutBinding, samplerLayoutBinding};
 
   std::vector<VkDescriptorBindingFlags> bindingFlags = {
-      VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
-          VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-      VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
-          VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-      VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
-          VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+      VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+      VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+      VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
   };
   VkDescriptorSetLayoutBindingFlagsCreateInfo setLayoutBindingsFlags = {
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
@@ -105,71 +110,123 @@ void Buffers::createDescriptorSetLayout() {
       .pBindings = bindings.data(),
 
   };
-  VK_CHECK(vkCreateDescriptorSetLayout(DeviceControl::getDevice(), &layoutInfo, nullptr, &descriptorSetLayout));
-
-  DeletionQueue::get().push_function([=](){vkDestroyDescriptorSetLayout(DeviceControl::getDevice(), descriptorSetLayout, nullptr);});
+  
+    VK_CHECK(vkCreateDescriptorSetLayout(DeviceControl::getDevice(), &layoutInfo, nullptr, &texturesSetLayouts));
+    DeletionQueue::get().push_function([=](){vkDestroyDescriptorSetLayout(DeviceControl::getDevice(), texturesSetLayouts, nullptr);});
+    
+  
+    VK_CHECK(vkCreateDescriptorSetLayout(DeviceControl::getDevice(), &layoutInfo, nullptr, &samplerDescriptorSetLayout));
+    DeletionQueue::get().push_function([=](){vkDestroyDescriptorSetLayout(DeviceControl::getDevice(), samplerDescriptorSetLayout, nullptr);});
 }
 void Buffers::createDescriptorPool() {
 
   std::vector<VkDescriptorPoolSize> poolSizes = {
       {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, STORAGE_COUNT},
-      {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, SAMPLER_COUNT},
-      {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, IMAGE_COUNT},
+      {VK_DESCRIPTOR_TYPE_SAMPLER, SAMPLER_COUNT},
+      {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, IMAGE_COUNT},
   };
   VkDescriptorPoolCreateInfo poolInfo = {
     .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
     .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
-    .maxSets = 1,
+    .maxSets = 5,
     .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
     .pPoolSizes = poolSizes.data(),
   };
   
   VK_CHECK(vkCreateDescriptorPool(DeviceControl::getDevice(), &poolInfo, nullptr, &descriptorPool));
-
   DeletionQueue::get().push_function([=](){vkDestroyDescriptorPool(DeviceControl::getDevice(), descriptorPool, nullptr);});
 }
 void Buffers::createDescriptorSet(std::vector<Model *> models) {
-  VkDescriptorSetAllocateInfo allocInfo = {
+  // Create the allocater struct for the textures.
+  VkDescriptorSetAllocateInfo textureAllocInfo = {
     .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
     .descriptorPool = descriptorPool,
     .descriptorSetCount = 1,
-    .pSetLayouts = &descriptorSetLayout,
+    .pSetLayouts = &texturesSetLayouts,
   };
-  VK_CHECK(vkAllocateDescriptorSets(DeviceControl::getDevice(), &allocInfo, &descriptorSet));
+  VK_CHECK(vkAllocateDescriptorSets(DeviceControl::getDevice(), &textureAllocInfo, &texturesSets));
+  // Create the allocater struct for the samplers.
+  VkDescriptorSetAllocateInfo samplerAllocInfo = {
+    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+    .descriptorPool = descriptorPool,
+    .descriptorSetCount = 1,
+    .pSetLayouts = &samplerDescriptorSetLayout,
+  };
+  VK_CHECK(vkAllocateDescriptorSets(DeviceControl::getDevice(), &samplerAllocInfo, &samplerDescriptorSet));
+  
+  for(int model = 0; model < models.size(); model++) {
+    // Textures for each model
+    VkDescriptorImageInfo modelTexInfo[4];
+    for(int i = 0; i < 4; i++) {
+      modelTexInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+    
+    modelTexInfo[0].imageView = models[model]->getMaterial().getDiffuseTexture()->getImageView();
+    modelTexInfo[1].imageView = models[model]->getMaterial().getMetallicTexture()->getImageView();
+    modelTexInfo[2].imageView = models[model]->getMaterial().getAOTexture()->getImageView();
+    modelTexInfo[3].imageView = models[model]->getMaterial().getRoughnessTexture()->getImageView();
 
-  std::vector<VkDescriptorImageInfo> imageInfoSet;
-  imageInfoSet.resize(models.size());
+    VkWriteDescriptorSet modelTexWriter = {
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .dstSet = texturesSets,
+      .dstBinding = IMAGE_BINDING,
+      .dstArrayElement = static_cast<uint32_t>(4*(model+1)),
+      .descriptorCount = 4,
+      .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+      .pImageInfo = modelTexInfo,
+    };
+    vkUpdateDescriptorSets(DeviceControl::getDevice(), 1, &modelTexWriter, 0, nullptr);
+  }  
 
-  for (int i = 0; i < models.size(); i++) {
-    imageInfoSet[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfoSet[i].imageView = models[i]->getMaterial().getDiffuseTexture()->getImageView();
-    imageInfoSet[i].sampler = models[i]->getMaterial().getDiffuseTexture()->getSampler();
-  }
+  // Now we create the one sampler we are going to use right now.
+  VkPhysicalDeviceProperties properties{};
+  vkGetPhysicalDeviceProperties(DeviceControl::getPhysicalDevice(), &properties);
 
-  std::vector<VkWriteDescriptorSet> descriptorWrites{};
-  descriptorWrites.resize(models.size());
+  VkSamplerCreateInfo samplerInfo = {
+    .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+    .pNext = nullptr,
+    .magFilter = VK_FILTER_LINEAR,
+    .minFilter = VK_FILTER_LINEAR,
+    .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+    .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    .mipLodBias = 0.0f,
+    .anisotropyEnable = VK_TRUE,
+    .maxAnisotropy = properties.limits.maxSamplerAnisotropy,
+    .compareEnable = VK_FALSE,
+    .compareOp = VK_COMPARE_OP_ALWAYS,
+    .minLod = 0.0f,
+    .maxLod = VK_LOD_CLAMP_NONE,
+    .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+    .unnormalizedCoordinates = VK_FALSE,
+  };
 
-  for (int i = 0; i < models.size(); i++) {
-    descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrites[i].dstSet = descriptorSet;
-    descriptorWrites[i].dstBinding = SAMPLER_BINDING;
-    descriptorWrites[i].dstArrayElement = i;
-    descriptorWrites[i].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descriptorWrites[i].descriptorCount = 1;
-    descriptorWrites[i].pImageInfo = &imageInfoSet[i];
-  }
+  VK_CHECK(vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr, &sampler));
+  DeletionQueue::get().push_function([=](){vkDestroySampler(DeviceControl::getDevice(), sampler, nullptr);});
+  
+  VkDescriptorImageInfo samplerInfoSet = {
+    .sampler = sampler,
+  };
+  
+  VkWriteDescriptorSet samplerWriteSet = {
+    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+    .dstSet = samplerDescriptorSet,
+    .dstBinding = SAMPLER_BINDING,
+    .descriptorCount = 1,
+    .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
+    .pImageInfo = &samplerInfoSet,
+  };
 
-  vkUpdateDescriptorSets(DeviceControl::getDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+  vkUpdateDescriptorSets(DeviceControl::getDevice(), 1, &samplerWriteSet, 0, nullptr);
 }
 
-uint32_t Buffers::findMemoryType(uint32_t typeFilter,
-                                 VkMemoryPropertyFlags properties) {
+uint32_t Buffers::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
   // Graphics cards offer different types of memory to allocate from, here we
   // query to find the right type of memory for our needs. Query the available
   // types of memory to iterate over.
   VkPhysicalDeviceMemoryProperties memProperties;
-  vkGetPhysicalDeviceMemoryProperties(DeviceControl::getPhysicalDevice(),
-                                      &memProperties);
+  vkGetPhysicalDeviceMemoryProperties(DeviceControl::getPhysicalDevice(), &memProperties);
   // iterate over and see if any of the memory types match our needs, in this
   // case, HOST_VISIBLE and HOST_COHERENT. These will be explained shortly.
   for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
@@ -177,7 +234,7 @@ uint32_t Buffers::findMemoryType(uint32_t typeFilter,
       return i;
     }
   }
-  throw std::runtime_error("failed to find suitable memory type! (Buffers.cpp:164)");
+  throw std::runtime_error("Failed to find suitable memory type!");
 }
 
 void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
@@ -233,8 +290,11 @@ Agnosia_T::AllocatedBuffer Buffers::createBuffer(size_t allocSize, VmaAllocation
 }
 
 VkDescriptorPool &Buffers::getDescriptorPool() { return descriptorPool; }
-VkDescriptorSet &Buffers::getDescriptorSet() { return descriptorSet; }
-VkDescriptorSetLayout &Buffers::getDescriptorSetLayout() { return descriptorSetLayout; }
+VkDescriptorSet &Buffers::getTextureDescriptorSets() { return texturesSets; }
+VkDescriptorSetLayout &Buffers::getTextureDescriptorSetLayouts() { return texturesSetLayouts; }
+
+VkDescriptorSet &Buffers::getSamplerDescriptorSet() { return samplerDescriptorSet; }
+VkDescriptorSetLayout &Buffers::getSamplerDescriptorSetLayout() { return samplerDescriptorSetLayout; }
 
 uint32_t Buffers::getMaxFramesInFlight() { return MAX_FRAMES_IN_FLIGHT; }
 std::vector<VkCommandBuffer> &Buffers::getCommandBuffers() { return commandBuffers; }

@@ -34,6 +34,7 @@ void initTransformsWindow(AssetCache& cache) {
   if(ImGui::TreeNode("Camera Transforms")) {
     ImGui::DragFloat3("Camera Position", Graphics::getCamPos());
     ImGui::DragFloat3("Light Position", Graphics::getLightPos());
+    ImGui::DragFloat3("Light Color", Graphics::getLightColor());
     ImGui::DragFloat3("Center Position", Graphics::getCenterPos());
     ImGui::DragFloat("Depth of Field", &Graphics::getDepthField(), 0.1f, 1.0f, 180.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat2("Near and Far fields", Graphics::getDistanceField());

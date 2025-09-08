@@ -1,7 +1,8 @@
 #version 460 core
 #include "common.glsl"
 
-layout(binding = 1) uniform sampler2D texSampler[];
+layout(set = 0, binding = 1) uniform texture2D _texture[];
+layout(set = 1, binding = 2) uniform sampler _sampler;
 
 layout(location = 0) in vec3 v_norm;
 layout(location = 1) in vec3 v_pos;
@@ -49,12 +50,11 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
 void main() {
   const float PI = 3.14159265359;
 
-  vec3 lightColor = vec3(23.47, 21.31, 20.79);
-  vec3 albedo = texture(texSampler[PushConstants.textureID], texCoord).rgb;
-  vec3 metallic = vec3(0.5);
-  
-  vec3 ao = vec3(0.5f, 0.5f, 0.5f);
-  vec3 roughness = vec3(0.5);
+  vec3 lightColor = PushConstants.lightColor;
+  vec3 albedo = texture(sampler2D(_texture[PushConstants.textureID], _sampler), texCoord).rgb;
+  vec3 metallic = texture(sampler2D(_texture[PushConstants.textureID+1], _sampler), texCoord).rgb;
+  vec3 ao = texture(sampler2D(_texture[PushConstants.textureID+2], _sampler), texCoord).rgb;
+  vec3 roughness = texture(sampler2D(_texture[PushConstants.textureID+3], _sampler), texCoord).rgb;
   
   vec3 F0 = vec3(0.04); 
   F0 = mix(F0, albedo, metallic);

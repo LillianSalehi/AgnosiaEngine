@@ -25,9 +25,11 @@ public:
   static uint32_t findMemoryType(uint32_t typeFilter,
                                  VkMemoryPropertyFlags flags);
   static VkDescriptorPool &getDescriptorPool();
-  static VkDescriptorSet &getDescriptorSet();
-
-  static VkDescriptorSetLayout &getDescriptorSetLayout();
+  static VkDescriptorSet &getTextureDescriptorSets();
+  static VkDescriptorSet &getSamplerDescriptorSet();
+  static VkDescriptorSetLayout &getTextureDescriptorSetLayouts();
+  static VkDescriptorSetLayout &getSamplerDescriptorSetLayout();
+  
   static uint32_t getMaxFramesInFlight();
   static std::vector<VkCommandBuffer> &getCommandBuffers();
 

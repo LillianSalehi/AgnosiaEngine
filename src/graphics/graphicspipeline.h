@@ -15,6 +15,7 @@ public:
   
   static float *getCamPos();
   static float *getLightPos();
+  static float *getLightColor();
   static float *getCenterPos();
   static float *getUpDir();
   static float &getDepthField();

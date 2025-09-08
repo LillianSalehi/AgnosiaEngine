@@ -12,7 +12,7 @@ static void VK_CHECK(VkResult result, std::source_location location = std::sourc
     std::string const line = std::to_string(location.line());
     std::string const function = location.function_name();
     
-    throw std::runtime_error("VkResult was not VK_SUCCESS at: " + fileName + ":" + line + ", " + function);    
+    throw std::runtime_error("VkResult was not VK_SUCCESS at: " + fileName + ":" + line + ", " + function + ", Result Code: " + std::to_string(result));    
   }
 }
 template<class T> [[nodiscard]] T* Address(T&& v) {

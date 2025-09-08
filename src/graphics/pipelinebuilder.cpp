@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <vector>
 #include <cstdint>
+#include <vulkan/vulkan_core.h>
 #include "buffers.h"
 #include "../devicelibrary.h"
 #include "../utils/helpers.h"
@@ -254,12 +255,13 @@ PipelineBuilder::PipelineBuilder() : vertexShader("src/shaders/base.vert"),
       .offset = 0,
       .size = sizeof(Agnosia_T::GPUPushConstants),
     };
-
+    std::vector<VkDescriptorSetLayout> setLayouts = { Buffers::getTextureDescriptorSetLayouts(), Buffers::getSamplerDescriptorSetLayout() };
+    
     VkPipelineLayoutCreateInfo pipelineLayoutInfo {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
       .pNext = nullptr,
-      .setLayoutCount = 1,
-      .pSetLayouts = &Buffers::getDescriptorSetLayout(),
+      .setLayoutCount = 2,
+      .pSetLayouts = setLayouts.data(),
       .pushConstantRangeCount = 1,
       .pPushConstantRanges = &pushConstant
     };

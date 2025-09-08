@@ -9,7 +9,6 @@ struct Vertex {
     vec2 texCoord;
 }; 
 
-
 layout(buffer_reference, scalar) readonly buffer VertexBuffer{ 
 	Vertex vertices[];
 };
@@ -17,6 +16,7 @@ layout( push_constant, scalar ) uniform constants {
     VertexBuffer vertBuffer;
     vec3 objPos;
     vec3 lightPos;
+    vec3 lightColor;
     vec3 camPos;
     int textureID;
     mat4 model;

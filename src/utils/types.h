@@ -38,6 +38,7 @@ public:
     VkDeviceAddress vertexBuffer;
     glm::vec3 objPosition;
     glm::vec3 lightPos;
+    glm::vec3 lightColor;
     glm::vec3 camPos;
     int textureID;
     glm::mat4 model;

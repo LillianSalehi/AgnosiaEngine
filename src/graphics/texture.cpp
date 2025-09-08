@@ -1,7 +1,6 @@
 #include "../devicelibrary.h"
 #include "buffers.h"
 #include "texture.h"
-#include "../utils/helpers.h"
 #include "../utils/deletion.h"
 
 #include <cstdio>
@@ -267,56 +266,12 @@ Texture::Texture(const std::string& ID, const std::string& texturePath) {
   // Create a texture image view, which is a struct of information about the image.
   this->imageView = DeviceControl::createImageView(this->image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, mipLevels);
 
-  // Create a sampler to access and parse the texture object.
-
-  VkSamplerCreateInfo samplerInfo{};
-  samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-  // These two options define the filtering method when sampling the texture.
-  // It also handles zooming in versus out, min vs mag!
-  samplerInfo.magFilter = VK_FILTER_LINEAR; // TODO: CUBIC
-  samplerInfo.minFilter = VK_FILTER_LINEAR; // TODO: CUBIC
-
-  // These options define UVW edge modes, ClampToEdge extends the last pixels
-  // to the edges when larger than the UVW.
-  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-
-  VkPhysicalDeviceProperties properties{};
-  vkGetPhysicalDeviceProperties(DeviceControl::getPhysicalDevice(), &properties);
-  // Enable or Disable Anisotropy, and set the amount.
-  samplerInfo.anisotropyEnable = VK_TRUE;
-  samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-
-  // When sampling with Clamp to Border, the border color is defined here.
-  samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-  // Normalizing coordinates changes texCoords from [0, texWidth] to [0, 1].
-  // This is what should ALWAYS be used, because it means you can use varying
-  // texture sizes. Another TODO: Normalizing
-  samplerInfo.unnormalizedCoordinates = VK_FALSE;
-  // Compare texels to a value and use the output in filtering!
-  // This is mainly used in percentage-closer filtering on shadow maps, this
-  // will be revisted eventually...
-  samplerInfo.compareEnable = VK_FALSE;
-  samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-
-  // Mipmaps are basically LoD's for textures, different resolutions to load
-  // based on distance. These settings simply describe how to apply
-  // mipmapping.
-  samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-  samplerInfo.mipLodBias = 0.0f;
-  samplerInfo.minLod = 0.0f;
-  samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
-
-  VK_CHECK(vkCreateSampler(DeviceControl::getDevice(), &samplerInfo, nullptr, &this->sampler));
-  
   VkImage image = this->image;
   VkImageView imageView = this->imageView;
-  VkSampler sampler = this->sampler;
   
   DeletionQueue::get().push_function([=](){vmaDestroyImage(Buffers::getAllocator(), image, alloc);});
   DeletionQueue::get().push_function([=](){vkDestroyImageView(DeviceControl::getDevice(), imageView, nullptr);});
-  DeletionQueue::get().push_function([=](){vkDestroySampler(DeviceControl::getDevice(), sampler, nullptr);});
+  
 }
 
 void Texture::createColorImage() {
@@ -383,4 +338,4 @@ Texture::Image &Texture::getDepthImage() { return depthImage; }
 
 VkImage &Texture::getImage() { return this->image; }
 VkImageView &Texture::getImageView() { return this->imageView; }
-VkSampler &Texture::getSampler() { return this->sampler; }
+

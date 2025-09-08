@@ -15,6 +15,7 @@
 #include <glm/ext/matrix_transform.hpp>
 
 float lightPos[4] = {5.0f, 5.0f, 5.0f, 0.44f};
+float lightColor[4] = {1.0f, 1.0f, 1.0f, 0.44f};
 float camPos[4] = {3.0f, 3.0f, 3.0f, 0.44f};
 float centerPos[4] = {0.0f, 0.0f, 0.0f, 0.44f};
 float upDir[4] = {0.0f, 0.0f, 1.0f, 0.44f};
@@ -150,34 +151,26 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
                     DeviceControl::getSwapChainExtent().width / (float)DeviceControl::getSwapChainExtent().height,
                     distanceField[0], distanceField[1]);
     
-  // GLM was created for OpenGL, where the Y coordinate was inverted. This
-  // simply flips the sign.
+  // GLM was created for OpenGL, where the Y coordinate was inverted. This simply flips the sign.
   pushConsts.proj[1][1] *= -1;
   pushConsts.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
   pushConsts.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
-  // TODO: write defaults and check in shade rmaybe to prevent weird behavior?
+  
   for (Model *model : cache.getModels()) {
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            graphicsHistory.front().layout, 0, 1, &Buffers::getDescriptorSet(),
-                            0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsHistory.front().layout, 0, 1, &Buffers::getTextureDescriptorSets(), 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsHistory.front().layout, 1, 1, &Buffers::getSamplerDescriptorSet(), 0, nullptr);
 
-    
     pushConsts.vertexBuffer = model->getBuffers().vertexBufferAddress;
     pushConsts.objPosition = model->getPos();
-    pushConsts.textureID = texID;
-    //pushConsts.ambient = model->getMaterial().getAmbient();
-    //pushConsts.spec = model->getMaterial().getSpecular();
-    //pushConsts.shine = model->getMaterial().getShininess();
+    pushConsts.textureID = ((texID+1)*4);
+    pushConsts.lightColor = glm::vec3(lightColor[0], lightColor[1], lightColor[2]);
 
-    vkCmdPushConstants(commandBuffer, graphicsHistory.front().layout, VK_SHADER_STAGE_ALL, 0,
-                       sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
+    vkCmdPushConstants(commandBuffer, graphicsHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
 
-    vkCmdBindIndexBuffer(commandBuffer, model->getBuffers().indexBuffer.buffer,
-                         0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(commandBuffer, model->getBuffers().indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
-    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model->getIndices()),
-                     1, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model->getIndices()), 1, 0, 0, 0);
     texID++;
   }
   
@@ -229,6 +222,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
 float *Graphics::getCamPos() { return camPos; }
 float *Graphics::getLightPos() { return lightPos; }
+float *Graphics::getLightColor() { return lightColor; }
 float *Graphics::getCenterPos() { return centerPos; }
 float *Graphics::getUpDir() { return upDir; }
 float &Graphics::getDepthField() { return depthField; }
