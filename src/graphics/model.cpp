@@ -2,6 +2,7 @@
 #include "model.h"
 #include <stdexcept>
 #include "../devicelibrary.h"
+#include "../utils/helpers.h"
 
 #define TINY_OBJ_IMPLEMENTATION
 #include <tiny_obj_loader.h>
@@ -30,39 +31,7 @@ template <> struct hash<Agnosia_T::Vertex> {
 };
 
 } // namespace std
-void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function) {
-  VkCommandBufferAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandPool = Buffers::getCommandPool();
-  allocInfo.commandBufferCount = 1;
 
-  VkCommandBuffer commandBuffer;
-  vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo,
-                           &commandBuffer);
-
-  VkCommandBufferBeginInfo beginInfo{};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-  vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-  function(commandBuffer);
-
-  vkEndCommandBuffer(commandBuffer);
-
-  VkSubmitInfo submitInfo{};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &commandBuffer;
-
-  vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo,
-                VK_NULL_HANDLE);
-  vkQueueWaitIdle(DeviceControl::getGraphicsQueue());
-
-  vkFreeCommandBuffers(DeviceControl::getDevice(), Buffers::getCommandPool(), 1,
-                       &commandBuffer);
-}
 
 Model::Model(const std::string &modelID, const Material &material, const std::string &modelPath, const glm::vec3 &objPos)
   : ID(modelID), material(material), objPosition(objPos), modelPath(modelPath) {

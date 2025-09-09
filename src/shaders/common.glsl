@@ -9,17 +9,23 @@ struct Vertex {
     vec2 texCoord;
 }; 
 
-layout(buffer_reference, scalar) readonly buffer VertexBuffer{ 
+layout(buffer_reference, scalar) readonly buffer VertexBuffer { 
 	Vertex vertices[];
 };
-layout( push_constant, scalar ) uniform constants {
+layout(buffer_reference, scalar) readonly buffer GPUBuffer { 
     VertexBuffer vertBuffer;
     vec3 objPos;
     vec3 lightPos;
     vec3 lightColor;
     vec3 camPos;
-    int textureID;
+    int diffuseID;
+    int metallicID;
+    int aoID;
+    int roughnessID;
     mat4 model;
     mat4 view;
     mat4 proj;
-} PushConstants;
+};
+layout( push_constant, scalar ) uniform constants {
+    GPUBuffer gpuBuffer;
+};

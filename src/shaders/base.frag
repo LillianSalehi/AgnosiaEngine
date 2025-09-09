@@ -50,26 +50,26 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
 void main() {
   const float PI = 3.14159265359;
 
-  vec3 lightColor = PushConstants.lightColor;
-  vec3 albedo = texture(sampler2D(_texture[PushConstants.textureID], _sampler), texCoord).rgb;
-  vec3 metallic = texture(sampler2D(_texture[PushConstants.textureID+1], _sampler), texCoord).rgb;
-  vec3 ao = texture(sampler2D(_texture[PushConstants.textureID+2], _sampler), texCoord).rgb;
-  vec3 roughness = texture(sampler2D(_texture[PushConstants.textureID+3], _sampler), texCoord).rgb;
+  vec3 lightColor = gpuBuffer.lightColor;
+  vec3 albedo = texture(sampler2D(_texture[gpuBuffer.diffuseID], _sampler), texCoord).rgb;
+  vec3 metallic = texture(sampler2D(_texture[gpuBuffer.metallicID], _sampler), texCoord).rgb;
+  vec3 ao = texture(sampler2D(_texture[gpuBuffer.aoID], _sampler), texCoord).rgb;
+  vec3 roughness = texture(sampler2D(_texture[gpuBuffer.roughnessID], _sampler), texCoord).rgb;
   
   vec3 F0 = vec3(0.04); 
   F0 = mix(F0, albedo, metallic);
 
   vec3 N = normalize(v_norm);
-  vec3 V = normalize(PushConstants.camPos - v_pos);
+  vec3 V = normalize(gpuBuffer.camPos - v_pos);
 
   vec3 Lo = vec3(0.0);
 
   // iterate over each light
   for(int i = 0; i < 1; ++i) {
-    vec3 L = normalize(PushConstants.lightPos - v_pos);
+    vec3 L = normalize(gpuBuffer.lightPos - v_pos);
     vec3 H = normalize(V+L);
 
-    float distance = length(PushConstants.lightPos - v_pos);
+    float distance = length(gpuBuffer.lightPos - v_pos);
     float attenuation = 1.0 / (distance * distance);
     vec3 radiance = lightColor * attenuation;
       

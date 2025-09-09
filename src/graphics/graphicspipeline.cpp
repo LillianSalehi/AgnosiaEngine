@@ -30,8 +30,7 @@ void Graphics::createCommandPool() {
   // Commands in Vulkan are not executed using function calls, you have to
   // record the ops you wish to perform to command buffers, pools manage the
   // memory used by the buffer!
-  DeviceControl::QueueFamilyIndices queueFamilyIndices =
-      DeviceControl::findQueueFamilies(DeviceControl::getPhysicalDevice());
+  DeviceControl::QueueFamilyIndices queueFamilyIndices = DeviceControl::findQueueFamilies(DeviceControl::getPhysicalDevice());
 
   VkCommandPoolCreateInfo poolInfo{};
   poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -53,8 +52,7 @@ void Graphics::createCommandBuffer() {
 
   VK_CHECK(vkAllocateCommandBuffers(DeviceControl::getDevice(), &allocInfo, Buffers::getCommandBuffers().data()));
 }
-void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
-                                   uint32_t imageIndex, AssetCache& cache) {
+void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, AssetCache& cache) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -138,47 +136,110 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer,
 
   vkCmdSetLineWidth(commandBuffer, Gui::getLineWidth());
 
-  int texID = 0;
-  Agnosia_T::GPUPushConstants pushConsts;
+  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsHistory.front().layout, 0, 1, &Buffers::getTextureDescriptorSets(), 0, nullptr);
+  vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsHistory.front().layout, 1, 1, &Buffers::getSamplerDescriptorSet(), 0, nullptr);
+
+  int modelID = 0;
+
+  Agnosia_T::GPUBuffer gpuBuffer;
   
-  pushConsts.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+  
+  gpuBuffer.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
-  pushConsts.view = glm::lookAt(glm::vec3(camPos[0], camPos[1], camPos[2]),
-                    glm::vec3(centerPos[0], centerPos[1], centerPos[2]),
-                    glm::vec3(upDir[0], upDir[1], upDir[2]));
+  gpuBuffer.view = glm::lookAt(glm::vec3(camPos[0], camPos[1], camPos[2]),
+                   glm::vec3(centerPos[0], centerPos[1], centerPos[2]),
+                   glm::vec3(upDir[0], upDir[1], upDir[2]));
 
-  pushConsts.proj = glm::perspective(glm::radians(depthField),
+  gpuBuffer.proj = glm::perspective(glm::radians(depthField),
                     DeviceControl::getSwapChainExtent().width / (float)DeviceControl::getSwapChainExtent().height,
                     distanceField[0], distanceField[1]);
     
   // GLM was created for OpenGL, where the Y coordinate was inverted. This simply flips the sign.
-  pushConsts.proj[1][1] *= -1;
-  pushConsts.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
-  pushConsts.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
+  gpuBuffer.proj[1][1] *= -1;
+  gpuBuffer.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
+  gpuBuffer.lightColor = glm::vec3(lightColor[0], lightColor[1], lightColor[2]);
+  gpuBuffer.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
+  
   
   for (Model *model : cache.getModels()) {
+    
+    // Per model push constants
+    gpuBuffer.vertexBuffer = model->getBuffers().vertexBufferAddress;
+    gpuBuffer.objPosition = model->getPos();
+    gpuBuffer.diffuseID = ((modelID+1)*4);
+    gpuBuffer.metallicID = ((modelID+1)*4)+1;
+    gpuBuffer.aoID = ((modelID+1)*4)+2;
+    gpuBuffer.roughnessID = ((modelID+1)*4)+3;
+    
+    const size_t gpuBufferSize = sizeof(Agnosia_T::GPUBuffer);
+    Agnosia_T::AllocatedBuffer gpuAllocatedBuffer = Buffers::createBuffer(gpuBufferSize, VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO);
+    VkBufferDeviceAddressInfo gpuBufferDeviceAddressInfo = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+      .buffer = gpuAllocatedBuffer.buffer,
+    };
+    
+    Agnosia_T::AllocatedBuffer stagingBuffer = Buffers::createBuffer(gpuBufferSize, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO);
+    void *data = stagingBuffer.info.pMappedData;
+    
+    // Copy the gpu buffer
+    memcpy(data, &gpuBuffer, gpuBufferSize);
+    immediate_submit([&](VkCommandBuffer cmd) {
+      VkBufferCopy gpuBufferCopy{0};
+      gpuBufferCopy.dstOffset = 0;
+      gpuBufferCopy.srcOffset = 0;
+      gpuBufferCopy.size = gpuBufferSize;
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsHistory.front().layout, 0, 1, &Buffers::getTextureDescriptorSets(), 0, nullptr);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsHistory.front().layout, 1, 1, &Buffers::getSamplerDescriptorSet(), 0, nullptr);
-
-    pushConsts.vertexBuffer = model->getBuffers().vertexBufferAddress;
-    pushConsts.objPosition = model->getPos();
-    pushConsts.textureID = ((texID+1)*4);
-    pushConsts.lightColor = glm::vec3(lightColor[0], lightColor[1], lightColor[2]);
+      vkCmdCopyBuffer(cmd, stagingBuffer.buffer, gpuAllocatedBuffer.buffer, 1, &gpuBufferCopy);
+    });
+    vmaDestroyBuffer(Buffers::getAllocator(), stagingBuffer.buffer, stagingBuffer.allocation);
+    
+    Agnosia_T::GPUPushConstants pushConsts = {
+      .gpuBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &gpuBufferDeviceAddressInfo),
+    };
 
     vkCmdPushConstants(commandBuffer, graphicsHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
 
     vkCmdBindIndexBuffer(commandBuffer, model->getBuffers().indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model->getIndices()), 1, 0, 0, 0);
-    texID++;
+    modelID++;
+    
+  DeletionQueue::get().push_function([=](){vmaDestroyBuffer(Buffers::getAllocator(), gpuAllocatedBuffer.buffer, gpuAllocatedBuffer.allocation);});
   }
   
 
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, fullscreenHistory.front().pipeline);
   
   if(cache.getModels().empty()) {
-      vkCmdPushConstants(commandBuffer, fullscreenHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
+    Agnosia_T::GPUPushConstants pushConsts;
+
+    const size_t gpuBufferSize = sizeof(Agnosia_T::GPUBuffer);
+    Agnosia_T::AllocatedBuffer gpuAllocatedBuffer = Buffers::createBuffer(gpuBufferSize,
+                                                  VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+                                                  VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO);
+    VkBufferDeviceAddressInfo gpuBufferDeviceAddressInfo = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+      .buffer = gpuAllocatedBuffer.buffer,
+    };
+    Agnosia_T::AllocatedBuffer stagingBuffer = Buffers::createBuffer(gpuBufferSize, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO);
+
+    void *data = stagingBuffer.info.pMappedData;
+    // Copy the gpu buffer
+    memcpy(data, &gpuBuffer, gpuBufferSize);
+
+    immediate_submit([&](VkCommandBuffer cmd) {
+      VkBufferCopy gpuBufferCopy{0};
+      gpuBufferCopy.dstOffset = 0;
+      gpuBufferCopy.srcOffset = 0;
+      gpuBufferCopy.size = gpuBufferSize;
+
+      vkCmdCopyBuffer(cmd, stagingBuffer.buffer, gpuAllocatedBuffer.buffer, 1, &gpuBufferCopy);
+    });
+    vmaDestroyBuffer(Buffers::getAllocator(), stagingBuffer.buffer, stagingBuffer.allocation);
+    
+    pushConsts.gpuBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &gpuBufferDeviceAddressInfo);
+    
+    vkCmdPushConstants(commandBuffer, fullscreenHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
   }
 
   vkCmdDraw(commandBuffer, 3, 1, 0, 0);

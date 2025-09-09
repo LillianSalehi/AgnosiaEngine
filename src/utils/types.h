@@ -1,4 +1,5 @@
 #pragma once
+#include "vulkan/vulkan_core.h"
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "vk_mem_alloc.h"
 #include <glm/glm.hpp>
@@ -34,16 +35,23 @@ public:
     VkDeviceAddress vertexBufferAddress;
   };
 
-  struct GPUPushConstants {
+  struct GPUBuffer {
     VkDeviceAddress vertexBuffer;
     glm::vec3 objPosition;
     glm::vec3 lightPos;
     glm::vec3 lightColor;
     glm::vec3 camPos;
-    int textureID;
+    int diffuseID;
+    int metallicID;
+    int aoID;
+    int roughnessID;
     glm::mat4 model;
     glm::mat4 view;
     glm::mat4 proj;
+  };
+
+  struct GPUPushConstants {
+    VkDeviceAddress gpuBufferAddress;
   };
 
   enum PipelineStage  {
