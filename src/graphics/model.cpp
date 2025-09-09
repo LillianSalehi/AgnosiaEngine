@@ -11,8 +11,8 @@
 
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
-#define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
+#include <cstring>
 #include "../utils/deletion.h"
 
 // chatgpt did this and the haters can WEEP fuck hash functions.
@@ -150,7 +150,7 @@ Model::Model(const std::string &modelID, const Material &material, const std::st
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VMA_MEMORY_USAGE_AUTO);
 
-  void *data = stagingBuffer.allocation->GetMappedData();
+  void *data = stagingBuffer.info.pMappedData;
 
   // Copy the vertex buffer
   memcpy(data, vertices.data(), vertexBufferSize);

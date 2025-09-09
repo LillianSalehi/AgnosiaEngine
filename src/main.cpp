@@ -1,7 +1,5 @@
 #include "entrypoint.h"
-
 #include <iostream>
-
 
 int main() {
   EntryApp::getInstance().initialize();
