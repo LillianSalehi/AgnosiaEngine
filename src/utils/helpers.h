@@ -1,7 +1,6 @@
 #pragma once
 
 #include <source_location>
-#define VK_NO_PROTOTYPES
 #include "volk.h"
 #include <stdexcept>
 #include <string>

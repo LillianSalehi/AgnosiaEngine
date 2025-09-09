@@ -1,6 +1,5 @@
 #pragma once
 #include "assetcache.h"
-#define VK_NO_PROTOTYPES
 #include "volk.h"
 
 class Gui {

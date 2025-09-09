@@ -1,5 +1,4 @@
 #pragma once
-#define VK_NO_PROTOTYPES
 #include "volk.h"
 #include "../utils/types.h"
 #include "../assetcache.h"

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#define VK_NO_PROTOTYPES
 #include "volk.h"
 #include <cstdint>
 #include "vk_mem_alloc.h"

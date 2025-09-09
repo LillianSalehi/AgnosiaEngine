@@ -1,5 +1,4 @@
 #pragma once
-#define VK_NO_PROTOTYPES
 #include "volk.h"
 #include <optional>
 #define GLFW_INCLUDE_VULKAN

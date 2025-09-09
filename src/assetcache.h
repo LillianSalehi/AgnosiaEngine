@@ -7,7 +7,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#define VK_NO_PROTOTYPES
 #include "volk.h"
 
 class AssetCache {

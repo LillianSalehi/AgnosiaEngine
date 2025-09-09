@@ -1,7 +1,6 @@
 #pragma once
 
 #include "texture.h"
-#define VK_NO_PROTOTYPES
 #include "volk.h"
 #include <string>
 

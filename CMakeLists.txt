@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(VOLK_STATIC_DEFINES VK_NO_PROTOTYPES)
+
 #NB! Include directories are included so that you can reference them without a relative path in code, just the file.
 include_directories(lib lib/imgui)
 
@@ -18,6 +20,9 @@ add_executable(agnosia ${LIBS} ${SOURCES})
 
 add_definitions(-DIMGUI_IMPL_VULKAN_NO_PROTOTYPES)
 
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+add_subdirectory(lib/volk)
+
 # Link libraries (-llib )
 target_link_libraries(agnosia
     glfw
@@ -30,6 +35,8 @@ target_link_libraries(agnosia
     tinyobjloader
     glslang
     glslang-default-resource-limits
+    GPUOpen::VulkanMemoryAllocator
+    volk
 )
 # These directories are referenced relatively in code, to find shaders and assets, so we move them to the destination location as well.
 file(COPY ${SHADERS} DESTINATION src/shaders)

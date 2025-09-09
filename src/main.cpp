@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#define VOLK_IMPLEMENTATION
+
 int main() {
   EntryApp::getInstance().initialize();
   try {

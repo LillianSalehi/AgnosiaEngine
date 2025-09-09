@@ -2,7 +2,6 @@
 
 #include <string>
 #include <vector>
-#define VK_NO_PROTOTYPES
 #include "volk.h"
 
 #include <filesystem>
