@@ -22,7 +22,6 @@ float upDir[4] = {0.0f, 0.0f, 1.0f, 0.44f};
 float depthField = 45.0f;
 float distanceField[2] = {0.1f, 100.0f};
 
-
 std::deque<Agnosia_T::Pipeline> graphicsHistory;
 std::deque<Agnosia_T::Pipeline> fullscreenHistory;
 
@@ -160,9 +159,8 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
   gpuBuffer.lightColor = glm::vec3(lightColor[0], lightColor[1], lightColor[2]);
   gpuBuffer.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
   
-  
   for (Model *model : cache.getModels()) {
-    
+    //printf("Model: %d\n", modelID);
     // Per model push constants
     gpuBuffer.vertexBuffer = model->getBuffers().vertexBufferAddress;
     gpuBuffer.objPosition = model->getPos();
@@ -171,28 +169,20 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     gpuBuffer.aoID = ((modelID+1)*4)+2;
     gpuBuffer.roughnessID = ((modelID+1)*4)+3;
     
-    const size_t gpuBufferSize = sizeof(Agnosia_T::GPUBuffer);
-    Agnosia_T::AllocatedBuffer gpuAllocatedBuffer = Buffers::createBuffer(gpuBufferSize, VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO);
+      const size_t gpuBufferSize = sizeof(Agnosia_T::GPUBuffer);
+      Agnosia_T::AllocatedBuffer gpuAllocatedBuffer = Buffers::createBuffer(gpuBufferSize, VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO);
+      void *data = gpuAllocatedBuffer.info.pMappedData;
+    
+    
+    // Copy the gpu buffer
+    //memcpy((char*) data + (gpuBufferSize * modelID), &gpuBuffer, gpuBufferSize);
+    memcpy(data, &gpuBuffer, gpuBufferSize);
+
+    
     VkBufferDeviceAddressInfo gpuBufferDeviceAddressInfo = {
       .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
       .buffer = gpuAllocatedBuffer.buffer,
     };
-    
-    Agnosia_T::AllocatedBuffer stagingBuffer = Buffers::createBuffer(gpuBufferSize, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO);
-    void *data = stagingBuffer.info.pMappedData;
-    
-    // Copy the gpu buffer
-    memcpy(data, &gpuBuffer, gpuBufferSize);
-    immediate_submit([&](VkCommandBuffer cmd) {
-      VkBufferCopy gpuBufferCopy{0};
-      gpuBufferCopy.dstOffset = 0;
-      gpuBufferCopy.srcOffset = 0;
-      gpuBufferCopy.size = gpuBufferSize;
-
-      vkCmdCopyBuffer(cmd, stagingBuffer.buffer, gpuAllocatedBuffer.buffer, 1, &gpuBufferCopy);
-    });
-    vmaDestroyBuffer(Buffers::getAllocator(), stagingBuffer.buffer, stagingBuffer.allocation);
-    
     Agnosia_T::GPUPushConstants pushConsts = {
       .gpuBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &gpuBufferDeviceAddressInfo),
     };
@@ -204,42 +194,14 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model->getIndices()), 1, 0, 0, 0);
     modelID++;
     
-  DeletionQueue::get().push_function([=](){vmaDestroyBuffer(Buffers::getAllocator(), gpuAllocatedBuffer.buffer, gpuAllocatedBuffer.allocation);});
+    
   }
   
 
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, fullscreenHistory.front().pipeline);
   
   if(cache.getModels().empty()) {
-    Agnosia_T::GPUPushConstants pushConsts;
-
-    const size_t gpuBufferSize = sizeof(Agnosia_T::GPUBuffer);
-    Agnosia_T::AllocatedBuffer gpuAllocatedBuffer = Buffers::createBuffer(gpuBufferSize,
-                                                  VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-                                                  VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO);
-    VkBufferDeviceAddressInfo gpuBufferDeviceAddressInfo = {
-      .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-      .buffer = gpuAllocatedBuffer.buffer,
-    };
-    Agnosia_T::AllocatedBuffer stagingBuffer = Buffers::createBuffer(gpuBufferSize, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO);
-
-    void *data = stagingBuffer.info.pMappedData;
-    // Copy the gpu buffer
-    memcpy(data, &gpuBuffer, gpuBufferSize);
-
-    immediate_submit([&](VkCommandBuffer cmd) {
-      VkBufferCopy gpuBufferCopy{0};
-      gpuBufferCopy.dstOffset = 0;
-      gpuBufferCopy.srcOffset = 0;
-      gpuBufferCopy.size = gpuBufferSize;
-
-      vkCmdCopyBuffer(cmd, stagingBuffer.buffer, gpuAllocatedBuffer.buffer, 1, &gpuBufferCopy);
-    });
-    vmaDestroyBuffer(Buffers::getAllocator(), stagingBuffer.buffer, stagingBuffer.allocation);
-    
-    pushConsts.gpuBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &gpuBufferDeviceAddressInfo);
-    
-    vkCmdPushConstants(commandBuffer, fullscreenHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
+    // handle none
   }
 
   vkCmdDraw(commandBuffer, 3, 1, 0, 0);
@@ -248,6 +210,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
   
   vkCmdEndRendering(commandBuffer);
 
+  
   const VkImageMemoryBarrier2 prePresentImageBarrier{
       .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
       .pNext = nullptr,
@@ -278,7 +241,10 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
   vkCmdPipelineBarrier2(Buffers::getCommandBuffers()[Render::getCurrentFrame()], &depInfo);
 
-  VK_CHECK(vkEndCommandBuffer(commandBuffer));  
+  VK_CHECK(vkEndCommandBuffer(commandBuffer));
+  
+  //vmaDestroyBuffer(Buffers::getAllocator(), gpuAllocatedBuffer.buffer, gpuAllocatedBuffer.allocation);
+  
 }
 
 float *Graphics::getCamPos() { return camPos; }
