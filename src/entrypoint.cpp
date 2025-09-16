@@ -99,7 +99,7 @@ void initAgnosia() {
   cache.store(std::move(uvSphere));
   cache.store(std::move(stanfordDragon));
   cache.store(std::move(teapot));
-
+  
 }
 void initVulkan() {
   // Initialize volk and continue if successful.

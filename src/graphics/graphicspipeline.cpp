@@ -9,6 +9,7 @@
 #include "render.h"
 #include "texture.h"
 #include "../utils/deletion.h"
+#include "vulkan/vulkan_core.h"
  
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/ext/matrix_clip_space.hpp>
@@ -140,51 +141,51 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
   int modelID = 0;
 
-  Agnosia_T::GPUBuffer gpuBuffer;
+  Agnosia_T::SceneBuffer sceneData;
   
   
-  gpuBuffer.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+  sceneData.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
 
-  gpuBuffer.view = glm::lookAt(glm::vec3(camPos[0], camPos[1], camPos[2]),
+  sceneData.view = glm::lookAt(glm::vec3(camPos[0], camPos[1], camPos[2]),
                    glm::vec3(centerPos[0], centerPos[1], centerPos[2]),
                    glm::vec3(upDir[0], upDir[1], upDir[2]));
 
-  gpuBuffer.proj = glm::perspective(glm::radians(depthField),
+  sceneData.proj = glm::perspective(glm::radians(depthField),
                     DeviceControl::getSwapChainExtent().width / (float)DeviceControl::getSwapChainExtent().height,
                     distanceField[0], distanceField[1]);
     
   // GLM was created for OpenGL, where the Y coordinate was inverted. This simply flips the sign.
-  gpuBuffer.proj[1][1] *= -1;
-  gpuBuffer.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
-  gpuBuffer.lightColor = glm::vec3(lightColor[0], lightColor[1], lightColor[2]);
-  gpuBuffer.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
+  sceneData.proj[1][1] *= -1;
+  sceneData.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
+  sceneData.lightColor = glm::vec3(lightColor[0], lightColor[1], lightColor[2]);
+  sceneData.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
   
+  const size_t sceneBufferSize = sizeof(Agnosia_T::SceneBuffer);
+  Agnosia_T::AllocatedBuffer sceneBuffer = Buffers::createBuffer(sceneBufferSize*(cache.getModels().size()), VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO);
+  void *sceneBufferData = sceneBuffer.info.pMappedData;
+
+  VkBufferDeviceAddressInfo sceneBufferDeviceAddressInfo = {
+    .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+    .buffer = sceneBuffer.buffer,
+  };
+  
+  VkDeviceAddress sceneBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &sceneBufferDeviceAddressInfo);
+
   for (Model *model : cache.getModels()) {
     //printf("Model: %d\n", modelID);
     // Per model push constants
-    gpuBuffer.vertexBuffer = model->getBuffers().vertexBufferAddress;
-    gpuBuffer.objPosition = model->getPos();
-    gpuBuffer.diffuseID = ((modelID+1)*4);
-    gpuBuffer.metallicID = ((modelID+1)*4)+1;
-    gpuBuffer.aoID = ((modelID+1)*4)+2;
-    gpuBuffer.roughnessID = ((modelID+1)*4)+3;
-    
-      const size_t gpuBufferSize = sizeof(Agnosia_T::GPUBuffer);
-      Agnosia_T::AllocatedBuffer gpuAllocatedBuffer = Buffers::createBuffer(gpuBufferSize, VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO);
-      void *data = gpuAllocatedBuffer.info.pMappedData;
-    
-    
-    // Copy the gpu buffer
-    //memcpy((char*) data + (gpuBufferSize * modelID), &gpuBuffer, gpuBufferSize);
-    memcpy(data, &gpuBuffer, gpuBufferSize);
+    sceneData.vertexBuffer = model->getBuffers().vertexBufferAddress;
+    sceneData.objPosition = model->getPos();
+    sceneData.diffuseID = ((modelID+1)*4);
+    sceneData.metallicID = ((modelID+1)*4)+1;
+    sceneData.aoID = ((modelID+1)*4)+2;
+    sceneData.roughnessID = ((modelID+1)*4)+3;
 
+    // Copy the gpu buffer
+    memcpy((char*) sceneBufferData + (sceneBufferSize * modelID), &sceneData, sceneBufferSize);
     
-    VkBufferDeviceAddressInfo gpuBufferDeviceAddressInfo = {
-      .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-      .buffer = gpuAllocatedBuffer.buffer,
-    };
     Agnosia_T::GPUPushConstants pushConsts = {
-      .gpuBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &gpuBufferDeviceAddressInfo),
+      .gpuBufferAddress = sceneBufferAddress + (sceneBufferSize * modelID),
     };
 
     vkCmdPushConstants(commandBuffer, graphicsHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
@@ -192,11 +193,8 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     vkCmdBindIndexBuffer(commandBuffer, model->getBuffers().indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
 
     vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(model->getIndices()), 1, 0, 0, 0);
-    modelID++;
-    
-    
+    modelID++;  
   }
-  
 
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, fullscreenHistory.front().pipeline);
   
@@ -243,7 +241,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
   VK_CHECK(vkEndCommandBuffer(commandBuffer));
   
-  //vmaDestroyBuffer(Buffers::getAllocator(), gpuAllocatedBuffer.buffer, gpuAllocatedBuffer.allocation);
+  vmaDestroyBuffer(Buffers::getAllocator(), sceneBuffer.buffer, sceneBuffer.allocation);
   
 }
 
