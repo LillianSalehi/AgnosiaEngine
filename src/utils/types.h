@@ -40,6 +40,7 @@ public:
     glm::vec3 objPosition;
     glm::vec3 lightPos;
     glm::vec3 lightColor;
+    float lightPower;
     glm::vec3 camPos;
     int diffuseID;
     int metallicID;

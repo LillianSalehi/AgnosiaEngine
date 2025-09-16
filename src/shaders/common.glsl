@@ -17,6 +17,7 @@ layout(buffer_reference, scalar) readonly buffer GPUBuffer {
     vec3 objPos;
     vec3 lightPos;
     vec3 lightColor;
+    float lightPower;
     vec3 camPos;
     int diffuseID;
     int metallicID;
@@ -26,6 +27,6 @@ layout(buffer_reference, scalar) readonly buffer GPUBuffer {
     mat4 view;
     mat4 proj;
 };
-layout( push_constant, scalar ) uniform constants {
+layout(push_constant, scalar) uniform constants {
     GPUBuffer gpuBuffer;
 };

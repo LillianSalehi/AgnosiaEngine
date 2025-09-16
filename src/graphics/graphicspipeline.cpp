@@ -17,6 +17,7 @@
 
 float lightPos[4] = {5.0f, 5.0f, 5.0f, 0.44f};
 float lightColor[4] = {1.0f, 1.0f, 1.0f, 0.44f};
+float lightPower = 1.0f;
 float camPos[4] = {3.0f, 3.0f, 3.0f, 0.44f};
 float centerPos[4] = {0.0f, 0.0f, 0.0f, 0.44f};
 float upDir[4] = {0.0f, 0.0f, 1.0f, 0.44f};
@@ -158,6 +159,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
   sceneData.proj[1][1] *= -1;
   sceneData.lightPos = glm::vec3(lightPos[0], lightPos[1], lightPos[2]);
   sceneData.lightColor = glm::vec3(lightColor[0], lightColor[1], lightColor[2]);
+  sceneData.lightPower = lightPower;
   sceneData.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
   
   const size_t sceneBufferSize = sizeof(Agnosia_T::SceneBuffer);
@@ -199,7 +201,14 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, fullscreenHistory.front().pipeline);
   
   if(cache.getModels().empty()) {
-    // handle none
+    memcpy((char*) sceneBufferData, &sceneData, sceneBufferSize);
+    
+    Agnosia_T::GPUPushConstants pushConsts = {
+      .gpuBufferAddress = sceneBufferAddress,
+    };
+
+    vkCmdPushConstants(commandBuffer, graphicsHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
+
   }
 
   vkCmdDraw(commandBuffer, 3, 1, 0, 0);
@@ -248,6 +257,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 float *Graphics::getCamPos() { return camPos; }
 float *Graphics::getLightPos() { return lightPos; }
 float *Graphics::getLightColor() { return lightColor; }
+float &Graphics::getLightPower() { return lightPower; }
 float *Graphics::getCenterPos() { return centerPos; }
 float *Graphics::getUpDir() { return upDir; }
 float &Graphics::getDepthField() { return depthField; }

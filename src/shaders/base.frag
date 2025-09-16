@@ -50,7 +50,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
 void main() {
   const float PI = 3.14159265359;
 
-  vec3 lightColor = gpuBuffer.lightColor;
+  vec3 lightColor = gpuBuffer.lightColor * gpuBuffer.lightPower;
   vec3 albedo = texture(sampler2D(_texture[gpuBuffer.diffuseID], _sampler), texCoord).rgb;
   vec3 metallic = texture(sampler2D(_texture[gpuBuffer.metallicID], _sampler), texCoord).rgb;
   vec3 ao = texture(sampler2D(_texture[gpuBuffer.aoID], _sampler), texCoord).rgb;

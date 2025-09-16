@@ -33,14 +33,17 @@ void initTransformsWindow(AssetCache& cache) {
   }
   if(ImGui::TreeNode("Camera Transforms")) {
     ImGui::DragFloat3("Camera Position", Graphics::getCamPos());
-    ImGui::DragFloat3("Light Position", Graphics::getLightPos());
-    ImGui::DragFloat3("Light Color", Graphics::getLightColor());
     ImGui::DragFloat3("Center Position", Graphics::getCenterPos());
     ImGui::DragFloat("Depth of Field", &Graphics::getDepthField(), 0.1f, 1.0f, 180.0f, NULL, ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat2("Near and Far fields", Graphics::getDistanceField());
     ImGui::TreePop();
   }
-  
+  if(ImGui::TreeNode("Light Controls")) {
+    ImGui::DragFloat3("Light Position", Graphics::getLightPos());
+    ImGui::ColorPicker3("Light Color", Graphics::getLightColor(), ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoSidePreview);
+    ImGui::DragFloat("Light Power", &Graphics::getLightPower(), 0.5f, 1.0f, FLT_MAX, NULL, ImGuiSliderFlags_AlwaysClamp);
+    ImGui::TreePop();
+  }
 }
 void initRenderWindow(AssetCache& cache) {
   if(ImGui::Checkbox("Wireframe?", &wireframe)) {

@@ -35,22 +35,18 @@ void recreateSwapChain() {
 // record a command buffer which draws the scene onto that image
 // submit the recorded command buffer and present the image!
 void Render::drawFrame(AssetCache& cache) {
-  vkWaitForFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-  vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
-
+  VK_CHECK(vkWaitForFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX));
   uint32_t imageIndex;
-  VkSemaphore acquireSemaphore = imageAvailableSemaphores[currentFrame];
-  VkResult result = vkAcquireNextImageKHR(DeviceControl::getDevice(), DeviceControl::getSwapChain(), UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+  VkResult result = vkAcquireNextImageKHR(DeviceControl::getDevice(), DeviceControl::getSwapChain(), UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
   if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
     recreateSwapChain();
     return;
   }
   VK_CHECK(result);
-
-  VkSemaphore submitSemaphore = renderFinishedSemaphores[imageIndex];
     
-  vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]);
-  vkResetCommandBuffer(Buffers::getCommandBuffers()[currentFrame], 0);
+  VK_CHECK(vkResetFences(DeviceControl::getDevice(), 1, &inFlightFences[currentFrame]));
+  VK_CHECK(vkResetCommandBuffer(Buffers::getCommandBuffers()[currentFrame], 0));
   Graphics::recordCommandBuffer(Buffers::getCommandBuffers()[currentFrame], imageIndex, cache);
   
   VkPipelineStageFlags waitStages[] = {
@@ -58,19 +54,21 @@ void Render::drawFrame(AssetCache& cache) {
     
   VkSubmitInfo submitInfo = {
     .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pNext = nullptr,
     .waitSemaphoreCount = 1,
-    .pWaitSemaphores = &acquireSemaphore,
+    .pWaitSemaphores = &imageAvailableSemaphores[currentFrame],
     .pWaitDstStageMask = waitStages,
     .commandBufferCount = 1,
     .pCommandBuffers = &Buffers::getCommandBuffers()[currentFrame],
     .signalSemaphoreCount = 1,
-    .pSignalSemaphores = &submitSemaphore,
+    .pSignalSemaphores = &renderFinishedSemaphores[imageIndex],
   };
 
   VK_CHECK(vkQueueSubmit(DeviceControl::getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]));
   
   VkPresentInfoKHR presentInfo = {
     .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+    .pNext = nullptr,
     .waitSemaphoreCount = 1,
     .pWaitSemaphores = &renderFinishedSemaphores[imageIndex],
     .swapchainCount = 1,
