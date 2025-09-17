@@ -35,7 +35,7 @@ public:
     VkDeviceAddress vertexBufferAddress;
   };
 
-  struct SceneBuffer {
+  struct SceneData {
     VkDeviceAddress vertexBuffer;
     glm::vec3 objPosition;
     glm::vec3 lightPos;

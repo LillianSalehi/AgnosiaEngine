@@ -1,5 +1,6 @@
 
 #include "assetcache.h"
+#include "devicelibrary.h"
 
 Texture* AssetCache::fetchLoadTexture(const std::string& ID, const std::string& path) {
   auto it = textureRegistry.find(ID);
@@ -26,6 +27,7 @@ void AssetCache::store(std::unique_ptr<Model>&& model) {
   modelRegistry.insert_or_assign(model->getID(), std::move(model));
 }
 void AssetCache::remove(const std::string& ID) {
+  vkDeviceWaitIdle(DeviceControl::getDevice());
   textureRegistry.erase(ID);
   materialRegistry.erase(ID);
   modelRegistry.erase(ID);

@@ -10,6 +10,7 @@
 #include "texture.h"
 #include "../utils/deletion.h"
 #include "vulkan/vulkan_core.h"
+#include <algorithm>
  
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/ext/matrix_clip_space.hpp>
@@ -142,7 +143,7 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
   int modelID = 0;
 
-  Agnosia_T::SceneBuffer sceneData;
+  Agnosia_T::SceneData sceneData;
   
   
   sceneData.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
@@ -162,8 +163,10 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
   sceneData.lightPower = lightPower;
   sceneData.camPos = glm::vec3(camPos[0], camPos[1], camPos[2]);
   
-  const size_t sceneBufferSize = sizeof(Agnosia_T::SceneBuffer);
-  Agnosia_T::AllocatedBuffer sceneBuffer = Buffers::createBuffer(sceneBufferSize*(cache.getModels().size()), VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO);
+  const size_t sceneDataSize = sizeof(Agnosia_T::SceneData);
+  size_t sceneBufferSize = sceneDataSize * std::clamp((int) cache.getModels().size(), 1, INT_MAX);
+  
+  Agnosia_T::AllocatedBuffer sceneBuffer = Buffers::createBuffer(sceneBufferSize, VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_AUTO);
   void *sceneBufferData = sceneBuffer.info.pMappedData;
 
   VkBufferDeviceAddressInfo sceneBufferDeviceAddressInfo = {
@@ -174,7 +177,6 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
   VkDeviceAddress sceneBufferAddress = vkGetBufferDeviceAddress(DeviceControl::getDevice(), &sceneBufferDeviceAddressInfo);
 
   for (Model *model : cache.getModels()) {
-    //printf("Model: %d\n", modelID);
     // Per model push constants
     sceneData.vertexBuffer = model->getBuffers().vertexBufferAddress;
     sceneData.objPosition = model->getPos();
@@ -184,10 +186,10 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
     sceneData.roughnessID = ((modelID+1)*4)+3;
 
     // Copy the gpu buffer
-    memcpy((char*) sceneBufferData + (sceneBufferSize * modelID), &sceneData, sceneBufferSize);
+    memcpy((char*) sceneBufferData + (sceneDataSize * modelID), &sceneData, sceneDataSize);
     
     Agnosia_T::GPUPushConstants pushConsts = {
-      .gpuBufferAddress = sceneBufferAddress + (sceneBufferSize * modelID),
+      .gpuBufferAddress = sceneBufferAddress + (sceneDataSize * modelID),
     };
 
     vkCmdPushConstants(commandBuffer, graphicsHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
@@ -201,14 +203,13 @@ void Graphics::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
   vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, fullscreenHistory.front().pipeline);
   
   if(cache.getModels().empty()) {
-    memcpy((char*) sceneBufferData, &sceneData, sceneBufferSize);
+    memcpy((char*) sceneBufferData, &sceneData, sceneDataSize);
     
     Agnosia_T::GPUPushConstants pushConsts = {
       .gpuBufferAddress = sceneBufferAddress,
     };
 
-    vkCmdPushConstants(commandBuffer, graphicsHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
-
+    vkCmdPushConstants(commandBuffer, fullscreenHistory.front().layout, VK_SHADER_STAGE_ALL, 0, sizeof(Agnosia_T::GPUPushConstants), &pushConsts);
   }
 
   vkCmdDraw(commandBuffer, 3, 1, 0, 0);
